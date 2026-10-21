@@ -1,0 +1,19 @@
+# Word run direction and persistent Google Fonts
+
+Font/UI decisions accepted 2026-10-21 for version 0.2.0. **The v0.2 direction strategy below was rejected by the user's second Word Android screenshot.** See ../word-android-bidi-investigation.md for the device comparison and next acceptance gate.
+
+The replacement implementation is recorded in [ADR 0003](0003-contextual-word-runs.md) for version 0.2.1.
+
+The user reproduced broken parentheses and reordered currency text in Microsoft Word for Android. Version 0.1 derived `w:rtl` from resolved Unicode embedding levels. This was incorrect: `w:rtl` is a high-level character-class override for weak/neutral characters, not a serialization of UAX #9 levels. Word then resolved the already overridden text again. Marking punctuation and whitespace RTL can change a Latin parenthetical group's visual order. The original XML tests verified text retention and the existence of direction flags, but did not detect this semantic error or validate Android Word rendering.
+
+Version 0.2 sets `w:rtl` only on strong RTL letters and their combining/joining characters; leaves neutral brackets, whitespace and numbers unclassified; preserves logical text; and keeps paragraph direction separate. **This approach is insufficient:** the user reported broken Persian and mixed parentheses in Microsoft Word for Android. Its XML tests assert the chosen serialization rule but do not establish correct rendering; that rule must not become an acceptance requirement for the replacement. Auto direction correctly keeps standalone English paragraphs LTR and remains the default for new drafts. Explicit user direction settings are preserved.
+
+Sources: https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.righttolefttext , https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bidirectionalembedding , and https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bidi . The paragraph `w:bidi` property affects paragraph layout properties; it does not by itself establish text ordering. Contextual neutral-character direction and directional embeddings need separate treatment.
+
+For fonts, ship an offline snapshot of Google's public font metadata and bundled regular/bold Vazirmatn TTFs with their license. Fetch only selected font families through the keyless Google Fonts CSS service. The native downloader requests full TTFs with all declared subsets; Google's default Latin-only response is insufficient for Persian. Never send document text through Google's `text=` parameter. Google's documented Developer API would require an API key; it is not used. Metadata refresh uses the current public metadata endpoint and falls back to the existing catalogue if unavailable.
+
+Cache complete regular/bold families in IndexedDB, persist across app launches, allow explicit deletion, and include font files in DOCX's standard obfuscated font parts. Select browser FontFaces for preview. Fonts without Arabic support use embedded Vazirmatn for Word's complex-script slot. Word font embedding support varies by application/version, so embedding does not guarantee identical display in every mobile reader. Failed downloads retain the previous selection and never commit a partial font family.
+
+The native command accepts HTTPS URLs only for Google's font stylesheet, font binary and metadata paths, with redirects disabled and a 32 MiB response limit. TLS uses WebPKI roots to avoid requiring Android-specific verifier initialization. No Google account or secret API key is embedded in the APK.
+
+Use Tailwind 4 and official shadcn/ui Radix components for settings, fonts, dialog focus management and notifications, as explicitly requested by the user. The official shadcn skill was read and CLI-generated components reviewed. Preserve the app's existing branding and requested removal of its decorative eyebrow.

@@ -1,0 +1,8 @@
+{
+  "version": "18.0.0",
+  "source": "https://www.unicode.org/Public/UCD/latest/ucd/BidiBrackets.txt",
+  "openingPairs": 65,
+  "sha256": "4b3b62e4a14b84ee752808c810c602534921c09a4a1bf78cfbee566d66c125b3",
+  "license": "LICENSE.txt",
+  "productionData": "src/data/bracket-pairs.json"
+}
