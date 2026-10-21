@@ -15,3 +15,8 @@ Logs are kept outside the repository under `/workspace/toolchains/`:
 `emulator-check.log`, `emulator-install-024.log`, `emulator-boot-state.log`.
 The existing APK signature/CRC/ABI/ELF checks remain documented in
 `android-packaging.md`.
+
+The user subsequently confirmed that Android 0.2.4 installs and works on their
+own phone, and explicitly asked to stop emulator testing. The emulator was
+stopped. Physical-phone installation/operation is confirmed by the user;
+emulator installation was not completed and must not be described as passed.

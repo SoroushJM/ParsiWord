@@ -1,0 +1,32 @@
+name: Build iOS simulator app
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  simulator:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+      - run: npm ci
+      - run: npm test
+      - run: npm run ios:init
+      - run: npm run ios:simulator
+      - name: Preserve app bundle metadata
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          app_path="$(find src-tauri/gen/apple src-tauri/target -type d -name '*.app' -prune -print | head -1)"
+          test -n "$app_path"
+          tar -czf artifacts/ParsiWord-iOS-simulator.tar.gz -C "$(dirname "$app_path")" "$(basename "$app_path")"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ParsiWord-iOS-simulator
+          path: artifacts/ParsiWord-iOS-simulator.tar.gz
+          if-no-files-found: error

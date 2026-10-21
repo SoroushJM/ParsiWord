@@ -1,3 +1,17 @@
+# وضعیت مرحلهٔ پلتفرم‌ها — ۰.۳.۰
+
+کاربر نصب و اجرای اندروید ۰.۲.۴ را روی گوشی تأیید کرد و گفت تست شبیه‌ساز را رها کن. شبیه‌ساز متوقف شد؛ نصب روی آن تأیید نشده است. درخواست جدید: اول Git و کامیت نسخهٔ تقریباً درست، سپس ویندوز/لینوکس/iOS و کامیت جدا، سپس LaTeX و Mermaid. Git محلی روی main ایجاد شد؛ کامیت پایه 9439794 با tag android-v0.2.4-baseline است. remote ساخته/منتشر نشده است.
+
+مرحلهٔ دوم: تنظیمات جداگانهٔ Linux (deb/AppImage)، Windows (NSIS per-user/WebView2)، iOS (حداقل 16.4 و Files)، فرمان‌های npm و دو workflow دستی GitHub آماده‌اند. alias Vite با fileURLToPath برای مسیر ویندوز اصلاح شد؛ target مرورگر Safari16.4 هم دارد. واردکردن فایل در iOS copy-to-sandbox می‌شود و نام فایل Windows/Linux/file URI درست حفظ می‌شود. هشت تست فایل اضافه شد؛ مجموع ۷۸۵ واحد و چهار Playwright و TypeScript/Vite پاس شدند. نسخهٔ نمایشی UI از package.json خوانده می‌شود.
+
+لینوکس واقعاً کامپایل و روی Xvfb اجرا شد؛ فایل /workspace/tmp/native-portability.md از file dialog وارد و DOCX در /workspace/tmp/linux-native-export.docx ذخیره شد؛ ZIP و متن فارسی/انگلیسی بررسی شدند. screenshotهای خصوصی /workspace/tmp/linux-native-*.png. فایل اجرایی debug در /workspace/toolchains/desktop-target/debug/parsiword است. Docker image parsiword-cross-build و کانتینر parsiword-native-work برای GTK/WebKit/LLVM/NSIS آماده‌اند؛ کاربر اصلی root نیست. در کانتینر UID1000 account وجود دارد و sandbox WebKit عادی فعال است. HOME و SDKهای کراس‌کامپایل در /tmp، Cargo/Rustup و workspace mount هستند.
+
+Windows: cargo-xwin نصب، Rust target x86_64-pc-windows-msvc و SDK/CRT دریافت شدند؛ cargo xwin check روی هدف ویندوز پاس شد. build/link/اجرای Windows هنوز تأیید نشده است. Cache و SDK ویندوز در /tmp/parsiword-windows-target و /tmp/parsiword-xwin-cache هستند. iOS روی Linux CLI ندارد و Xcode موجود نیست؛ config/workflow آماده است ولی binary یا اجرای iOS تأیید نشده است. اسناد دقیق docs/platforms.md.
+
+برای کمبود دیسک فقط cacheهای ساخته‌شدهٔ Android x86 و debug، و image شبیه‌ساز کنارگذاشته‌شده حذف شدند؛ source/APKها محفوظ‌اند. Android release cache برای ساخت نهایی باقی است. خروجی Android همچنان همیشه فقط ARM64؛ x86 desktop با این محدودیت فرق دارد. مرحلهٔ LaTeX/Mermaid باید پس از کامیت مستقل این مرحله شروع شود.
+
+## وضعیت پیشین
+
 # وضعیت فعلی — نسخهٔ آزمایشی ۰.۲.۴، فقط ARM64، 2026-10-21
 
 درخواست پایدار تازه: کاربر می‌خواهد APK روی گوشی‌اش نصب شود و صریحاً گفته دیگر هیچ خروجی Android x86/x86_64 ساخته نشود. فقط ARM64 بساز. کاربر قبلاً گفته خودش روی گوشی تست می‌کند؛ شبیه‌ساز لازم نیست. در تصویر، نصب ۰.۲.۳ با «App not installed» رد شد. مقایسهٔ واقعی APKهای قبلی امضای یکسان، versionCode افزایشی، ARM64 و هم‌ترازی سالم ۱۶کیلوبایتی را نشان داد؛ علت دقیق خطای نصب از پیام عمومی معلوم نشده است. کاربر گفته نسخهٔ قدیمی را حذف کرده. هرگز علت را قطعی به امضا یا وجود x86 نسبت نده.

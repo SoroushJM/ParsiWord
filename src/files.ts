@@ -21,11 +21,16 @@ export async function saveDocx(bytes: Uint8Array, filename: string): Promise<boo
 export async function openMarkdown(): Promise<{ name: string; text: string } | null> {
   if (isTauri()) {
     // Android document providers don't consistently label .md as text/markdown.
-    const path = await open({ multiple: false, directory: false, filters: [{ name: 'Markdown / Text', extensions: ['md', 'markdown', 'txt'] }] });
+    const path = await open({ multiple: false, directory: false, fileAccessMode: 'copy', filters: [{ name: 'Markdown / Text', extensions: ['md', 'markdown', 'txt'] }] });
     if (!path) return null;
     const text = await readTextFile(path);
     if (text.length > 500_000) throw new Error('FILE_TOO_LARGE');
-    return { name: 'یادداشت واردشده', text };
+    let name = 'یادداشت واردشده';
+    try {
+      const filename = decodeURIComponent(path.replace(/\\/g, '/').split('/').pop() || '');
+      if (/\.(md|markdown|txt)$/iu.test(filename)) name = filename.replace(/\.(md|markdown|txt)$/iu, '').slice(0, 90);
+    } catch { /* Keep a readable title for document-provider URLs. */ }
+    return { name, text };
   }
   return null;
 }

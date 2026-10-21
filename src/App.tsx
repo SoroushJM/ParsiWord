@@ -2,6 +2,7 @@ import { Children, isValidElement, useEffect, useRef, useState, type ComponentPr
 import { isTauri } from '@tauri-apps/api/core';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { version as appVersion } from '../package.json';
 import {
   ArrowDownToLine, ArrowLeft, Bold, BookOpen, Check, CheckCheck,
   ChevronDown, Code2, FilePlus2, FileText, FolderOpen, Heading2,
@@ -208,7 +209,7 @@ function App() {
             <div className="privacy-note"><ShieldCheck size={18} /><span>متن تو از دستگاه خارج نمی‌شود.<br />تبدیل آفلاین؛ اینترنت فقط برای دریافت فونت جدید.</span></div>
           </aside>
         </div>
-        <footer className="page-footer"><span>ساخته‌شده برای نوشتن، به زبان خودت.</span><span>نسخهٔ آزمایشی ۰.۲</span></footer>
+        <footer className="page-footer"><span>ساخته‌شده برای نوشتن، به زبان خودت.</span><span>نسخهٔ آزمایشی <bdi dir="ltr">{appVersion}</bdi></span></footer>
       </main>
 
       <div className="export-dock"><div className="export-dock-inner"><Button variant="outline" size="icon" className="size-12" aria-label="تنظیمات خروجی" onClick={() => setSheet('settings')}><Settings2 /></Button><Button size="lg" className="h-12 flex-1" onClick={convert} disabled={busy || !markdown.trim()}>{busy ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? 'در حال ساخت سند…' : 'ذخیرهٔ فایل Word'}</span><span className="docx-label">.docx</span></Button></div></div>

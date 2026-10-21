@@ -1,7 +1,7 @@
 {
   "name": "parsiword",
   "private": true,
-  "version": "0.2.4",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,13 @@
     "test": "vitest run",
     "test:ui": "playwright test",
     "android:apk": "tauri android build --apk --target aarch64 --ci",
-    "android:preview": "tauri android build --debug --apk --target aarch64 --ci"
+    "android:preview": "tauri android build --debug --apk --target aarch64 --ci",
+    "desktop:build": "tauri build --ci",
+    "linux:build": "tauri build --bundles deb,appimage --ci",
+    "windows:build": "tauri build --bundles nsis --ci",
+    "ios:init": "tauri ios init --ci",
+    "ios:simulator": "tauri ios build --target aarch64-sim --no-sign --ci",
+    "ios:build": "tauri ios build --ci"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
