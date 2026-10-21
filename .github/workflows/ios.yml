@@ -16,6 +16,10 @@ jobs:
           targets: aarch64-apple-ios-sim
       - run: npm ci
       - run: npm test
+      - run: npx playwright install webkit
+      - run: npm run test:ui -- --project webkit
+        env:
+          PW_WEBKIT: '1'
       - run: npm run ios:init
       - run: npm run ios:simulator
       - name: Preserve app bundle metadata

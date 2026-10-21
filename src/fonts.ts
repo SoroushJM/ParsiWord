@@ -1,10 +1,11 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import catalogue from './data/google-fonts.json';
+import { bundledFont, bundledFaces, codeFont, mathFont, isBundledFont } from './font-assets';
+import { documentFontUsage } from './markdown';
+export { bundledFont, isBundledFont, normalizeFontFamily } from './font-assets';
 
 export type GoogleFont = { family: string; arabic: boolean; weights: number[]; subsets?: string[] };
 export type FontBundle = { family: string; arabic: boolean; regular: Uint8Array; bold?: Uint8Array; savedAt: number };
-export const systemFonts = ['Arial', 'Tahoma', 'Times New Roman', 'Courier New'];
-export const bundledFont = 'Vazirmatn';
 export const initialCatalogue = catalogue.families as GoogleFont[];
 const databaseName = 'parsiword-fonts-v1';
 const pending = new Map<string, Promise<FontBundle>>();
@@ -78,14 +79,15 @@ export async function downloadFace(family: string, weight: number): Promise<Uint
 export async function ensureFont(font: GoogleFont, transport = downloadFace): Promise<FontBundle> {
   if (pending.has(font.family)) return pending.get(font.family)!;
   const task = (async () => {
-    if (font.family === bundledFont) {
+    if (isBundledFont(font.family)) {
+      const asset = bundledFaces[font.family];
       const read = async (name: string) => {
         const response = await fetch(`/fonts/${name}.ttf`);
         if (!response.ok) throw new Error('FONT_FORMAT');
         const bytes = new Uint8Array(await response.arrayBuffer()); validateFont(bytes); return bytes;
       };
-      const [regular, bold] = await Promise.all([read('Vazirmatn-Regular'), read('Vazirmatn-Bold')]);
-      return { family: bundledFont, arabic: true, regular, bold, savedAt: 0 };
+      const [regular, bold] = await Promise.all([read(asset.regular), asset.bold ? read(asset.bold) : undefined]);
+      return { family: font.family, arabic: asset.arabic, regular, bold, savedAt: 0 };
     }
     const cached = await transaction<FontBundle | undefined>('fonts', 'readonly', store => store.get(font.family));
     if (cached) return cached;
@@ -129,16 +131,21 @@ export async function refreshCatalogue(): Promise<GoogleFont[]> {
   return list;
 }
 
-export async function documentFonts(family: string): Promise<FontBundle[]> {
-  if (systemFonts.includes(family)) return [];
-  const font = (await fontCatalogue()).find(f => f.family === family);
+export async function documentFonts(family: string, markdown = ''): Promise<FontBundle[]> {
+  const catalogue = await fontCatalogue();
+  const font = catalogue.find(f => f.family === family);
   if (!font) throw new Error('FONT_MISSING');
-  const selected = await ensureFont(font);
-  return font.arabic ? [selected] : [selected, await ensureFont(initialCatalogue.find(f => f.family === bundledFont)!)];
+  const usage = documentFontUsage(markdown);
+  const families = new Set([family]);
+  if (!font.arabic || usage.code || usage.math) families.add(bundledFont);
+  if (usage.code) families.add(codeFont);
+  if (usage.math) families.add(mathFont);
+  return Promise.all(Array.from(families, name => ensureFont(catalogue.find(f => f.family === name) || initialCatalogue.find(f => f.family === name)!)));
 }
 
 export function fontError(error: unknown): string {
   const message = String(error);
+  if (message.includes('FONT_MISSING')) return 'این فونت در دسترس نیست. یک فونت دیگر انتخاب کن.';
   if (message.includes('FONT_STORAGE')) return 'فضای نگهداری فونت در دسترس نیست. فضای خالی گوشی را بررسی کن.';
   if (message.includes('FONT_TOO_LARGE')) return 'فایل این فونت برای این نسخه بیش از حد بزرگ است؛ فونت دیگری انتخاب کن.';
   if (message.includes('FONT_FORMAT')) return 'نسخهٔ قابل استفاده در Word برای این فونت دریافت نشد. فونت دیگری انتخاب کن.';

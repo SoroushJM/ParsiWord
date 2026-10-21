@@ -9,20 +9,18 @@ import { version as appVersion } from '../package.json';
 import {
   ArrowDownToLine, ArrowLeft, Bold, BookOpen, Check, CheckCheck,
   ChevronDown, Code2, FilePlus2, FileText, FolderOpen, Heading2,
-  Italic, List, LoaderCircle, Settings2, ShieldCheck, Sparkles, Undo2,
+  Italic, List, LoaderCircle, Settings2, ShieldCheck, Undo2,
 } from 'lucide-react';
 import { defaultSettings, exportWord, paragraphDirection, safeFilename, type ExportSettings } from './converter';
 import { openMarkdown, saveDocx } from './files';
-import { samples } from './samples';
 import { FontPicker } from './FontPicker';
-import { activateFont, documentFonts, fontError, systemFonts } from './fonts';
+import { activateFont, documentFonts, fontError, normalizeFontFamily } from './fonts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import '@fontsource/vazirmatn/400.css';
@@ -49,14 +47,14 @@ function loadDraft() {
             title: typeof s.title === 'string' ? s.title.slice(0, 90) : defaultSettings.title,
             direction: ['rtl', 'ltr', 'auto'].includes(s.direction) ? s.direction : 'rtl',
             fontSize: [10, 11, 12, 14, 16, 18].includes(s.fontSize) ? s.fontSize : 12,
-            alignmentOnly: s.alignmentOnly === true,
-            fontFamily: typeof s.fontFamily === 'string' ? s.fontFamily.slice(0, 100) : defaultSettings.fontFamily,
+            alignmentOnly: false,
+            fontFamily: typeof s.fontFamily === 'string' ? normalizeFontFamily(s.fontFamily.slice(0, 100)) : defaultSettings.fontFamily,
           } as ExportSettings,
         };
       }
     }
   } catch { /* Use a clean draft if browser storage is unavailable. */ }
-  return { markdown: samples[0].markdown, settings: defaultSettings };
+  return { markdown: '', settings: defaultSettings };
 }
 
 function App() {
@@ -64,7 +62,7 @@ function App() {
   const [markdown, setMarkdown] = useState(initial.markdown);
   const [settings, setSettings] = useState(initial.settings);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
-  const [sheet, setSheet] = useState<'settings' | 'samples' | 'fonts' | null>(null);
+  const [sheet, setSheet] = useState<'settings' | 'fonts' | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(true);
   const [storageError, setStorageError] = useState(false);
@@ -90,7 +88,7 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    if (!systemFonts.includes(settings.fontFamily)) documentFonts(settings.fontFamily).then(fonts => {
+    documentFonts(settings.fontFamily).then(fonts => {
       if (active) return Promise.all(fonts.map(activateFont));
     }).catch(error => { if (active) setNotice({ text: fontError(error), error: true }); });
     return () => { active = false; };
@@ -113,9 +111,9 @@ function App() {
     if (!markdown.trim() || busy) return;
     setBusy(true);
     try {
-      const fonts = await documentFonts(settings.fontFamily);
+      const fonts = await documentFonts(settings.fontFamily, markdown);
       const bytes = await exportWord(markdown, settings, fonts);
-      if (await saveDocx(bytes, safeFilename(settings.title + (settings.alignmentOnly ? '-فقط-راست-چین' : '')))) {
+      if (await saveDocx(bytes, safeFilename(settings.title))) {
         setNotice({ text: 'فایل Word آماده شد و ذخیره شد.' });
       }
     } catch (error) {
@@ -136,11 +134,11 @@ function App() {
 
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/u).length : 0;
   const fa = (n: number) => n.toLocaleString('fa-IR');
-  const dirLabel = settings.alignmentOnly ? 'فقط راست‌چین · مقایسه' : { rtl: 'راست‌به‌چپ', auto: 'جهت خودکار', ltr: 'چپ‌به‌راست' }[settings.direction];
-  const previewDir = (children: ReactNode) => settings.alignmentOnly ? 'ltr' : paragraphDirection(renderedText(children), settings.direction);
+  const dirLabel = { rtl: 'راست‌به‌چپ', auto: 'جهت خودکار', ltr: 'چپ‌به‌راست' }[settings.direction];
+  const previewDir = (children: ReactNode) => paragraphDirection(renderedText(children), settings.direction);
   const components = {
     pre: ({ children }: ComponentPropsWithoutRef<'pre'>) => {
-      const rich = Children.toArray(children).some(child => isValidElement<{ className?: string }>(child) && /language-(mermaid|math|latex|tex)\b/.test(child.props.className || ''));
+      const rich = Children.toArray(children).some(child => isValidElement<{ className?: string }>(child) && /language-(mermaid|math|latex|tex)\b/i.test(child.props.className || ''));
       return rich ? <>{children}</> : <pre>{children}</pre>;
     },
     code: ({ className, children }: ComponentPropsWithoutRef<'code'>) => {
@@ -150,7 +148,7 @@ function App() {
       if (mathLanguage(language)) return <MathView source={source} display={!className?.includes('math-inline')} />;
       return <code className={className}>{children}</code>;
     },
-    p: ({ children }: ComponentPropsWithoutRef<'p'>) => <p dir={previewDir(children)} style={settings.alignmentOnly ? { textAlign: 'right' } : undefined}>{children}</p>,
+    p: ({ children }: ComponentPropsWithoutRef<'p'>) => <p dir={previewDir(children)}>{children}</p>,
     h1: ({ children }: ComponentPropsWithoutRef<'h1'>) => <h1 dir={previewDir(children)}>{children}</h1>,
     h2: ({ children }: ComponentPropsWithoutRef<'h2'>) => <h2 dir={previewDir(children)}>{children}</h2>,
     h3: ({ children }: ComponentPropsWithoutRef<'h3'>) => <h3 dir={previewDir(children)}>{children}</h3>,
@@ -187,7 +185,6 @@ function App() {
 
             <div className="document-actions">
               <button onClick={importFile}><FolderOpen size={16} /> باز کردن فایل</button>
-              <button onClick={() => setSheet('samples')}><Sparkles size={16} /> متن‌های نمونه <ChevronDown size={13} /></button>
             </div>
 
             <div className="editor-tabs" role="tablist" aria-label="حالت نمایش">
@@ -210,7 +207,7 @@ function App() {
             </div>
 
             <div id="preview-panel" role="tabpanel" aria-labelledby="preview-tab" hidden={tab !== 'preview'} className="preview-panel">
-              {tab === 'preview' && (markdown.trim() ? <article className="prose" dir={settings.alignmentOnly ? 'ltr' : settings.direction === 'auto' ? 'auto' : settings.direction} style={{ fontSize: `${settings.fontSize + 2}px`, fontFamily: `"${settings.fontFamily}", Vazirmatn, "ParsiWord Symbols", sans-serif` }}><Markdown remarkPlugins={[remarkGfm, remarkMath]} components={components}>{markdown}</Markdown></article> : <div className="empty-preview"><FileText size={36} /><p>هنوز چیزی ننوشته‌ای.</p><button onClick={() => setTab('edit')}>شروع نوشتن <ArrowLeft size={16} /></button></div>)}
+              {tab === 'preview' && (markdown.trim() ? <article className="prose" dir={settings.direction === 'auto' ? 'auto' : settings.direction} style={{ fontSize: `${settings.fontSize + 2}px`, fontFamily: `"${settings.fontFamily}", Vazirmatn, "ParsiWord Symbols", sans-serif` }}><Markdown remarkPlugins={[remarkGfm, remarkMath]} components={components}>{markdown}</Markdown></article> : <div className="empty-preview"><FileText size={36} /><p>هنوز چیزی ننوشته‌ای.</p><button onClick={() => setTab('edit')}>شروع نوشتن <ArrowLeft size={16} /></button></div>)}
               <p className="preview-disclaimer">پیش‌نمایش متن است؛ صفحه‌بندی و نمایش نهایی را در Word بررسی کن.</p>
             </div>
 
@@ -219,7 +216,6 @@ function App() {
 
           <aside className="side-panel">
             <div className="direction-card"><span className="card-icon"><Settings2 size={19} /></span><div><h2>جهت درست، از ابتدا</h2><p>راست‌چین بودن با راست‌به‌چپ بودن فرق دارد. جهت متن در فایل Word هم ثبت می‌شود.</p></div><button onClick={() => setSheet('settings')}>{dirLabel}<ChevronDown size={14} /></button></div>
-            <button className="bracket-card" onClick={() => setSheet('samples')}><span className="bracket-icon" aria-hidden="true">( )</span><span><strong>پرانتزها را امتحان کنیم؟</strong><span>چند متن آماده برای بررسی در Word</span></span><ArrowLeft size={18} /></button>
             <div className="privacy-note"><ShieldCheck size={18} /><span>متن تو از دستگاه خارج نمی‌شود.<br />تبدیل آفلاین؛ اینترنت فقط برای دریافت فونت جدید.</span></div>
           </aside>
         </div>
@@ -241,8 +237,8 @@ function App() {
       <Dialog open={sheet !== null} onOpenChange={open => { if (!open) setSheet(null); }}>
         <DialogContent dir="rtl" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{sheet === 'settings' ? 'تنظیمات خروجی' : sheet === 'fonts' ? 'انتخاب فونت' : 'متن‌های نمونه'}</DialogTitle>
-            <DialogDescription>{sheet === 'fonts' ? 'فونت‌های Google Fonts، با دانلود و نگهداری روی دستگاه' : sheet === 'settings' ? 'جهت متن، اندازه و فونت سند Word را انتخاب کن.' : 'یک متن آماده برای بررسی خروجی انتخاب کن.'}</DialogDescription>
+            <DialogTitle>{sheet === 'fonts' ? 'انتخاب فونت' : 'تنظیمات خروجی'}</DialogTitle>
+            <DialogDescription>{sheet === 'fonts' ? 'فونت‌های Google Fonts، با دانلود و نگهداری روی دستگاه' : 'جهت متن، اندازه و فونت سند Word را انتخاب کن.'}</DialogDescription>
           </DialogHeader>
           {sheet === 'settings' ? <FieldGroup>
             <Field><FieldLabel htmlFor="export-title">نام فایل</FieldLabel><Input id="export-title" value={settings.title} onChange={e => update('title', e.target.value)} maxLength={90} /></Field>
@@ -253,12 +249,12 @@ function App() {
               </ToggleGroup>
               <FieldDescription>«خودکار» جهت هر پاراگراف را جدا تشخیص می‌دهد؛ پاراگراف انگلیسی چپ‌به‌راست می‌ماند.</FieldDescription>
             </Field>
-            <Field><FieldLabel>فونت خروجی</FieldLabel><Button variant="outline" className="w-full justify-between" onClick={() => setSheet('fonts')} aria-label="انتخاب فونت خروجی"><span dir="ltr">{settings.fontFamily}</span><ChevronDown data-icon="inline-end" /></Button><FieldDescription>{systemFonts.includes(settings.fontFamily) ? 'فونت سیستم؛ ممکن است در دستگاه دیگر جایگزین شود.' : 'فونت در سند جاسازی می‌شود؛ نمایش آن به پشتیبانی Word بستگی دارد.'}</FieldDescription></Field>
+            <Field><FieldLabel>فونت خروجی</FieldLabel><Button variant="outline" className="w-full justify-between" onClick={() => setSheet('fonts')} aria-label="انتخاب فونت خروجی"><span dir="ltr">{settings.fontFamily}</span><ChevronDown data-icon="inline-end" /></Button><FieldDescription>فونت داخل فایل Word جاسازی می‌شود و همراه سند منتقل می‌شود.</FieldDescription></Field>
             <Field><FieldLabel htmlFor="font-size">اندازهٔ متن</FieldLabel><Select dir="rtl" value={String(settings.fontSize)} onValueChange={value => update('fontSize', Number(value))}><SelectTrigger id="font-size" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{[10, 11, 12, 14, 16, 18].map(n => <SelectItem key={n} value={String(n)}>{fa(n)} pt</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
-            <Field orientation="horizontal"><div className="flex flex-1 flex-col gap-2"><FieldLabel htmlFor="align-only">حالت مقایسه: فقط راست‌چین</FieldLabel><FieldDescription>جهت پاراگراف را خاموش می‌کند تا تفاوت تراز و جهت را در دو خروجی بررسی کنی.</FieldDescription></div><Switch id="align-only" checked={settings.alignmentOnly} onCheckedChange={value => update('alignmentOnly', value)} /></Field>
             <p className="text-muted-foreground text-xs leading-6">کاغذ A4 است. فرمول LaTeX در Word قابل ویرایش است؛ نمودار Mermaid به تصویر تبدیل می‌شود. تصاویر Markdown هنوز پشتیبانی نمی‌شوند.</p>
             <Button onClick={() => setSheet(null)}>آماده است <Check data-icon="inline-end" /></Button>
-          </FieldGroup> : sheet === 'fonts' ? <><FontPicker value={settings.fontFamily} onSelect={family => { update('fontFamily', family); setSheet('settings'); }} /><Button variant="outline" onClick={() => setSheet('settings')}>بازگشت به تنظیمات</Button></> : <div className="flex flex-col gap-3">{samples.map(sample => <Button key={sample.id} variant="outline" className="h-auto justify-between gap-3 py-4" onClick={() => { setPrevious(markdown); setMarkdown(sample.markdown); update('title', sample.title); setTab('edit'); setSheet(null); }}><span className="flex flex-col items-start gap-2"><span>{sample.title}</span><span className="text-muted-foreground text-xs">{sample.description}</span></span><ArrowLeft data-icon="inline-end" /></Button>)}<p className="text-muted-foreground text-xs leading-6">متن فعلی را با «متن قبلی» در نوار ویرایش برگردان.</p></div>}
+          </FieldGroup> : <><FontPicker value={settings.fontFamily} onSelect={family => { update('fontFamily', family); setSheet('settings'); }} /><Button variant="outline" onClick={() => setSheet('settings')}>بازگشت به تنظیمات</Button></>}
+
         </DialogContent>
       </Dialog>
     </div>

@@ -41,3 +41,6 @@ src-tauri/gen/apple/DerivedData/
 *.njsproj
 *.sln
 *.sw?
+
+# Python verification/build helpers
+__pycache__/

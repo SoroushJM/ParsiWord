@@ -35,3 +35,14 @@ including 16 KiB ELF alignment and checking the current frontend bundle.
 Source/license resources for the math library are embedded among Tauri's
 frontend resources in the native .so; they are not separate APK asset entries.
 A new on-phone check for 0.4.0 remains pending.
+
+## 0.4.1
+
+Signed APK: 8,740,411 bytes, version code 4001, same certificate as 0.2.4/0.4.0,
+ARM64 only, nondebug and nontest. The increase over 0.4.0 includes full offline
+Noto Sans Mono and STIX Two Math assets needed for portable code/math exports.
+It does not include all Google Fonts. Metadata/signature/ZIP/16 KiB alignment
+and current clean-UI/offline-font-resource presence checks pass. This version
+also migrates old comparison/system-font draft settings while keeping text.
+Actual installation/Word Android rendering of 0.4.1 remains a phone check;
+no new emulator was started after the user's earlier instruction to stop it.

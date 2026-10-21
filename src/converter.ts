@@ -1,7 +1,5 @@
-import { unified } from 'unified';
-import remarkParse from 'remark-parse';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
+import { markdownParser as parser, documentFontUsage } from './markdown';
+import { bundledFont, codeRunFont, mathFont } from './font-assets';
 import { wordMath } from './math';
 import { mathLanguage, RichContentError } from './rich-content';
 import { renderMermaid, type Diagram, type DiagramRenderer } from './diagrams';
@@ -12,7 +10,7 @@ import { delimiterFont, delimiterFontParts } from './delimiter-font';
 import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel,
   LevelFormat, Packer, Paragraph, ShadingType, Table, TableCell, TableRow,
-  TextRun, WidthType, ImageRun,
+  TextRun, WidthType, ImageRun, BuilderElement,
   type IParagraphOptions, type IRunOptions, type NumberingDefinition,
   type ParagraphChild,
 } from 'docx';
@@ -29,7 +27,7 @@ export type ExportSettings = {
 export const defaultSettings: ExportSettings = {
   title: 'یادداشت من', direction: 'auto', fontSize: 12, alignmentOnly: false, fontFamily: 'Vazirmatn',
 };
-const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
+
 
 // Preserve logical Unicode text. Let OOXML and the reader perform visual ordering.
 export function paragraphDirection(text: string, mode: Direction): 'rtl' | 'ltr' {
@@ -46,7 +44,7 @@ function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href
       case 'strong': return leaves(n.children, { ...style, bold: true, boldComplexScript: true }, href);
       case 'emphasis': return leaves(n.children, { ...style, italics: true, italicsComplexScript: true }, href);
       case 'delete': return leaves(n.children, { ...style, strike: true }, href);
-      case 'inlineCode': return [{ text: n.value, style: { ...style, font: 'Courier New', color: '145A53', shading: { fill: 'EDF5F3', type: ShadingType.CLEAR } }, code: true }];
+      case 'inlineCode': return [{ text: n.value, style: { ...style, font: codeRunFont, color: '145A53', shading: { fill: 'EDF5F3', type: ShadingType.CLEAR } }, code: true }];
       case 'link': return leaves(n.children, style, /^(https?:|mailto:)/i.test(n.url) ? n.url : undefined);
       case 'break': return [{ text: '\n', style, break: true }];
       case 'image': return [{ text: `[تصویر: ${n.alt || 'بدون عنوان'}]`, style }];
@@ -213,7 +211,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
         return node.value.split('\n').map(line => new Paragraph({
         bidirectional: false, alignment: AlignmentType.LEFT,
         shading: { fill: 'F1F4F5' }, spacing: { after: 0, line: 280 },
-        children: fallbackPieces([{ text: line || ' ', style: { font: 'Courier New', size: 20 } }])
+        children: fallbackPieces([{ text: line || ' ', style: { font: codeRunFont, size: 20 } }])
           .map(piece => new TextRun({ ...piece.style, text: piece.text })),
       }));
       }
@@ -225,7 +223,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
   }
 
   const fontSize = Math.min(24, Math.max(9, settings.fontSize)) * 2;
-  const family = settings.fontFamily || 'Arial';
+  const family = settings.fontFamily || bundledFont;
   const selectedFont = fonts.find(f => f.family === family);
   const documentFont = { ascii: family, hAnsi: family, eastAsia: family, cs: selectedFont?.arabic === false ? 'Vazirmatn' : family };
   const headings = Array.from({ length: 6 }, (_, i) => ({
@@ -236,7 +234,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
   const children = root.children.flatMap(block);
   const embeddedFonts = fonts.map(font => ({ name: font.family, data: Buffer.from(font.regular), ...(font.bold ? { bold: Buffer.from(font.bold) } : {}) }));
   if (usesDelimiterFont) embeddedFonts.push({ name: delimiterFont.family, data: Buffer.from(delimiterFont.ttfBase64, 'base64') });
-  return new Document({
+  const document = new Document({
     title: settings.title || 'یادداشت من', creator: 'ParsiWord',
     description: 'Markdown document exported locally with ParsiWord',
     styles: {
@@ -247,6 +245,11 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
     fonts: embeddedFonts,
     sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1100, bottom: 1100, left: 1000, right: 1000 } } }, children }],
   });
+  if (documentFontUsage(markdown).math) document.Settings.addChildElement(new BuilderElement({
+    name: 'm:mathPr', attributes: { xmlns: { key: 'xmlns:m', value: 'http://schemas.openxmlformats.org/officeDocument/2006/math' } },
+    children: [new BuilderElement({ name: 'm:mathFont', attributes: { val: { key: 'm:val', value: mathFont } } })],
+  }));
+  return document;
 }
 
 export async function exportWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid): Promise<Uint8Array> {

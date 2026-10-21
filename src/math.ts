@@ -3,6 +3,7 @@ import { mml2omml } from 'mathml2omml';
 import { DOMParser, type Element } from '@xmldom/xmldom';
 import { BuilderElement, type AttributeData, type AttributePayload, type ParagraphChild } from 'docx';
 import { RichContentError } from './rich-content';
+import { bundledFont, mathFont } from './font-assets';
 
 const supported = new Set('math menclose mfrac mglyph mi mmultiscripts mn mo mover mroot mrow ms mspace msqrt mstyle msub msubsup msup mtable mtd mtext mtr munder munderover semantics'.split(' '));
 const options = { trust: false, throwOnError: true, maxExpand: 1000, maxSize: 20 } as const;
@@ -45,6 +46,17 @@ export function wordMath(source: string, display = false): ParagraphChild {
       const operand = Array.from(nary.childNodes).find(n => n.nodeName === 'm:e') as Element | undefined;
       const next = nary.nextSibling;
       if (operand && !operand.hasChildNodes() && next?.nodeType === 1 && !/^[=<>≤≥≠≈]/.test(next.textContent || '')) operand.appendChild(next);
+    }
+    // Declare the bundled math face on runs and control properties too; this
+    // avoids inheriting a prose font when a reader ignores the global math font.
+    const w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    const targets = [...Array.from(omml.getElementsByTagName('m:r')), ...Array.from(omml.getElementsByTagName('m:ctrlPr'))];
+    for (const target of targets) {
+      let properties = Array.from(target.childNodes).find(n => n.nodeName === 'w:rPr') as Element | undefined;
+      if (!properties) { properties = omml.createElementNS(w, 'w:rPr'); target.insertBefore(properties, target.firstChild); }
+      const font = omml.createElementNS(w, 'w:rFonts');
+      for (const slot of ['ascii', 'hAnsi', 'eastAsia', 'cs']) font.setAttributeNS(w, `w:${slot}`, slot === 'cs' ? bundledFont : mathFont);
+      properties.insertBefore(font, properties.firstChild);
     }
     // The validated root implements the same XML component contract as docx.Math.
     return new MathElement(element) as ParagraphChild;

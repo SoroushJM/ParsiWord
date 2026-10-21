@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import JSZip from 'jszip';
 import { readFile } from 'node:fs/promises';
 
-test('mobile editor, preview, persistence, samples and valid DOCX download', async ({ page }) => {
+test('mobile editor, preview, persistence and valid DOCX download', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
@@ -20,14 +20,9 @@ test('mobile editor, preview, persistence, samples and valid DOCX download', asy
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /ذخیرهٔ فایل Word/ }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('آزمایش گوشی.docx');
+  expect(download.suggestedFilename()).toMatch(/^آزمایش[ _]گوشی\.docx$/);
   const zip = await JSZip.loadAsync(await readFile((await download.path())!));
   expect(await zip.file('word/document.xml')!.async('string')).toContain('React 19');
-  await page.getByRole('button', { name: /متن‌های نمونه/ }).click();
-  await page.getByRole('button', { name: /آزمایش پرانتزها فارسی/ }).click();
-  await expect(page.getByRole('textbox', { name: 'متن Markdown' })).toHaveValue(/React \(version 19\)/);
-  await page.getByRole('button', { name: 'متن قبلی' }).click();
-  await expect(page.getByRole('textbox', { name: 'متن Markdown' })).toHaveValue('# عنوان فارسی\n\nمتن (React 19) درست است.');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
 });
@@ -42,18 +37,27 @@ test('imports markdown and allows empty draft without exporting', async ({ page 
   await expect(page.getByRole('textbox', { name: 'متن Markdown' })).toHaveValue('# گزارش\n\nآزمایش (۱۲۳)');
 });
 
-test('diagnostic direction option is reflected in generated Word', async ({ page }) => {
+test('removes diagnostics and migrates legacy system-font/comparison drafts without losing text', async ({ page }) => {
+  const markdown = 'متن قدیمی React (version 19) حفظ می‌شود.';
+  await page.addInitScript(({ markdown }) => localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown, settings: { title: 'سند قبلی', fontFamily: 'Arial', direction: 'rtl', alignmentOnly: true } })), { markdown });
   await page.goto('/');
+  await expect(page.getByRole('textbox', { name: 'متن Markdown' })).toHaveValue(markdown);
+  await expect(page.getByRole('button', { name: /متن‌های نمونه|پرانتزها را امتحان/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'تنظیمات خروجی' }).click();
-  await page.getByLabel('حالت مقایسه: فقط راست‌چین').check();
+  await expect(page.getByLabel('حالت مقایسه: فقط راست‌چین')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'انتخاب فونت خروجی' })).toContainText('Vazirmatn');
+  await page.getByRole('button', { name: 'انتخاب فونت خروجی' }).click();
+  await expect(page.getByText('فونت‌های سیستم', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'بازگشت به تنظیمات' }).click();
   await page.getByRole('button', { name: 'آماده است' }).click();
-  const downloadPromise = page.waitForEvent('download');
+  const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: /ذخیرهٔ فایل Word/ }).click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toContain('فقط-راست-چین');
+  const download = await downloading;
+  expect(download.suggestedFilename()).toMatch(/^سند[ _]قبلی\.docx$/);
   const zip = await JSZip.loadAsync(await readFile((await download.path())!));
-  const xml = await zip.file('word/document.xml')!.async('string');
-  expect(xml).toContain('w:bidi w:val="false"');
+  expect(await zip.file('word/document.xml')!.async('string')).toContain('<w:bidi/>');
+  expect(await zip.file('word/settings.xml')!.async('string')).toContain('embedTrueTypeFonts');
+  expect(zip.file(/word\/fonts\/.*\.odttf$/)).toHaveLength(2);
 });
 
 test('Google font is selectable, embedded in Word, and reusable after reload without another download', async ({ page }) => {
@@ -62,6 +66,7 @@ test('Google font is selectable, embedded in Word, and reusable after reload wit
   await page.route('https://fonts.googleapis.com/**', route => route.fulfill({ contentType: 'text/css', headers: { 'access-control-allow-origin': '*' }, body: '@font-face { font-family: "Noto Naskh Arabic"; src: url(https://fonts.gstatic.com/s/parsiword-test.ttf) format("truetype"); }' }));
   await page.route('https://fonts.gstatic.com/**', route => { downloads++; return route.fulfill({ contentType: 'font/ttf', headers: { 'access-control-allow-origin': '*' }, body: font }); });
   await page.goto('/');
+  await page.getByRole('textbox', { name: 'متن Markdown' }).fill('متن فارسی با فونت انتخابی.');
   await page.getByRole('button', { name: 'تنظیمات خروجی' }).click();
   await page.getByRole('button', { name: 'انتخاب فونت خروجی' }).click();
   await page.getByLabel('جست‌وجو در Google Fonts').fill('Noto Naskh Arabic');

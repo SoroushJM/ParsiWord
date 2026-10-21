@@ -36,3 +36,10 @@ Licenses and the unmodified mathml2omml distributed module are included under
 `public/licenses`; see its NOTICE and LGPL/GPL texts. The source distribution
 allows rebuilding with a modified library. Native Word Android rendering is
 still a separate device check from the XML and browser tests.
+
+In 0.4.1, Word math explicitly names the bundled STIX Two Math face in document
+math settings, runs and control properties, and embeds its complete MATH-capable
+TTF. Noto Sans Mono and Persian fallback faces travel with code and mixed text.
+LibreOffice may still use its own math renderer/font choices; embedding a font
+does not force an external reader to honor it. The independent font verifier
+checks what the file actually contains rather than inferring from screenshots.

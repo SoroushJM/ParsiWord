@@ -4,7 +4,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 
 const source = '# فرمول و نمودار\n\nرابطهٔ $E=mc^2$ برقرار است.\n\n$$\n\\int_0^1 x^2\\,dx=\\frac{1}{3}\n$$\n\n```mermaid\nflowchart TD\n  A[نوشتن Markdown] --> B{بررسی متن}\n  B -->|تأیید| C[خروجی Word]\n  B -->|اصلاح| A\n```\n\n```mermaid\nsequenceDiagram\n  participant A as نویسنده\n  participant B as پارسی‌ورد\n  A->>B: Markdown\n  B-->>A: Word\n```';
 
-test('offline math and Mermaid previews produce native Word equations and real PNG diagrams', async ({ page }) => {
+test('offline math and Mermaid previews produce native Word equations and real PNG diagrams', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort());
@@ -33,9 +33,9 @@ test('offline math and Mermaid previews produce native Word equations and real P
     expect(png.readUInt32BE(20)).toBeGreaterThan(100);
   }
   await mkdir('artifacts', { recursive: true });
-  await writeFile('artifacts/ParsiWord-LaTeX-Mermaid-demo.docx', bytes);
-  await writeFile('artifacts/ParsiWord-LaTeX-Mermaid-demo.md', source);
-  await page.screenshot({ path: '/workspace/tmp/rich-preview.png', fullPage: true });
+  await writeFile('artifacts/ParsiWord-0.4.1-LaTeX-Mermaid-demo.docx', bytes);
+  await writeFile('artifacts/ParsiWord-0.4.1-LaTeX-Mermaid-demo.md', source);
+  await page.screenshot({ path: testInfo.outputPath('rich-preview.png'), fullPage: true });
   expect(errors).toEqual([]);
 });
 

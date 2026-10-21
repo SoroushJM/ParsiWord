@@ -38,3 +38,18 @@ describe('font downloads are stored for offline Word exports', () => {
     expect(() => validateFont(new TextEncoder().encode('<html>server error</html>'))).toThrow('FONT_FORMAT');
   });
 });
+
+it('keeps old draft font choices portable when retiring system-only fonts', async () => {
+  const { normalizeFontFamily } = await import('./fonts');
+  for (const family of ['Arial', 'Tahoma', 'Times New Roman', 'Courier New']) expect(normalizeFontFamily(family)).toBe('Vazirmatn');
+  expect(normalizeFontFamily('Noto Naskh Arabic')).toBe('Noto Naskh Arabic');
+});
+
+it('detects required fonts through Markdown structure, including nested math and literal code', async () => {
+  const { documentFontUsage } = await import('./markdown');
+  expect(documentFontUsage('متن ساده')).toEqual({ code: false, math: false });
+  expect(documentFontUsage('> $x^2$\n\n- `fn()`')).toEqual({ code: true, math: true });
+  expect(documentFontUsage('```mermaid\ngraph TD\nA-->B\n```')).toEqual({ code: false, math: false });
+  expect(documentFontUsage('```latex\nx^2\n```')).toEqual({ code: false, math: true });
+  expect(documentFontUsage('```js\n$x^2$\n```')).toEqual({ code: true, math: false });
+});

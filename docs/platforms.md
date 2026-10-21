@@ -73,3 +73,39 @@ download failed in this proxied environment; supplying the same official
 AppImage type2 runtime via `appimagetool --runtime-file` completed packaging.
 The 107 MiB AppImage is a local build artifact, not part of the public downloads
 or a tested portability claim. The smaller DEB is the published Linux package.
+
+## 0.4.1 follow-up
+
+The production interface no longer exposes sample/diagnostic/comparison buttons.
+Old comparison drafts migrate to proper paragraph/run direction without losing
+text. System-only fonts are no longer selectable; existing such selections
+migrate to the bundled font. All UI export paths load embeddable selected,
+Persian fallback, code and math faces as needed before creating Word.
+
+801 unit tests and seven Chromium plus seven WebKit tests pass. WebKit runs in
+Linux with an iPhone viewport; this is useful frontend coverage, not an iOS
+native-runtime test. Native Windows launch and iOS compilation still require
+their actual hosts. No authenticated GitHub runner is available in this session;
+no remote was created or pushed. The prepared workflows now run browser checks
+and include a macOS desktop target (13.3+, matching Safari 16.4).
+
+The font portability test restores all ODTTF bytes and compares the complete
+fonts to their source files. The accompanying verification script independently
+checks font declarations, relationship targets, SFNT data, embedding permission
+and full file hashes. The sample carries six faces across selected/Persian,
+code, mathematics and rare-symbol fonts. Library defaults retain embedded fonts
+when Word saves the document again.
+
+Final 0.4.1 native checks: the actual Linux release app imported a Markdown file,
+previewed it and saved DOCX with native dialogs. All six embedded faces were
+restored and matched their original source bytes. A local AppImage assembled
+from the same final release binary also launched, previewed the draft, saved
+Word and passed the same full-font check; it is not publicly distributed.
+The Windows release binary is AMD64 and contains the latest frontend/font
+assets; NSIS compilation completed. An extra 7-Zip inspection has incomplete
+support for this NSIS command set and is not treated as installer execution
+validation. Windows OS execution still needs a Windows host.
+Android 0.4.1 is ARM64-only, version code 4001, signed with the same preview
+certificate. The signed 8,740,411-byte APK passed metadata, signature, ZIP,
+16 KiB ELF/alignment and latest-frontend/offline-font-asset checks. No new
+Android emulator was started, as requested. The new APK phone check is pending.

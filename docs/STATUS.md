@@ -139,3 +139,38 @@ DEB packaging succeeded after the category fix. An AppImage was also packaged
 locally using the official runtime downloaded separately after the packager's
 automatic download failed. Public Linux distribution uses the 6.24 MB DEB;
 AppImage runtime/portability has not been tested and it was not uploaded.
+
+## 0.4.1 — production controls and portable fonts
+
+Removed sample buttons, bracket-test card and alignment-only switch from the UI.
+New drafts start blank. Existing draft text is preserved; old alignment-only
+settings are disabled and system-font selections migrate to bundled Vazirmatn.
+The low-level diagnostic converter API and regression fixtures remain for tools.
+
+All selectable fonts now have actual embeddable files. Word exports load the
+selected family plus needed Persian, Noto Sans Mono code and STIX Two Math math
+faces. Math font is declared globally and on native math runs/control properties.
+Fonts are full SFNT files, obfuscated according to OOXML, with font relationships
+and embedTrueTypeFonts enabled. Code and math assets plus OFL licenses are bundled
+for offline use. The rare-symbol fallback remains embedded only when needed.
+
+801 unit tests pass. Seven Chromium and seven WebKit UI tests pass, including
+migration, absent test controls, Google-font caching and full decoded-font byte
+comparisons. WebKit replaces spaces with underscores in download suggestions;
+the filename tests account for that browser behavior. LibreOffice visual checks
+show the Persian and code faces from the file; its math renderer substitutes its
+own fonts even though STIX is correctly declared and embedded in the DOCX.
+Reader-specific rendering cannot be forced by adding more copies of font files.
+
+macOS desktop configuration/CI and native-host browser checks were added. macOS
+and iOS cannot be built/run in this Linux-only environment; Windows release can
+be linked/packaged here but cannot be certified as runtime-tested on Windows.
+
+Final native result: Linux release and local AppImage both ran and saved actual
+DOCX files through native dialogs; each output passed full-byte checks for all
+six embedded faces. Windows release/NSIS generation passed, including current
+asset and AMD64 checks; no Windows OS launch is claimed. Android 0.4.1 release
+APK passed signing/ABI/alignment/current-assets checks and retains the previous
+signing certificate. macOS/iOS config schemas pass, but native Apple builds
+cannot be performed without their macOS/Xcode host. These host limitations are
+not represented as completed runtime tests. No Android x86 build was created.

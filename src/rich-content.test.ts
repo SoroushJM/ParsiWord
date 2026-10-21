@@ -30,6 +30,13 @@ describe('editable Word equations', () => {
     expect(operand.textContent).toBe('x2');
     expect((operand as unknown as Element).getElementsByTagName('m:sSup')).toHaveLength(1);
   });
+  it('names the embedded math font on native runs and in document settings', async () => {
+    const { doc, xml } = await document('$x^2+1$');
+    for (const run of Array.from(doc.getElementsByTagName('m:r'))) {
+      expect(run.getElementsByTagName('w:rFonts')[0].getAttribute('w:ascii')).toBe('STIX Two Math');
+    }
+    expect(xml).not.toContain('Cambria Math');
+  });
   it('isolates inline equations from Persian direction and keeps styled text and links', async () => {
     const { doc } = await document('رابطهٔ **$x^2$** و [فرمول $a+b$](https://example.com) برقرار است.');
     expect(doc.getElementsByTagName('m:oMath')).toHaveLength(2);

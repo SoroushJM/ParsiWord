@@ -1,0 +1,15 @@
+Vazirmatn: existing bundled regular/bold faces; see OFL-Vazirmatn.txt.
+
+Noto Sans Mono: Google Fonts ofl/notosansmono/NotoSansMono[wdth,wght].ttf.
+Static full faces instantiated at wdth=100 and wght=400/700 with fontTools;
+internal style names updated to Regular/Bold. SIL Open Font License 1.1:
+OFL-NotoSansMono.txt. These files are not font subsets.
+https://github.com/google/fonts/tree/main/ofl/notosansmono
+
+STIX Two Math: unmodified Google Fonts ofl/stixtwomath/STIXTwoMath-Regular.ttf,
+with its OpenType MATH table. SIL Open Font License 1.1: OFL-STIXTwoMath.txt.
+SHA-256: 562551b15b836e6e01d1b7350909baf3c8c8d83260c1190fbf4544333e6936de
+https://github.com/google/fonts/tree/main/ofl/stixtwomath
+
+Rebuild script: scripts/build-document-fonts.py in the source distribution.
+ParsiWord Symbols: existing rare-delimiter subset; see scripts/build-delimiter-font.py.
