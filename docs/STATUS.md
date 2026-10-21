@@ -108,3 +108,34 @@ APK نهایی ۰.۲.۱ با versionCode=2001، minSdk=24 و targetSdk=36، شا
 محیط ساخت در /workspace/toolchains است. برای ساخت دوباره . /workspace/toolchains/env.sh و سپس npm run tauri -- android build --debug --apk --target aarch64 x86_64 --ci را اجرا کن. لاگ نهایی android-021-final.log و تست‌ها unit-021.log و ui-021-final.log هستند. شبیه‌ساز لازم نیست؛ کاربر خودش تست گوشی را انجام می‌دهد.
 
 کاربر خواسته سقف کانتکست همین محیط ۲۵۲k باشد؛ ابزار تغییر سقف یا usage نداریم و نباید ادعا شود این تنظیم انجام شده است. این وضعیت برای ادامهٔ کوتاه‌تر در گفت‌وگوی تازه ذخیره شده است.
+
+## 0.4.0 — LaTeX and Mermaid
+
+The Android baseline was committed as 9439794 and tagged android-v0.2.4-baseline.
+The platform work was committed separately as b8ab561, tagged platforms-v0.3.0.
+Android emulator work was stopped at the user's request after they confirmed
+that 0.2.4 installs and works on their phone.
+
+Added remark-math parsing, local KaTeX preview, native editable OMML export,
+and lazy local Mermaid SVG/PNG rendering. Complete formulas are not replaced
+with screenshots; diagrams are raster images with their Markdown source in
+alternative text. Invalid or unsupported rich content reports a useful error
+and blocks misleading export. Existing RTL direction tests are retained.
+The integral regression discovered during visual inspection was corrected by
+attaching a structured integrand to the library's otherwise empty n-ary body.
+See docs/rich-content.md for limits and bundled library licenses/source.
+
+Final functional checks: 798 unit tests and all six Playwright tests pass;
+TypeScript/Vite builds pass. The generated Word demo was visually checked
+in LibreOffice after the integral fix. The actual Linux release application
+opened the demo Markdown through its native dialog, rendered equations and
+Mermaid, then saved a DOCX with two native equations and two PNG diagrams.
+Windows MSVC release linking and NSIS generation also passed, but no Windows
+runtime test was performed. Linux category validation was corrected in this
+phase. iOS configuration/workflow are prepared but unbuilt/unexecuted.
+Android 0.4.0 ARM64 release signature/ABI/16 KiB alignment checks passed with
+the same preview signing certificate as 0.2.4; new phone confirmation pending.
+DEB packaging succeeded after the category fix. An AppImage was also packaged
+locally using the official runtime downloaded separately after the packager's
+automatic download failed. Public Linux distribution uses the 6.24 MB DEB;
+AppImage runtime/portability has not been tested and it was not uploaded.

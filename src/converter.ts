@@ -1,6 +1,10 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import { wordMath } from './math';
+import { mathLanguage, RichContentError } from './rich-content';
+import { renderMermaid, type Diagram, type DiagramRenderer } from './diagrams';
 import { Buffer } from 'buffer';
 import type { FontBundle } from './fonts';
 import { paragraphBaseDirection, wordDirectionSpans } from './word-direction';
@@ -8,7 +12,7 @@ import { delimiterFont, delimiterFontParts } from './delimiter-font';
 import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel,
   LevelFormat, Packer, Paragraph, ShadingType, Table, TableCell, TableRow,
-  TextRun, WidthType,
+  TextRun, WidthType, ImageRun,
   type IParagraphOptions, type IRunOptions, type NumberingDefinition,
   type ParagraphChild,
 } from 'docx';
@@ -25,7 +29,7 @@ export type ExportSettings = {
 export const defaultSettings: ExportSettings = {
   title: 'یادداشت من', direction: 'auto', fontSize: 12, alignmentOnly: false, fontFamily: 'Vazirmatn',
 };
-const parser = unified().use(remarkParse).use(remarkGfm);
+const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
 
 // Preserve logical Unicode text. Let OOXML and the reader perform visual ordering.
 export function paragraphDirection(text: string, mode: Direction): 'rtl' | 'ltr' {
@@ -33,10 +37,11 @@ export function paragraphDirection(text: string, mode: Direction): 'rtl' | 'ltr'
   return paragraphBaseDirection(text);
 }
 
-type Leaf = { text: string; style: IRunOptions; href?: string; code?: boolean; break?: boolean };
+type Leaf = { text: string; style: IRunOptions; href?: string; math?: ParagraphChild; code?: boolean; break?: boolean };
 function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href?: string): Leaf[] {
   return nodes.flatMap((n): Leaf[] => {
     switch (n.type) {
+      case 'inlineMath': return [{ text: '\ufffc', style, href, math: wordMath(n.value) }];
       case 'text': return [{ text: n.value, style, href }];
       case 'strong': return leaves(n.children, { ...style, bold: true, boldComplexScript: true }, href);
       case 'emphasis': return leaves(n.children, { ...style, italics: true, italicsComplexScript: true }, href);
@@ -54,14 +59,14 @@ function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href
   });
 }
 
-export function createWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = []): Document {
+export function createWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], diagrams: ReadonlyMap<string, Diagram> = new Map()): Document {
   const root = parser.parse(markdown) as Root;
   const numbering: NumberingDefinition[] = [];
   let listId = 0;
   let usesDelimiterFont = false;
 
   function fallbackPieces(pieces: Leaf[]): Leaf[] {
-    return pieces.flatMap(piece => piece.break ? [piece] : delimiterFontParts(piece.text).map(part => {
+    return pieces.flatMap(piece => (piece.break || piece.math) ? [piece] : delimiterFontParts(piece.text).map(part => {
       if (!part.fallback) return { ...piece, text: part.text };
       usesDelimiterFont = true;
       return { ...piece, text: part.text, style: { ...piece.style, font: {
@@ -88,8 +93,8 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
       ? [{ start: 0, end: text.length, direction: 'ltr' as const, needsBoundaryMarks: false }]
       : wordDirectionSpans(text, dir, codeRanges);
     const children: ParagraphChild[] = [];
-    let activeLink: string | undefined, linkRuns: TextRun[] = [];
-    function appendRun(run: TextRun, href?: string) {
+    let activeLink: string | undefined, linkRuns: ParagraphChild[] = [];
+    function appendRun(run: ParagraphChild, href?: string) {
       if (!href) {
         activeLink = undefined;
         children.push(run);
@@ -112,7 +117,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
         const end = Math.min(span.end, pieceEnd) - pieceStart;
         if (end > start) {
           const isRtl = !settings.alignmentOnly && span.direction === 'rtl';
-          const run = new TextRun({
+          const run = piece.math || new TextRun({
             ...piece.style,
             ...(piece.break ? { break: 1 } : { text: piece.text.slice(start, end) }),
             rightToLeft: isRtl ? true : undefined,
@@ -193,12 +198,25 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
       case 'blockquote': return node.children.flatMap(child => child.type === 'paragraph'
         ? [para(child.children, { border: { right: { color: '219888', size: 18, style: BorderStyle.SINGLE, space: 12 } }, indent: { left: 200, right: 200 } })]
         : block(child));
-      case 'code': return node.value.split('\n').map(line => new Paragraph({
+      case 'math': return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER, spacing: { before: 160, after: 160 } })];
+      case 'code': {
+        if (mathLanguage(node.lang)) return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER })];
+        if (node.lang?.toLowerCase() === 'mermaid') {
+          const diagram = diagrams.get(node.value);
+          if (!diagram) throw new RichContentError('نمودار هنوز برای خروجی آماده نشده است. دوباره امتحان کن.');
+          const scale = Math.min(1, 620 / diagram.width, 760 / diagram.height);
+          return [new Paragraph({ bidirectional: false, alignment: AlignmentType.CENTER, children: [new ImageRun({
+            type: 'png', data: diagram.png, transformation: { width: Math.max(1, Math.round(diagram.width * scale)), height: Math.max(1, Math.round(diagram.height * scale)) },
+            altText: { name: 'Mermaid', title: 'Mermaid diagram', description: node.value },
+          })] })];
+        }
+        return node.value.split('\n').map(line => new Paragraph({
         bidirectional: false, alignment: AlignmentType.LEFT,
         shading: { fill: 'F1F4F5' }, spacing: { after: 0, line: 280 },
         children: fallbackPieces([{ text: line || ' ', style: { font: 'Courier New', size: 20 } }])
           .map(piece => new TextRun({ ...piece.style, text: piece.text })),
       }));
+      }
       case 'thematicBreak': return [new Paragraph({ border: { bottom: { color: 'CEDBD7', size: 6, style: BorderStyle.SINGLE } } })];
       case 'html': return [para([{ type: 'text', value: node.value }])];
       case 'footnoteDefinition': return [para([{ type: 'text', value: `[${node.label || node.identifier}] ` }]), ...node.children.flatMap(block)];
@@ -231,8 +249,16 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
   });
 }
 
-export async function exportWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = []): Promise<Uint8Array> {
-  return new Uint8Array(await Packer.toArrayBuffer(createWord(markdown, settings, fonts)));
+export async function exportWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid): Promise<Uint8Array> {
+  const diagrams = new Map<string, Diagram>();
+  async function prepare(node: { type: string; lang?: string | null; value?: string; children?: readonly unknown[] }): Promise<void> {
+    if (node.type === 'code' && node.lang?.toLowerCase() === 'mermaid' && node.value !== undefined && !diagrams.has(node.value)) {
+      diagrams.set(node.value, await renderer(node.value));
+    }
+    if (node.children) for (const child of node.children) await prepare(child as Parameters<typeof prepare>[0]);
+  }
+  await prepare(parser.parse(markdown));
+  return new Uint8Array(await Packer.toArrayBuffer(createWord(markdown, settings, fonts, diagrams)));
 }
 
 export function safeFilename(title: string): string {

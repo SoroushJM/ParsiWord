@@ -1,0 +1,14 @@
+ParsiWord uses KaTeX and Mermaid under the MIT license, and mathml2omml
+0.5.0 under LGPL-3.0-or-later. Copyright belongs to their respective authors.
+
+mathml2omml is unmodified. Its complete distributed JavaScript module, type
+definitions and license texts accompany this application in licenses/mathml2omml.
+Upstream preferred source: https://github.com/fiduswriter/mathml2omml/tree/v0.5.0
+NPM release: https://www.npmjs.com/package/mathml2omml/v/0.5.0
+
+You may modify/replace mathml2omml and reverse-engineer this application for
+that purpose. The accompanying ParsiWord source distribution contains all
+application sources and lockfiles to rebuild/relink it: replace the npm
+module, then npm run build and the appropriate Tauri build command. Build and
+installation instructions are in README.md and docs/platforms.md. No private
+signing keys are supplied or required to build your own unsigned application.

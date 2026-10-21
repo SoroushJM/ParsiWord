@@ -15,4 +15,8 @@ export const samples = [
     id: 'mixed', title: 'متن ترکیبی و نشانه‌ها', description: 'لینک، شماره، مبلغ، نقل‌قول و شکست خط',
     markdown: '# آزمایش متن ترکیبی\n\nکتابخانهٔ React (version **19**) را نصب کنید.\n\nاین پروژه (React و TypeScript) روی اندروید اجرا می‌شود.\n\nنقل‌قول «Hello, world!» و توضیح (فارسی) را بررسی کنید.\n\nمبلغ (**250** USD) و تخفیف 25% ثبت شد.\n\nشمارهٔ +98-21-12345678 و شناسهٔ 123_456 را بررسی کنید.\n\nتاریخ 2026/10/21 و نسخهٔ v2.1.0 ثبت شد.\n\nپیوند [React (version **19**)](https://react.dev/) و نشانی user@example.com را بررسی کنید.\n\nنشانی https://example.com/docs?q=React#v19 آماده است.\n\nکد `fn(12);` و مسیر `C:\\src\\index.ts` باید چپ‌به‌راست بمانند.\n\nاین عبارت طولانی است تا در نمایش گوشی بشکند: کتابخانهٔ React (version **19**) را نصب کنید و نتیجه (مرحلهٔ اول (نسخهٔ آزمایشی)) را دوباره ببینید.\n\nThis is an English sentence (with parentheses) and number 123.\n',
   },
+  {
+    id: 'rich', title: 'فرمول و نمودار', description: 'LaTeX قابل ویرایش و نمودار Mermaid',
+    markdown: '# فرمول و نمودار\n\nرابطهٔ $E=mc^2$ در متن فارسی هم قابل استفاده است.\n\n$$\n\\int_0^1 x^2\\,dx=\\frac{1}{3}\n$$\n\n```mermaid\nflowchart TD\n  A[نوشتن Markdown] --> B{بررسی متن}\n  B -->|تأیید| C[خروجی Word]\n  B -->|اصلاح| A\n```\n\n## دنبالهٔ پیام‌ها\n\n```mermaid\nsequenceDiagram\n  participant A as نویسنده\n  participant B as پارسی‌ورد\n  A->>B: Markdown\n  B-->>A: Word\n```\n',
+  },
 ];

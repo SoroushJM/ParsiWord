@@ -2,6 +2,9 @@ import { Children, isValidElement, useEffect, useRef, useState, type ComponentPr
 import { isTauri } from '@tauri-apps/api/core';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import { MathView, MermaidView } from './RichPreview';
+import { mathLanguage, RichContentError } from './rich-content';
 import { version as appVersion } from '../package.json';
 import {
   ArrowDownToLine, ArrowLeft, Bold, BookOpen, Check, CheckCheck,
@@ -31,7 +34,7 @@ const storageKey = 'parsiword-draft-v1';
 function renderedText(value: ReactNode): string {
   return Children.toArray(value).map(child => typeof child === 'string' || typeof child === 'number'
     ? String(child)
-    : isValidElement<{ children?: ReactNode }>(child) ? renderedText(child.props.children) : '').join('');
+    : isValidElement<{ children?: ReactNode; className?: string }>(child) ? (/math-(inline|display)/.test(child.props.className || '') ? '\ufffc' : renderedText(child.props.children)) : '').join('');
 }
 function loadDraft() {
   try {
@@ -117,7 +120,7 @@ function App() {
       }
     } catch (error) {
       console.error('DOCX export failed', error);
-      setNotice({ text: String(error).includes('FONT_') ? fontError(error) : 'ذخیرهٔ فایل انجام نشد. فضای خالی و محل ذخیره را بررسی کن و دوباره امتحان کن.', error: true });
+      setNotice({ text: error instanceof RichContentError ? error.message : String(error).includes('FONT_') ? fontError(error) : 'ذخیرهٔ فایل انجام نشد. فضای خالی و محل ذخیره را بررسی کن و دوباره امتحان کن.', error: true });
     } finally { setBusy(false); }
   }
 
@@ -136,6 +139,17 @@ function App() {
   const dirLabel = settings.alignmentOnly ? 'فقط راست‌چین · مقایسه' : { rtl: 'راست‌به‌چپ', auto: 'جهت خودکار', ltr: 'چپ‌به‌راست' }[settings.direction];
   const previewDir = (children: ReactNode) => settings.alignmentOnly ? 'ltr' : paragraphDirection(renderedText(children), settings.direction);
   const components = {
+    pre: ({ children }: ComponentPropsWithoutRef<'pre'>) => {
+      const rich = Children.toArray(children).some(child => isValidElement<{ className?: string }>(child) && /language-(mermaid|math|latex|tex)\b/.test(child.props.className || ''));
+      return rich ? <>{children}</> : <pre>{children}</pre>;
+    },
+    code: ({ className, children }: ComponentPropsWithoutRef<'code'>) => {
+      const language = className?.match(/language-(\S+)/)?.[1];
+      const source = String(children).replace(/\n$/, '');
+      if (language?.toLowerCase() === 'mermaid') return <MermaidView source={source} />;
+      if (mathLanguage(language)) return <MathView source={source} display={!className?.includes('math-inline')} />;
+      return <code className={className}>{children}</code>;
+    },
     p: ({ children }: ComponentPropsWithoutRef<'p'>) => <p dir={previewDir(children)} style={settings.alignmentOnly ? { textAlign: 'right' } : undefined}>{children}</p>,
     h1: ({ children }: ComponentPropsWithoutRef<'h1'>) => <h1 dir={previewDir(children)}>{children}</h1>,
     h2: ({ children }: ComponentPropsWithoutRef<'h2'>) => <h2 dir={previewDir(children)}>{children}</h2>,
@@ -196,7 +210,7 @@ function App() {
             </div>
 
             <div id="preview-panel" role="tabpanel" aria-labelledby="preview-tab" hidden={tab !== 'preview'} className="preview-panel">
-              {tab === 'preview' && (markdown.trim() ? <article className="prose" dir={settings.alignmentOnly ? 'ltr' : settings.direction === 'auto' ? 'auto' : settings.direction} style={{ fontSize: `${settings.fontSize + 2}px`, fontFamily: `"${settings.fontFamily}", Vazirmatn, "ParsiWord Symbols", sans-serif` }}><Markdown remarkPlugins={[remarkGfm]} components={components}>{markdown}</Markdown></article> : <div className="empty-preview"><FileText size={36} /><p>هنوز چیزی ننوشته‌ای.</p><button onClick={() => setTab('edit')}>شروع نوشتن <ArrowLeft size={16} /></button></div>)}
+              {tab === 'preview' && (markdown.trim() ? <article className="prose" dir={settings.alignmentOnly ? 'ltr' : settings.direction === 'auto' ? 'auto' : settings.direction} style={{ fontSize: `${settings.fontSize + 2}px`, fontFamily: `"${settings.fontFamily}", Vazirmatn, "ParsiWord Symbols", sans-serif` }}><Markdown remarkPlugins={[remarkGfm, remarkMath]} components={components}>{markdown}</Markdown></article> : <div className="empty-preview"><FileText size={36} /><p>هنوز چیزی ننوشته‌ای.</p><button onClick={() => setTab('edit')}>شروع نوشتن <ArrowLeft size={16} /></button></div>)}
               <p className="preview-disclaimer">پیش‌نمایش متن است؛ صفحه‌بندی و نمایش نهایی را در Word بررسی کن.</p>
             </div>
 
@@ -242,7 +256,7 @@ function App() {
             <Field><FieldLabel>فونت خروجی</FieldLabel><Button variant="outline" className="w-full justify-between" onClick={() => setSheet('fonts')} aria-label="انتخاب فونت خروجی"><span dir="ltr">{settings.fontFamily}</span><ChevronDown data-icon="inline-end" /></Button><FieldDescription>{systemFonts.includes(settings.fontFamily) ? 'فونت سیستم؛ ممکن است در دستگاه دیگر جایگزین شود.' : 'فونت در سند جاسازی می‌شود؛ نمایش آن به پشتیبانی Word بستگی دارد.'}</FieldDescription></Field>
             <Field><FieldLabel htmlFor="font-size">اندازهٔ متن</FieldLabel><Select dir="rtl" value={String(settings.fontSize)} onValueChange={value => update('fontSize', Number(value))}><SelectTrigger id="font-size" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{[10, 11, 12, 14, 16, 18].map(n => <SelectItem key={n} value={String(n)}>{fa(n)} pt</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
             <Field orientation="horizontal"><div className="flex flex-1 flex-col gap-2"><FieldLabel htmlFor="align-only">حالت مقایسه: فقط راست‌چین</FieldLabel><FieldDescription>جهت پاراگراف را خاموش می‌کند تا تفاوت تراز و جهت را در دو خروجی بررسی کنی.</FieldDescription></div><Switch id="align-only" checked={settings.alignmentOnly} onCheckedChange={value => update('alignmentOnly', value)} /></Field>
-            <p className="text-muted-foreground text-xs leading-6">کاغذ A4 است. تصویر، Mermaid و تبدیل فرمول ریاضی هنوز پشتیبانی نمی‌شوند.</p>
+            <p className="text-muted-foreground text-xs leading-6">کاغذ A4 است. فرمول LaTeX در Word قابل ویرایش است؛ نمودار Mermaid به تصویر تبدیل می‌شود. تصاویر Markdown هنوز پشتیبانی نمی‌شوند.</p>
             <Button onClick={() => setSheet(null)}>آماده است <Check data-icon="inline-end" /></Button>
           </FieldGroup> : sheet === 'fonts' ? <><FontPicker value={settings.fontFamily} onSelect={family => { update('fontFamily', family); setSheet('settings'); }} /><Button variant="outline" onClick={() => setSheet('settings')}>بازگشت به تنظیمات</Button></> : <div className="flex flex-col gap-3">{samples.map(sample => <Button key={sample.id} variant="outline" className="h-auto justify-between gap-3 py-4" onClick={() => { setPrevious(markdown); setMarkdown(sample.markdown); update('title', sample.title); setTab('edit'); setSheet(null); }}><span className="flex flex-col items-start gap-2"><span>{sample.title}</span><span className="text-muted-foreground text-xs">{sample.description}</span></span><ArrowLeft data-icon="inline-end" /></Button>)}<p className="text-muted-foreground text-xs leading-6">متن فعلی را با «متن قبلی» در نوار ویرایش برگردان.</p></div>}
         </DialogContent>

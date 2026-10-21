@@ -6,3 +6,10 @@
 @media(prefers-reduced-motion:reduce){.spin{animation:none}*{scroll-behavior:auto!important}}
 
 }
+
+.math-inline { display: inline-block; unicode-bidi: isolate; max-width: 100%; vertical-align: middle; }
+.math-block { direction: ltr; overflow-x: auto; text-align: center; margin-block: 1em; }
+.mermaid-diagram { overflow-x: auto; margin-block: 1em; background: white; border-radius: .5rem; padding: .5rem; }
+.mermaid-diagram svg { max-width: 100% !important; height: auto; display: block; margin-inline: auto; }
+.rich-error { color: #a32f23; overflow-wrap: anywhere; }
+.rich-error code, .rich-error pre { white-space: pre-wrap; }

@@ -1,4 +1,4 @@
-# Android distribution, 0.2.4
+# Android distribution, 0.2.4 and 0.4.0
 
 The user requested a replacement for the APK that their Samsung installer rejected and explicitly requested that future Android builds contain no x86 output.
 
@@ -19,3 +19,19 @@ The signed APK is **5,324,347 bytes**, compared with 48,566,154 bytes for 0.2.3.
 `scripts/verify-android-apk.py` checks the final signed file: signature validity from API 24, certificate continuity, version/package metadata, exactly one ARM64 library, no debug/test-only flags, native extraction, ZIP CRC and alignment, AArch64 ELF load segments and 16 KiB page alignment, and presence of the latest frontend and bundled symbol font. Its report is `artifacts/verification-0.2.4.json`. TypeScript, Vite, Rust release, Kotlin/Java and Android optimization/package tasks completed successfully.
 
 No converter or UI behavior changed in this version. The existing 777 unit and 4 Playwright tests were last run for the 0.2.3 functional changes and were not unnecessarily repeated for packaging alone. No emulator was started. APK structural checks are not proof of installation or launch on the user's phone; those results remain pending.
+
+## Follow-up: device confirmation and 0.4.0
+
+The user confirmed that 0.2.4 installs and works on their Android phone.
+Emulator testing was stopped at their request; see android-emulator-check.md.
+
+0.4.0 adds offline LaTeX and Mermaid. Its release APK remains ARM64-only,
+API 24+, nondebug, nontest, with the same application ID and preview signing
+certificate. Version code is 4000 (greater than the previous 2004). The
+signed file is 7,695,931 bytes (about 7.34 MiB). The increase includes the local
+math/diagram engines and math fonts; the Google catalogue is still only a
+small family list, not all font files. The same APK verification script passed,
+including 16 KiB ELF alignment and checking the current frontend bundle.
+Source/license resources for the math library are embedded among Tauri's
+frontend resources in the native .so; they are not separate APK asset entries.
+A new on-phone check for 0.4.0 remains pending.
