@@ -3,6 +3,9 @@ import { renderMath } from './math';
 import { diagramFontSize, renderMermaid } from './diagrams';
 import 'katex/dist/katex.min.css';
 import './diagram-preview.css';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
 
 export function MathView({ source, display = false }: { source: string; display?: boolean }) {
   const result = useMemo(() => {
@@ -10,9 +13,10 @@ export function MathView({ source, display = false }: { source: string; display?
     catch (error) { return { error: (error as Error).message }; }
   }, [source, display]);
   const Tag = display ? 'div' : 'span';
-  return result.html
-    ? <Tag dir="ltr" className={display ? 'math-block' : 'math-inline'} dangerouslySetInnerHTML={{ __html: result.html }} />
-    : <Tag className="rich-error" role="alert">{result.error} <code dir="ltr">{source}</code></Tag>;
+  if (result.html) return <Tag dir="ltr" className={cn(display ? 'math-block' : 'math-inline')} dangerouslySetInnerHTML={{ __html: result.html }} />;
+  if (display) return <Alert variant="destructive"><AlertDescription>{result.error} <code dir="ltr">{source}</code></AlertDescription></Alert>;
+  // Inline formulas must remain phrasing content inside their paragraph.
+  return <span className="rich-error" role="alert">{result.error} <code dir="ltr">{source}</code></span>;
 }
 export function MermaidView({ source }: { source: string }) {
   const [state, setState] = useState<{ source: string; svg?: string; width?: number; error?: string }>({ source });
@@ -43,8 +47,8 @@ export function MermaidView({ source }: { source: string }) {
   }, [source, state.svg]);
   // Keep the previous drawing in place while the new source settles, so typing
   // in a diagram does not collapse its height and move the editor viewport.
-  if (!state.svg && (state.source !== source || !state.error)) return <div role="status">در حال رسم نمودار…</div>;
-  if (state.error) return <div className="rich-error" role="alert">{state.error}<pre dir="ltr">{source}</pre></div>;
+  if (!state.svg && (state.source !== source || !state.error)) return <div className="flex items-center gap-2"><Spinner aria-label="در حال رسم نمودار" /><span>در حال رسم نمودار…</span></div>;
+  if (state.error) return <Alert variant="destructive"><AlertDescription>{state.error}<pre dir="ltr">{source}</pre></AlertDescription></Alert>;
   const widthInText = state.width! / diagramFontSize;
   return <><div ref={frame} dir="ltr" className="mermaid-diagram" role="img" aria-label="نمودار Mermaid"
     aria-busy={state.source !== source}

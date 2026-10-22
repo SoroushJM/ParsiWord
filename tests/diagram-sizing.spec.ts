@@ -31,8 +31,7 @@ test('small diagrams stay compact and follow the document text size', async ({ p
   await expect(page.locator('.mermaid-scroll-hint')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'تنظیمات خروجی' }).click();
-  await page.locator('#font-size').click();
-  await page.getByRole('option', { name: '۱۸ pt', exact: true }).click();
+  await page.getByRole('radiogroup', { name: 'اندازهٔ متن', exact: true }).getByRole('radio', { name: '۱۸ pt', exact: true }).click();
   await page.getByRole('button', { name: 'آماده است' }).click();
   const large = await diagramSize(page);
   expect(large.width).toBeGreaterThan(small.width * 1.5);

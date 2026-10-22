@@ -1,22 +1,28 @@
-import { useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { CodeBlock } from '@tiptap/extension-code-block';
 import { ListItem } from '@tiptap/extension-list';
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react';
-import { Plugin } from '@tiptap/pm/state';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { MathView, MermaidView } from './RichPreview';
 import { highlightCode } from './code-highlight';
 import { mathLanguage } from './rich-content';
 import { paragraphDirection, type Direction } from './converter';
-import { parseRichMarkdown } from './rich-editor-markdown';
+import type { SourcePosition } from './rich-editor-markdown';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 function CodeBlockView({ node }: NodeViewProps) {
   const language = String(node.attrs.language || '');
   const diagram = language.toLowerCase() === 'mermaid';
   const math = mathLanguage(language);
-  const code = highlightCode(node.textContent, language);
+  const source = node.textContent;
+  const code = useMemo(() => highlightCode(source, language), [source, language]);
   return <NodeViewWrapper className={diagram || math ? 'rich-source-block' : 'code-block'} dir="ltr" data-language={code.language || ''}>
     {diagram || math ? <>
       <div contentEditable={false}>{diagram ? <MermaidView source={node.textContent} /> : <MathView source={node.textContent} display />}</div>
@@ -29,48 +35,84 @@ export const RichCodeBlock = CodeBlock.extend({
   addAttributes() { return { ...this.parent?.(), meta: { default: null, rendered: false } }; },
   addNodeView() { return ReactNodeViewRenderer(CodeBlockView); },
   addProseMirrorPlugins() {
-    let previousDoc: ProseMirrorNode | undefined;
-    let cached = DecorationSet.empty;
-    return [...(this.parent?.() || []), new Plugin({
-      props: {
-        decorations(state) {
-          if (state.doc === previousDoc) return cached;
+    const key = new PluginKey<DecorationSet>('richCodeHighlight');
+    const syntax = (node: ProseMirrorNode, pos: number) => {
+      if (node.type.name !== 'codeBlock' || mathLanguage(node.attrs.language) || String(node.attrs.language).toLowerCase() === 'mermaid') return [];
+      const decorations: Decoration[] = [];
+      let offset = pos + 1;
+      highlightCode(node.textContent, node.attrs.language).lines.forEach((line, index) => {
+        if (index) offset++;
+        for (const token of line) {
+          if (token.scope && token.text.length) decorations.push(Decoration.inline(offset, offset + token.text.length, {
+            'data-scope': token.scope,
+            style: `color:#${token.color};${token.bold ? 'font-weight:700;' : ''}${token.italic ? 'font-style:italic;' : ''}`,
+          }));
+          offset += token.text.length;
+        }
+      });
+      return decorations;
+    };
+    return [...(this.parent?.() || []), new Plugin<DecorationSet>({
+      key,
+      state: {
+        init: (_config, state) => {
           const decorations: Decoration[] = [];
           state.doc.descendants((node, pos) => {
-            if (node.type.name !== 'codeBlock' || mathLanguage(node.attrs.language) || node.attrs.language === 'mermaid') return;
-            let offset = pos + 1;
-            const lines = highlightCode(node.textContent, node.attrs.language).lines;
-            lines.forEach((line, index) => {
-              if (index) offset++;
-              for (const token of line) {
-                if (token.scope && token.text.length) decorations.push(Decoration.inline(offset, offset + token.text.length, {
-                  'data-scope': token.scope,
-                  style: `color:#${token.color};${token.bold ? 'font-weight:700;' : ''}${token.italic ? 'font-style:italic;' : ''}`,
-                }));
-                offset += token.text.length;
-              }
-            });
-            return false;
+            if (node.type.name === 'codeBlock') { decorations.push(...syntax(node, pos)); return false; }
           });
-          previousDoc = state.doc;
-          cached = DecorationSet.create(state.doc, decorations);
-          return cached;
+          return DecorationSet.create(state.doc, decorations);
+        },
+        apply: (transaction, previous, oldState, newState) => {
+          if (!transaction.docChanged) return previous;
+          let next = previous.map(transaction.mapping, transaction.doc);
+          const ranges: { from: number; to: number }[] = [];
+          transaction.mapping.maps.forEach((map, index) => {
+            const rest = transaction.mapping.slice(index + 1);
+            map.forEach((_oldStart, _oldEnd, from, to) => ranges.push({ from: rest.map(from, -1), to: rest.map(to, 1) }));
+          });
+          if (!ranges.length) {
+            const from = oldState.doc.content.findDiffStart(newState.doc.content);
+            const to = oldState.doc.content.findDiffEnd(newState.doc.content);
+            if (from !== null) ranges.push({ from, to: to?.b ?? from });
+          }
+          const visited = new Set<number>();
+          for (const range of ranges) {
+            transaction.doc.nodesBetween(Math.max(0, range.from - 1), Math.min(transaction.doc.content.size, range.to + 1), (node, pos) => {
+              if (!node.isTextblock) return;
+              if (visited.has(pos)) return false;
+              visited.add(pos);
+              next = next.remove(next.find(pos, pos + node.nodeSize));
+              next = next.add(transaction.doc, syntax(node, pos));
+              return false;
+            });
+          }
+          return next;
         },
       },
+      props: { decorations: state => key.getState(state) },
     })];
   },
 });
 
 function MathNodeView({ node, updateAttributes }: NodeViewProps) {
   const [editing, setEditing] = useState(false);
+  const sourceId = useId();
   const display = node.type.name === 'mathBlock';
   const Tag = display ? 'div' : 'span';
   return <NodeViewWrapper as={Tag} className={display ? 'rich-math-block' : 'rich-math-inline'} contentEditable={false}>
-    <button type="button" className="rich-math-button" aria-label="ویرایش فرمول" onClick={() => setEditing(value => !value)}><MathView source={String(node.attrs.source)} display={display} /></button>
-    {editing && <span className="rich-math-source">{display
-      ? <textarea dir="ltr" aria-label="متن فرمول LaTeX" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setEditing(false); } }} />
-      : <input dir="ltr" aria-label="متن فرمول LaTeX" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} onKeyDown={event => { if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); setEditing(false); } }} />}
-      <button type="button" onClick={() => setEditing(false)}>تأیید</button></span>}
+    {display && <MathView source={String(node.attrs.source)} display />}
+    <Dialog open={editing} onOpenChange={setEditing}>
+      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="rich-math-button h-auto max-w-full" aria-label="ویرایش فرمول">{display ? 'ویرایش فرمول' : <MathView source={String(node.attrs.source)} />}</Button></DialogTrigger>
+      <DialogContent dir="rtl">
+        <DialogHeader><DialogTitle>ویرایش فرمول</DialogTitle><DialogDescription>متن LaTeX را تغییر بده؛ فرمول و Markdown هم‌زمان به‌روز می‌شوند.</DialogDescription></DialogHeader>
+        <FieldGroup>
+          <Field><FieldLabel htmlFor={sourceId}>متن فرمول LaTeX</FieldLabel>{display
+            ? <Textarea id={sourceId} dir="ltr" aria-label="متن فرمول LaTeX" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} />
+            : <Input id={sourceId} dir="ltr" aria-label="متن فرمول LaTeX" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); setEditing(false); } }} />}</Field>
+          <Button type="button" onClick={() => setEditing(false)}>تأیید</Button>
+        </FieldGroup>
+      </DialogContent>
+    </Dialog>
   </NodeViewWrapper>;
 }
 
@@ -91,10 +133,19 @@ export const MathBlock = Node.create({
 
 function RawNodeView({ node, updateAttributes }: NodeViewProps) {
   const [editing, setEditing] = useState(false);
+  const sourceId = useId();
   const inline = node.type.name === 'rawInline';
   return <NodeViewWrapper as={inline ? 'span' : 'div'} className={inline ? 'rich-raw-inline' : 'rich-raw-block'} contentEditable={false}>
-    <button type="button" onClick={() => setEditing(value => !value)} aria-label="ویرایش نشانه‌گذاری">{node.attrs.label || node.attrs.source}</button>
-    {editing && <textarea aria-label="نشانه‌گذاری Markdown" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} />}
+    <Dialog open={editing} onOpenChange={setEditing}>
+      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="h-auto max-w-full whitespace-normal" aria-label="ویرایش نشانه‌گذاری">{node.attrs.label || node.attrs.source}</Button></DialogTrigger>
+      <DialogContent dir="rtl">
+        <DialogHeader><DialogTitle>ویرایش نشانه‌گذاری</DialogTitle><DialogDescription>نشانه‌گذاری این بخش در Markdown حفظ می‌شود.</DialogDescription></DialogHeader>
+        <FieldGroup>
+          <Field><FieldLabel htmlFor={sourceId}>نشانه‌گذاری Markdown</FieldLabel><Textarea id={sourceId} aria-label="نشانه‌گذاری Markdown" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} /></Field>
+          <Button type="button" onClick={() => setEditing(false)}>تأیید</Button>
+        </FieldGroup>
+      </DialogContent>
+    </Dialog>
   </NodeViewWrapper>;
 }
 export const RawInline = Node.create({
@@ -127,34 +178,40 @@ export const MarkdownLengthLimit = Extension.create<{ serialize: (doc: ProseMirr
   },
 });
 
-export function sourceAnnotations(getSource: () => string, getDirection: () => Direction) {
-  let previousSource: string | undefined;
+export function sourceAnnotations(getPositions: (doc: ProseMirrorNode) => SourcePosition[], getDirection: () => Direction) {
+  let previousPositions: SourcePosition[] | undefined;
   let previousDoc: ProseMirrorNode | undefined;
   let previousDirection: Direction | undefined;
   let cached = DecorationSet.empty;
-  let positions: { start: number; end: number }[] = [];
+  const directions = new WeakMap<ProseMirrorNode, { mode: Direction; direction: string }>();
   return Extension.create({
     name: 'sourceAnnotations',
     addProseMirrorPlugins() {
       return [new Plugin({ props: { decorations(state) {
-        const source = getSource();
+        const positions = getPositions(state.doc);
         const direction = getDirection();
-        if (source === previousSource && state.doc === previousDoc && direction === previousDirection) return cached;
-        if (source !== previousSource) { positions = parseRichMarkdown(source).positions; previousSource = source; }
+        if (positions === previousPositions && state.doc === previousDoc && direction === previousDirection) return cached;
+        const end = positions[positions.length - 1]?.end || 0;
         const decorations: Decoration[] = [];
         let index = 0;
         state.doc.forEach((node, pos) => {
           const span = positions[index++];
           decorations.push(Decoration.node(pos, pos + node.nodeSize, {
-            'data-source-start': String(span?.start ?? source.length),
-            'data-source-end': String(span?.end ?? source.length),
+            'data-source-start': String(span?.start ?? end),
+            'data-source-end': String(span?.end ?? end),
           }));
         });
         state.doc.descendants((node, pos) => {
           if (!['paragraph', 'heading', 'listItem', 'tableCell', 'tableHeader'].includes(node.type.name)) return;
-          decorations.push(Decoration.node(pos, pos + node.nodeSize, { dir: paragraphDirection(node.textContent, direction) }));
+          let entry = directions.get(node);
+          if (!entry || entry.mode !== direction) {
+            entry = { mode: direction, direction: paragraphDirection(node.textContent, direction) };
+            directions.set(node, entry);
+          }
+          decorations.push(Decoration.node(pos, pos + node.nodeSize, { dir: entry.direction }));
         });
         previousDoc = state.doc;
+        previousPositions = positions;
         previousDirection = direction;
         cached = DecorationSet.create(state.doc, decorations);
         return cached;

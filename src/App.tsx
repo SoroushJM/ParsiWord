@@ -1,25 +1,18 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { EditablePreview } from './EditablePreview';
+import { BrandHeader, DocumentHeading, ExportSettingsDialog, IntroControls, MobileViewSwitch, SourceToolbar } from './AppControls';
 import { usePreviewScroll } from './use-preview-scroll';
 import { RichContentError } from './rich-content';
 import defaultDocument from './default-document.md?raw';
 import { version as appVersion } from '../package.json';
-import {
-  ArrowDownToLine, Bold, BookOpen, Check, CheckCheck,
-  ChevronDown, Code2, FilePlus2, FileText, FolderOpen, Heading2,
-  Italic, List, LoaderCircle, Settings2, ShieldCheck, Undo2,
-} from 'lucide-react';
+import { BookOpen, CheckCheck, Code2, ShieldCheck } from 'lucide-react';
 import { defaultSettings, exportWord, safeFilename, type ExportSettings } from './converter';
 import { openMarkdown, saveDocx } from './files';
-import { FontPicker } from './FontPicker';
 import { activateFont, documentFonts, fontError, normalizeFontFamily } from './fonts';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import '@fontsource/vazirmatn/400.css';
@@ -55,6 +48,13 @@ function App() {
   const [initial] = useState(loadDraft);
   const [markdown, setMarkdown] = useState(initial.markdown);
   const [settings, setSettings] = useState(initial.settings);
+  const markdownRef = useRef(markdown);
+  const settingsRef = useRef(settings);
+  markdownRef.current = markdown;
+  settingsRef.current = settings;
+  const [editingView, setEditingView] = useState<'edit' | 'preview'>('edit');
+  const editingViewRef = useRef(editingView);
+  const [inactiveSource, setInactiveSource] = useState(initial.markdown);
   const [previewMarkdown, setPreviewMarkdown] = useState(initial.markdown);
   const [sheet, setSheet] = useState<'settings' | 'fonts' | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,10 +66,31 @@ function App() {
   const preview = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const { mobileView, selectView, activateView } = usePreviewScroll(editor, preview, markdown, previewMarkdown);
+  // Markdown state, export and persistence are current in the input task.
+  // Only the secondary textarea's DOM value waits for a short pause. Replacing
+  // its entire value on every rich keystroke makes WebView reshape all source.
+  const sourceMarkdown = editingView === 'preview' && (mobileView === 'preview' || !matchMedia('(max-width: 899px)').matches)
+    ? inactiveSource : markdown;
+  useEffect(() => {
+    if (editingView !== 'preview') return;
+    const timer = setTimeout(() => setInactiveSource(markdown), 120);
+    return () => clearTimeout(timer);
+  }, [markdown, editingView]);
+  const activateEditingView = useCallback((view: 'edit' | 'preview') => {
+    if (editingViewRef.current !== view) {
+      editingViewRef.current = view;
+      setInactiveSource(markdownRef.current);
+      setEditingView(view);
+    }
+    activateView(view);
+  }, [activateView]);
+  const onSourceFocus = useCallback(() => activateEditingView('edit'), [activateEditingView]);
+  const onPreviewFocus = useCallback(() => activateEditingView('preview'), [activateEditingView]);
   const updateFromPreview = useCallback((value: string) => {
+    activateEditingView('preview');
     setMarkdown(value);
     setPreviewMarkdown(value);
-  }, []);
+  }, [activateEditingView]);
   const focusEditor = useCallback(() => {
     selectView('edit');
     requestAnimationFrame(() => editor.current?.focus());
@@ -78,12 +99,25 @@ function App() {
     const element = editor.current;
     if (!element?.clientWidth) return;
     const scroll = window.scrollY;
+    const style = getComputedStyle(element);
+    const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
     element.style.height = 'auto';
-    element.style.height = `${element.scrollHeight}px`;
+    element.style.height = `${element.scrollHeight + border}px`;
     element.scrollTop = 0;
     if (window.scrollY !== scroll) window.scrollTo(0, scroll);
   }, []);
-  useLayoutEffect(resizeEditor, [markdown, mobileView, resizeEditor]);
+  useLayoutEffect(() => {
+    // The hidden Markdown pane does not need layout while typing in preview.
+    // On desktop, resize the secondary pane after an input burst rather than
+    // forcing textarea layout before each rich-editor paint.
+    if (mobileView === 'preview' && matchMedia('(max-width: 899px)').matches) return;
+    const active = document.activeElement;
+    if (active?.matches('input, textarea, [contenteditable="true"]') && !active.matches('.markdown-editor')) {
+      const timer = setTimeout(resizeEditor, 160);
+      return () => clearTimeout(timer);
+    }
+    resizeEditor();
+  }, [markdown, mobileView, resizeEditor]);
   useEffect(() => {
     const element = editor.current;
     if (!element) return;
@@ -139,20 +173,23 @@ function App() {
     return () => { active = false; };
   }, [settings.fontFamily]);
 
-  function update<K extends keyof ExportSettings>(key: K, value: ExportSettings[K]) {
+  const update = useCallback(<K extends keyof ExportSettings,>(key: K, value: ExportSettings[K]) => {
     setSettings(s => ({ ...s, [key]: value }));
-  }
+  }, []);
 
-  function wrap(before: string, after = '') {
+  const wrap = useCallback((before: string, after = '') => {
     const el = editor.current;
     if (!el) return;
+    const markdown = markdownRef.current;
     const start = el.selectionStart; const end = el.selectionEnd;
     const selected = markdown.slice(start, end);
     setMarkdown(markdown.slice(0, start) + before + selected + after + markdown.slice(end));
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + before.length, end + before.length); });
-  }
+  }, []);
 
-  async function convert() {
+  const convert = useCallback(async () => {
+    const markdown = markdownRef.current;
+    const settings = settingsRef.current;
     if (!markdown.trim() || busy) return;
     setBusy(true);
     try {
@@ -165,85 +202,65 @@ function App() {
       console.error('DOCX export failed', error);
       setNotice({ text: error instanceof RichContentError ? error.message : String(error).includes('FONT_') ? fontError(error) : 'ذخیرهٔ فایل انجام نشد. فضای خالی و محل ذخیره را بررسی کن و دوباره امتحان کن.', error: true });
     } finally { setBusy(false); }
-  }
+  }, [busy]);
 
-  async function importFile() {
+  const importFile = useCallback(async () => {
     if (!isTauri()) { input.current?.click(); return; }
     try {
       const file = await openMarkdown();
-      if (file) { setPrevious(markdown); setMarkdown(file.text); update('title', file.name); }
+      if (file) { setPrevious(markdownRef.current); setMarkdown(file.text); update('title', file.name); }
     } catch (error) {
       setNotice({ text: String(error).includes('FILE_TOO_LARGE') ? 'برای این نسخه، متن باید کمتر از ۵۰۰ هزار نویسه باشد.' : 'باز کردن فایل انجام نشد. یک فایل متنی یا Markdown انتخاب کن.', error: true });
     }
-  }
+  }, [update]);
+
+  const onDirectionChange = useCallback((direction: ExportSettings['direction']) => update('direction', direction), [update]);
+  const onTitleChange = useCallback((title: string) => update('title', title), [update]);
+  const onSettings = useCallback(() => setSheet('settings'), []);
+  const onNew = useCallback(() => {
+    setPrevious(markdownRef.current);
+    setMarkdown('');
+    update('title', 'یادداشت تازه');
+    focusEditor();
+  }, [update, focusEditor]);
+  const onRestore = useCallback(() => {
+    if (previous !== null) { setMarkdown(previous); setPrevious(null); }
+  }, [previous]);
+  const onOpen = importFile;
+  const onExport = convert;
+  const onWrap = wrap;
 
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/u).length : 0;
   const fa = (n: number) => n.toLocaleString('fa-IR');
-  const dirLabel = { rtl: 'راست‌به‌چپ', auto: 'جهت خودکار', ltr: 'چپ‌به‌راست' }[settings.direction];
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <a className="brand" href="#" onClick={e => e.preventDefault()} aria-label="پارسی‌ورد">
-          <span className="brand-mark"><FileText size={23} strokeWidth={1.8} /><span /></span>
-          <span className="brand-name">پارسی‌ورد<span>PARSIWORD</span></span>
-        </a>
-      </header>
+      <BrandHeader />
 
       <main>
-        <section className="intro">
-          <h1>متن ساده بنویس.<br /><span>مرتب تحویل بگیر.</span></h1>
-          <div className="intro-controls">
-            <Select dir="rtl" value={settings.direction} onValueChange={value => update('direction', value as ExportSettings['direction'])}>
-              <SelectTrigger aria-label="جهت متن" className="direction-trigger"><Settings2 size={15} /><SelectValue>{dirLabel}</SelectValue></SelectTrigger>
-              <SelectContent><SelectGroup><SelectItem value="auto">جهت خودکار</SelectItem><SelectItem value="rtl">راست‌به‌چپ</SelectItem><SelectItem value="ltr">چپ‌به‌راست</SelectItem></SelectGroup></SelectContent>
-            </Select>
-          </div>
-          <p>Markdown تو، در یک فایل Word.<br className="mobile-break" /> با توجه به فارسی و جهت نوشتن.</p>
-        </section>
+        <IntroControls direction={settings.direction} onDirectionChange={onDirectionChange} />
 
         <div className="workspace">
           <section className="document-panel" aria-label="ویرایش سند">
-            <div className="document-heading">
-              <div className="document-name"><span className="file-icon"><FileText size={19} /></span><div><label htmlFor="document-title" className="sr-only">نام سند</label><input id="document-title" value={settings.title} onChange={e => update('title', e.target.value)} maxLength={90} placeholder="نام سند" /><span>پیش‌نویس شخصی</span></div></div>
-              <div className="document-tools">
-                <div className="document-actions"><button onClick={importFile}><FolderOpen size={16} /> باز کردن فایل</button></div>
-                <button className="icon-button" title="یادداشت تازه" aria-label="یادداشت تازه" onClick={() => { setPrevious(markdown); setMarkdown(''); update('title', 'یادداشت تازه'); focusEditor(); }}><FilePlus2 size={20} /></button>
-              </div>
-              <div className="document-export">
-                <Button variant="outline" size="icon" className="size-12" aria-label="تنظیمات خروجی" onClick={() => setSheet('settings')}><Settings2 /></Button>
-                <Button size="lg" className="h-12 flex-1" onClick={convert} disabled={busy || !markdown.trim()}>{busy ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? 'در حال ساخت سند…' : 'ذخیرهٔ فایل Word'}</span><span className="docx-label">.docx</span></Button>
-              </div>
-            </div>
+            <DocumentHeading title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} />
 
             <div className="live-workspace" data-view={mobileView}>
-            <div className="mobile-view-switch" role="group" aria-label="نمای سند">
-              <button type="button" data-mobile-view="edit" aria-pressed={mobileView === 'edit'} aria-controls="edit-panel" onClick={() => selectView('edit')}><Code2 size={17} /> ویرایش متن</button>
-              <button type="button" data-mobile-view="preview" aria-pressed={mobileView === 'preview'} aria-controls="preview-pane" onClick={() => selectView('preview')}><BookOpen size={17} /> پیش‌نمایش</button>
-            </div>
+            <MobileViewSwitch view={mobileView} onSelect={selectView} />
             <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading">
               <div className="pane-heading"><h2 id="edit-heading"><Code2 size={17} /> ویرایش متن</h2><span>Markdown</span></div>
-              <div className="format-toolbar" role="toolbar" aria-label="ابزار قالب‌بندی">
-                <button title="تیتر" aria-label="درج تیتر" onClick={() => wrap('## ')}><Heading2 size={18} /></button>
-                <button title="پررنگ" aria-label="درج متن پررنگ" onClick={() => wrap('**', '**')}><Bold size={17} /></button>
-                <button title="مورب" aria-label="درج متن مورب" onClick={() => wrap('*', '*')}><Italic size={17} /></button>
-                <span />
-                <button title="فهرست" aria-label="درج فهرست" onClick={() => wrap('- ')}><List size={18} /></button>
-                <button title="کد" aria-label="درج کد" onClick={() => wrap('`', '`')}><Code2 size={17} /></button>
-                {previous !== null && <button className="restore-button" onClick={() => { setMarkdown(previous); setPrevious(null); }}><Undo2 size={15} /> متن قبلی</button>}
-              </div>
-              <textarea ref={editor} className="markdown-editor" aria-label="متن Markdown" dir={settings.direction === 'ltr' ? 'ltr' : 'auto'} value={markdown} onFocus={() => activateView('edit')} onChange={e => setMarkdown(e.target.value)} placeholder="از اینجا شروع کن…" spellCheck={false} maxLength={500_000} />
+              <SourceToolbar canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
+              <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">متن Markdown</FieldLabel><Textarea id="markdown-source" ref={editor} className="markdown-editor" aria-label="متن Markdown" dir={settings.direction === 'ltr' ? 'ltr' : 'auto'} value={sourceMarkdown} onFocus={onSourceFocus} onChange={e => setMarkdown(e.target.value)} placeholder="از اینجا شروع کن…" spellCheck={false} maxLength={500_000} /></Field></FieldGroup>
             </section>
 
             <section id="preview-pane" className="preview-pane" aria-labelledby="preview-heading">
               <div className="pane-heading"><h2 id="preview-heading"><BookOpen size={17} /> پیش‌نمایش</h2></div>
-              <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={() => activateView('preview')}>
+              <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus}>
                 <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} />
               </div>
             </section>
             </div>
 
-            <div className="editor-status"><span>{fa(wordCount)} واژه <span className="separator">·</span> {fa(markdown.length)} نویسه</span><span className={storageError ? 'storage-error' : ''}>{storageError ? 'ذخیرهٔ خودکار در دسترس نیست' : saved ? <><CheckCheck size={14} /> ذخیره شد</> : 'در حال ذخیره…'}</span></div>
+            <div className="editor-status"><span>{fa(wordCount)} واژه <span className="separator">·</span> {fa(markdown.length)} نویسه</span><Badge variant={storageError ? 'destructive' : 'secondary'}>{storageError ? 'ذخیرهٔ خودکار در دسترس نیست' : saved ? <><CheckCheck data-icon="inline-start" /> ذخیره شد</> : 'در حال ذخیره…'}</Badge></div>
           </section>
 
         </div>
@@ -263,29 +280,7 @@ function App() {
       <Toaster dir="rtl" position="bottom-center" theme="light" closeButton
         offset={{ bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', left: 24, right: 24 }}
         mobileOffset={{ bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', left: 16, right: 16 }} />
-      <Dialog open={sheet !== null} onOpenChange={open => { if (!open) setSheet(null); }}>
-        <DialogContent dir="rtl" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{sheet === 'fonts' ? 'انتخاب فونت' : 'تنظیمات خروجی'}</DialogTitle>
-            <DialogDescription>{sheet === 'fonts' ? 'فونت‌های Google Fonts، با دانلود و نگهداری روی دستگاه' : 'جهت متن، اندازه و فونت سند Word را انتخاب کن.'}</DialogDescription>
-          </DialogHeader>
-          {sheet === 'settings' ? <FieldGroup>
-            <Field><FieldLabel htmlFor="export-title">نام فایل</FieldLabel><Input id="export-title" value={settings.title} onChange={e => update('title', e.target.value)} maxLength={90} /></Field>
-            <Field>
-              <FieldLabel>جهت متن در Word</FieldLabel>
-              <ToggleGroup type="single" variant="outline" value={settings.direction} onValueChange={value => { if (value) update('direction', value as ExportSettings['direction']); }} dir="rtl" aria-label="جهت متن در Word" className="w-full">
-                <ToggleGroupItem value="rtl" className="flex-1">راست‌به‌چپ</ToggleGroupItem><ToggleGroupItem value="auto" className="flex-1">خودکار</ToggleGroupItem><ToggleGroupItem value="ltr" className="flex-1">چپ‌به‌راست</ToggleGroupItem>
-              </ToggleGroup>
-              <FieldDescription>«خودکار» جهت هر پاراگراف را جدا تشخیص می‌دهد؛ پاراگراف انگلیسی چپ‌به‌راست می‌ماند.</FieldDescription>
-            </Field>
-            <Field><FieldLabel>فونت خروجی</FieldLabel><Button variant="outline" className="w-full justify-between" onClick={() => setSheet('fonts')} aria-label="انتخاب فونت خروجی"><span dir="ltr">{settings.fontFamily}</span><ChevronDown data-icon="inline-end" /></Button><FieldDescription>فونت داخل فایل Word جاسازی می‌شود و همراه سند منتقل می‌شود.</FieldDescription></Field>
-            <Field><FieldLabel htmlFor="font-size">اندازهٔ متن</FieldLabel><Select dir="rtl" value={String(settings.fontSize)} onValueChange={value => update('fontSize', Number(value))}><SelectTrigger id="font-size" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{[10, 11, 12, 14, 16, 18].map(n => <SelectItem key={n} value={String(n)}>{fa(n)} pt</SelectItem>)}</SelectGroup></SelectContent></Select></Field>
-            <p className="text-muted-foreground text-xs leading-6">کاغذ A4 است. فرمول LaTeX در Word قابل ویرایش است؛ نمودار Mermaid به تصویر تبدیل می‌شود. تصاویر Markdown هنوز پشتیبانی نمی‌شوند.</p>
-            <Button onClick={() => setSheet(null)}>آماده است <Check data-icon="inline-end" /></Button>
-          </FieldGroup> : <><FontPicker value={settings.fontFamily} onSelect={family => { update('fontFamily', family); setSheet('settings'); }} /><Button variant="outline" onClick={() => setSheet('settings')}>بازگشت به تنظیمات</Button></>}
-
-        </DialogContent>
-      </Dialog>
+      <ExportSettingsDialog settings={settings} sheet={sheet} onSheetChange={setSheet} onUpdate={update} />
     </div>
   );
 }

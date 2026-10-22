@@ -11,7 +11,8 @@ for (const [name, width, height] of [['desktop', 1100, 800], ['mobile', 393, 851
     await expect(editor).toBeVisible();
     await expect(page.locator('.prose h1')).toHaveText('پیش‌نمایش زنده');
     const heading = (await page.locator('.intro h1').boundingBox())!;
-    const direction = (await page.getByRole('combobox', { name: 'جهت متن', exact: true }).boundingBox())!;
+    const directions = page.getByRole('radiogroup', { name: 'جهت متن', exact: true });
+    const direction = (await directions.boundingBox())!;
     expect(direction.y).toBeGreaterThanOrEqual(heading.y + heading.height);
     const edit = (await page.locator('.editing-pane').boundingBox())!;
     if (width >= 900) {
@@ -23,7 +24,7 @@ for (const [name, width, height] of [['desktop', 1100, 800], ['mobile', 393, 851
       expect(preview.width).toBeGreaterThan(450);
     } else {
       await expect(page.locator('.preview-pane')).toBeHidden();
-      await expect(page.locator('[data-mobile-view="edit"]')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator('[data-mobile-view="edit"]')).toHaveAttribute('aria-checked', 'true');
       const switchBox = (await page.locator('.mobile-view-switch').boundingBox())!;
       expect(switchBox.y + switchBox.height).toBeLessThanOrEqual(edit.y + 2);
       for (const button of await page.locator('.mobile-view-switch button').all()) {
@@ -36,12 +37,10 @@ for (const [name, width, height] of [['desktop', 1100, 800], ['mobile', 393, 851
     await expect(editor).toBeFocused();
     await expect(page.locator('.katex')).toHaveCount(1);
     await expect(page.locator('.code-block [data-scope="keyword"]').first()).toHaveCSS('color', 'rgb(207, 34, 46)');
-    await page.getByRole('combobox', { name: 'جهت متن', exact: true }).click();
-    await page.getByRole('option', { name: 'چپ‌به‌راست', exact: true }).click();
+    await directions.getByRole('radio', { name: 'چپ‌به‌راست', exact: true }).click();
     await expect(editor).toHaveAttribute('dir', 'ltr');
     await expect(page.locator('.prose p').first()).toHaveAttribute('dir', 'ltr');
-    await page.getByRole('combobox', { name: 'جهت متن', exact: true }).click();
-    await page.getByRole('option', { name: 'جهت خودکار', exact: true }).click();
+    await directions.getByRole('radio', { name: 'جهت خودکار', exact: true }).click();
     await expect(page.locator('.prose p').first()).toHaveAttribute('dir', 'rtl');
     if (width < 900) {
       await page.locator('[data-mobile-view="preview"]').click();
@@ -49,7 +48,7 @@ for (const [name, width, height] of [['desktop', 1100, 800], ['mobile', 393, 851
       await expect(page.locator('.editing-pane')).toBeHidden();
       await expect(page.locator('.prose h1')).toBeVisible();
       await expect(page.getByRole('toolbar', { name: 'ابزار قالب‌بندی' })).toBeHidden();
-      await expect(page.locator('[data-mobile-view="preview"]')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator('[data-mobile-view="preview"]')).toHaveAttribute('aria-checked', 'true');
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`${name}-live-preview.png`), fullPage: false });
@@ -86,7 +85,7 @@ test('the mobile choice survives a resize through the desktop breakpoint', async
   await page.setViewportSize({ width: 393, height: 851 });
   await expect(page.locator('.preview-pane')).toBeVisible();
   await expect(page.locator('.editing-pane')).toBeHidden();
-  await expect(page.locator('[data-mobile-view="preview"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('[data-mobile-view="preview"]')).toHaveAttribute('aria-checked', 'true');
   await page.locator('[data-mobile-view="edit"]').click();
   await expect(page.getByRole('textbox', { name: 'متن Markdown' })).toHaveValue(source);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -1,6 +1,6 @@
 # Android distribution
 
-For the current 0.4.5 test build, use `npm run android:test-apk -- /path/output.apk`.
+For the current 0.4.6 test build, use `npm run android:test-apk -- /path/output.apk`.
 It builds an optimized, nondebug ARM64 release with application ID
 `app.parsiword.mobile.preview` and label `ParsiWord Preview`, so it can coexist
 with the normal app. The prior signing key was absent from the source archive.
@@ -8,7 +8,24 @@ The test-build script creates/reuses a separate key outside the repository in
 `PARSIWORD_SIGNING_DIR` (default `~/.local/share/parsiword/signing`); retain that
 directory and its password file for later Preview updates. Normal
 `npm run android:apk` keeps `app.parsiword.mobile`. The distribution signing key
-is not part of the source. See [0.4.5](releases/0.4.5.md) for build instructions.
+is not part of the source. Version 0.4.6 uses code 4006 and reuses the 0.4.5
+Preview key for updates. See [0.4.6](releases/0.4.6.md) for the current status
+and build instructions; the verified 0.4.5 delivery remains documented in
+[0.4.5](releases/0.4.5.md).
+
+The native Android parent pads the WebView for system bars and display cutouts.
+After padding, those insets are consumed before dispatch to the WebView so CSS
+does not apply the same safe area twice. Keyboard (IME) insets remain available
+to children. Browser viewport checks do not exercise this Android dispatch path.
+
+The delivered 0.4.6 Preview APK is 9,129,587 bytes. Its certificate matches the
+0.4.5 Preview APK, while the version code increases from 4005 to 4006. The
+[final verification report](releases/0.4.6-preview-verification.json) confirms
+v2/v3 signatures, ARM64-only output, nondebug/nontest flags, ZIP CRC, the final
+frontend and 16 KiB ZIP/ELF alignment. Gofile's upload size and MD5 match the
+local file. Download and SHA256 are in the [release note](releases/0.4.6.md).
+Physical phone installation and keyboard/sticky behavior remain a user check;
+no emulator or new desktop binary was used for this release.
 
 ## Historical distribution, 0.2.4 and 0.4.0
 

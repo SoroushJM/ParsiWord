@@ -84,6 +84,10 @@ export function usePreviewScroll(
   const viewport = useRef({ width: innerWidth, height: innerHeight });
   const reflowing = useRef(false);
   const measuredLayout = useRef('');
+  const sources = useRef({ markdown, previewMarkdown });
+  sources.current = { markdown, previewMarkdown };
+  const dirty = useRef(true);
+  const scheduleUpdate = useRef<((reflow?: boolean) => void) | null>(null);
 
   const layoutSize = useCallback(() => {
     const input = editor.current, panel = preview.current;
@@ -101,7 +105,9 @@ export function usePreviewScroll(
 
   const measure = useCallback(() => {
     const input = editor.current, panel = preview.current;
+    const { markdown, previewMarkdown } = sources.current;
     if (!input || !panel || markdown !== previewMarkdown) return;
+    if (!dirty.current) return;
     const blocks = [...panel.querySelectorAll<HTMLElement>('[data-source-start]')];
     const offsets = blocks.flatMap(block => [Number(block.dataset.sourceStart), Number(block.dataset.sourceEnd)]);
     if (input.clientWidth) {
@@ -115,7 +121,8 @@ export function usePreviewScroll(
     }
     if (panel.clientWidth) previewMap.current = previewPoints(panel, markdown.length);
     measuredLayout.current = layoutSize();
-  }, [editor, preview, markdown, previewMarkdown, layoutSize]);
+    dirty.current = false;
+  }, [editor, preview, layoutSize]);
 
   const read = useCallback((view: View) => {
     const element = view === 'edit' ? editor.current : preview.current;
@@ -161,6 +168,7 @@ export function usePreviewScroll(
   }, [mobileView, measure, read]);
 
   const activateView = useCallback((view: View) => {
+    if (driver.current === view) return;
     driver.current = view;
     measure();
     read(view);
@@ -178,17 +186,27 @@ export function usePreviewScroll(
   }, []);
 
   useLayoutEffect(() => {
+    // Source text remains current immediately. Expensive DOM maps are needed
+    // for scrolling, not for painting each character in the rich editor.
+    dirty.current = true;
+    scheduleUpdate.current?.();
+  }, [markdown, previewMarkdown]);
+
+  useLayoutEffect(() => {
     const input = editor.current, panel = preview.current;
     if (!input || !panel) return;
     let frame = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let pendingReflow = false;
     const update = (reflow = false) => {
       measure();
+      const { markdown, previewMarkdown } = sources.current;
       if (markdown !== previewMarkdown) return;
       const activeView = mobile ? mobileView : driver.current;
       if (restore.current && markdown === previewMarkdown) {
         restore.current = false;
         write(mobile ? mobileView : 'edit');
-      } else if (reflow && !document.activeElement?.matches('textarea, [contenteditable="true"]')) {
+      } else if (reflow && !document.activeElement?.matches('input, textarea, [contenteditable="true"]')) {
         // Late diagram/font layout must keep the same logical block in view.
         write(activeView, true);
       } else {
@@ -198,6 +216,24 @@ export function usePreviewScroll(
       }
       if (!mobile && markdown === previewMarkdown) write(driver.current === 'edit' ? 'preview' : 'edit');
     };
+    const schedule = (reflow = false) => {
+      pendingReflow ||= reflow;
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      const run = () => {
+        frame = requestAnimationFrame(() => {
+          const changedLayout = pendingReflow;
+          pendingReflow = false;
+          update(changedLayout);
+        });
+      };
+      // Keep layout reads and the hidden source mirror out of active input.
+      // A scroll or view change below still measures synchronously on demand.
+      if (document.activeElement?.matches('input, textarea, [contenteditable="true"]')) timer = setTimeout(run, 180);
+      else run();
+    };
+    scheduleUpdate.current = schedule;
+    dirty.current = true;
     update();
     const sizes = new WeakMap<Element, string>();
     const observer = new ResizeObserver(entries => {
@@ -207,7 +243,7 @@ export function usePreviewScroll(
         if (sizes.has(entry.target) && sizes.get(entry.target) !== size) changed = true;
         sizes.set(entry.target, size);
       }
-      if (changed) { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => update(true)); }
+      if (changed) { dirty.current = true; schedule(true); }
     });
     observer.observe(input);
     observer.observe(panel);
@@ -218,14 +254,16 @@ export function usePreviewScroll(
     const mutations = new MutationObserver(() => {
       const content = panel.querySelector('.prose');
       if (content) observer.observe(content);
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => update(true));
+      dirty.current = true;
+      schedule(true);
     });
     mutations.observe(panel, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-source-start', 'data-source-end'] });
     const onResize = () => {
       viewport.current = { width: innerWidth, height: innerHeight };
       reflowing.current = true;
+      dirty.current = true;
       cancelAnimationFrame(frame);
+      clearTimeout(timer);
       frame = requestAnimationFrame(() => { update(true); reflowing.current = false; });
     };
     const onWindowScroll = () => {
@@ -234,7 +272,9 @@ export function usePreviewScroll(
       if (reflowing.current) return;
       if (expectedWindow.current !== null && Math.abs(window.scrollY - expectedWindow.current) < 2) { expectedWindow.current = null; return; }
       expectedWindow.current = null;
+      const { markdown, previewMarkdown } = sources.current;
       if (markdown !== previewMarkdown) return;
+      measure();
       driver.current = mobile ? mobileView : 'edit';
       read(driver.current);
       if (!mobile) write('preview');
@@ -244,7 +284,9 @@ export function usePreviewScroll(
       if (measuredLayout.current !== layoutSize()) { onResize(); return; }
       if (expectedPreview.current !== null && Math.abs(panel.scrollTop - expectedPreview.current) < 2) { expectedPreview.current = null; return; }
       expectedPreview.current = null;
+      const { markdown, previewMarkdown } = sources.current;
       if (markdown !== previewMarkdown) return;
+      measure();
       driver.current = 'preview';
       read('preview');
       write('edit');
@@ -256,6 +298,8 @@ export function usePreviewScroll(
     panel.addEventListener('scroll', onPreviewScroll, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      scheduleUpdate.current = null;
       observer.disconnect();
       mutations.disconnect();
       window.removeEventListener('scroll', onWindowScroll);
@@ -263,7 +307,7 @@ export function usePreviewScroll(
       document.fonts.removeEventListener('loadingdone', onFontsLoaded);
       panel.removeEventListener('scroll', onPreviewScroll);
     };
-  }, [mobile, mobileView, markdown, previewMarkdown, editor, preview, measure, read, write, layoutSize]);
+  }, [mobile, mobileView, editor, preview, measure, read, write, layoutSize]);
 
   return { mobileView, selectView, activateView };
 }

@@ -1,0 +1,11 @@
+.rich-toolbar-container { position: sticky; top: 0; z-index: 6; margin: -6px -20px 12px; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--border); }
+.rich-format-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; direction: rtl; }
+.rich-heading-field { width: 112px; flex-shrink: 0; }
+.rich-table-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 8px; }
+.rich-link-tools { padding-top: 8px; }
+@media (max-width: 899px) {
+  .rich-toolbar-container { top: calc(var(--view-switch-height, 60px) + env(safe-area-inset-top, 0px)); }
+  .rich-format-toolbar { display: grid; grid-template-rows: repeat(2, 40px); grid-auto-flow: column; grid-auto-columns: 40px; gap: 3px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 3px; }
+  .rich-heading-field { grid-column: span 3; grid-row: span 2; align-self: start; }
+}
+@media (max-width: 700px) { .rich-toolbar-container { margin-inline: -17px; padding-inline: 10px; } }

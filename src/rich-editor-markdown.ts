@@ -19,6 +19,7 @@ type MarkdownNode = {
   identifier?: string; align?: ('left' | 'right' | 'center' | null)[];
   position?: { start: { offset?: number }; end: { offset?: number } };
 };
+export type SourcePosition = { start: number; end: number };
 const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
 const writer = unified().use(remarkGfm).use(remarkMath).use(remarkStringify, {
   bullet: '-', fences: true, emphasis: '*', strong: '*', listItemIndent: 'one',

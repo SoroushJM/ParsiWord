@@ -99,6 +99,49 @@ test('preview keeps the reading block when the phone width changes', async ({ pa
   await expect(page.locator('.editing-pane')).toBeHidden();
 });
 
+test('fast rich input followed immediately by a mode switch preserves the edited reading position', async ({ page }) => {
+  await loadDocument(page, wrappingSource, 393);
+  await page.locator('[data-mobile-view="preview"]').click();
+  await scrollPreviewHeadingToTop(page, 'Wrapped section 6');
+  const paragraph = page.locator('.prose h2').filter({ hasText: /^Wrapped section 6$/ }).locator('xpath=following-sibling::p[1]');
+  await paragraph.evaluate(element => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    range.collapse(true);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    (element.closest('[contenteditable="true"]') as HTMLElement).focus({ preventScroll: true });
+  });
+  const marker = 'پایان ویرایش سریع';
+  const burst = ('افزودن متن سریع با حفظ محل مطالعه در گوشی. ').repeat(45) + marker + ' ';
+  // An IME-style input burst rewraps the active paragraph. The mode change has
+  // no idle wait after the last input, so pending layout work must use the
+  // current document rather than an earlier source snapshot.
+  await page.getByRole('textbox', { name: 'ویرایش پیش‌نمایش', exact: true }).pressSequentially('تایپ سریع ', { delay: 0 });
+  await page.keyboard.insertText(burst);
+  await page.locator('[data-mobile-view="edit"]').click();
+  const editor = page.locator('textarea.markdown-editor');
+  await expect(editor).toBeVisible();
+  const markdown = await editor.inputValue();
+  expect(markdown).toContain('تایپ سریع ' + burst);
+  expect(markdown).toContain('## Wrapped section 6');
+  expect(markdown).toContain('## Wrapped section 7');
+  const markerOffset = markdown.indexOf(marker) + marker.length;
+  const lineTop = await nativeSourceLineTop(page, markerOffset);
+  const caretInReadingArea = async () => editor.evaluate((element, top) => {
+    const caretY = element.getBoundingClientRect().top + top;
+    const toolbarBottom = document.querySelector('.format-toolbar')!.getBoundingClientRect().bottom;
+    return caretY >= toolbarBottom - 30 && caretY <= innerHeight + 30;
+  }, lineTop);
+  await expect.poll(caretInReadingArea, { message: 'The text just entered in preview should remain in the visible Markdown reading area' }).toBe(true);
+  await expect(editor).not.toBeFocused();
+  expect(await editor.evaluate(element => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1);
+  await expect(page.locator('.editor-status')).toContainText('ذخیره شد');
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('parsiword-draft-v1')!).markdown);
+  expect(saved).toBe(markdown);
+});
+
 test('a late Mermaid render above the current block preserves the reading position', async ({ page }) => {
   let releaseDiagram!: () => void;
   const diagramGate = new Promise<void>(resolve => { releaseDiagram = resolve; });

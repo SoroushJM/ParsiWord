@@ -31,9 +31,11 @@ test('rich typing and Word-style formatting update Markdown and the downloaded W
   await selectContents(rich.locator('p'));
   await page.getByRole('button', { name: 'پررنگ', exact: true }).click();
   await expect(rich.locator('strong')).toHaveText('متن نخست و ادامه');
-  await page.getByRole('combobox', { name: 'سبک پاراگراف', exact: true }).selectOption('2');
+  await page.getByRole('combobox', { name: 'سبک پاراگراف', exact: true }).click();
+  await page.getByRole('option', { name: 'تیتر ۲', exact: true }).click();
   await expect(rich.locator('h2')).toHaveText('متن نخست و ادامه');
-  await page.getByRole('combobox', { name: 'سبک پاراگراف', exact: true }).selectOption('paragraph');
+  await page.getByRole('combobox', { name: 'سبک پاراگراف', exact: true }).click();
+  await page.getByRole('option', { name: 'متن عادی', exact: true }).click();
   await page.getByRole('button', { name: 'فهرست بولت‌دار', exact: true }).click();
   await expect(rich.locator('ul > li')).toHaveCount(1);
   await page.getByRole('button', { name: 'فهرست شماره‌دار', exact: true }).click();

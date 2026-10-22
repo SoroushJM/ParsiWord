@@ -1,12 +1,4 @@
-.rich-toolbar-container { position: sticky; top: 0; z-index: 6; margin: -6px -20px 12px; padding: 8px 12px; background: #fafcfbf5; backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
-.rich-format-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; direction: rtl; }
-.rich-format-toolbar > button { display: grid; place-items: center; width: 34px; height: 36px; border: 1px solid transparent; border-radius: 6px; color: #506d5d; flex-shrink: 0; }
-.rich-format-toolbar > button:hover, .rich-format-toolbar > button[aria-pressed=true] { background: #e6f2eb; color: #167d69; border-color: #c6dfd1; }
-.rich-format-toolbar > button:disabled { opacity: .35; cursor: default; }
-.rich-format-toolbar button:focus-visible, .rich-format-toolbar select:focus-visible { outline: 2px solid #167d69; outline-offset: 2px; }
-.rich-format-toolbar select { max-width: 110px; height: 36px; padding: 4px 8px; border: 1px solid #d8e5dc; border-radius: 6px; background: white; color: #395e4b; font-size: 11px; }
-.rich-indent-icon { font-size: 21px; }
-.rich-document { min-height: 220px; outline: none; white-space: pre-wrap; caret-color: #167d69; }
+.rich-document { min-height: 220px; outline: none; white-space: pre-wrap; caret-color: var(--primary); }
 .rich-document:focus { outline: none; }
 .rich-document ul { list-style-type: disc; padding-inline-start: 1.7em; }
 .rich-document ol { list-style-type: decimal; padding-inline-start: 1.7em; }
@@ -18,36 +10,18 @@
 .rich-document table { table-layout: fixed; }
 .rich-document th, .rich-document td { min-width: 60px; vertical-align: top; position: relative; }
 .rich-document th > p, .rich-document td > p { margin: 0; }
-.rich-document .selectedCell { background-color: #dcefe5; }
+.rich-document .selectedCell { background-color: var(--accent); }
 .rich-document .code-block { margin-inline: 0; }
 .rich-document .code-block pre { margin: 0; }
 .rich-document .code-block code { white-space: pre; display: block; }
-.rich-document .ProseMirror-selectednode { outline: 2px solid #85b99e; outline-offset: 2px; }
-.rich-source-details { margin: .4em 0 1em; border: 1px solid #dce8e0; border-radius: 7px; overflow: hidden; }
-.rich-source-details summary { padding: 6px 10px; font-size: 11px; color: #4f735c; direction: rtl; cursor: pointer; background: #f5f9f6; }
+.rich-document .ProseMirror-selectednode { outline: 2px solid var(--ring); outline-offset: 2px; }
+.rich-source-details { margin: .4em 0 1em; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.rich-source-details summary { padding: 6px 10px; font-size: 11px; color: var(--muted-foreground); direction: rtl; cursor: pointer; background: var(--muted); }
 .rich-source-details pre { margin: 0; border-radius: 0; }
 .rich-math-inline { display: inline-block; vertical-align: baseline; max-width: 100%; }
 .rich-math-button { max-width: 100%; text-align: inherit; }
-.rich-math-button:focus-visible { outline: 2px solid #85b99e; outline-offset: 2px; }
 .rich-math-block { margin-block: 1em; text-align: center; }
-.rich-math-source { display: flex; align-items: center; gap: 6px; background: #f1f7f3; border: 1px solid #dce8e0; border-radius: 7px; padding: 6px; font: 12px/1.8 Vazirmatn, sans-serif; }
-.rich-math-source input, .rich-math-source textarea { min-width: 0; width: 100%; background: white; border: 1px solid #dce8e0; padding: 4px; }
-.rich-math-source textarea { min-height: 90px; resize: vertical; }
-.rich-math-source button { flex-shrink: 0; }
 .rich-raw-block, .rich-raw-inline { overflow-wrap: anywhere; }
-.rich-raw-block > button { font-family: monospace; white-space: pre-wrap; text-align: start; }
-.rich-raw-block textarea, .rich-raw-inline textarea { width: 100%; min-height: 80px; border: 1px solid #cddfd2; padding: 8px; font-size: 12px; }
+.rich-raw-block > button { white-space: pre-wrap; text-align: start; }
 .editable-preview-content[data-empty=true] .rich-document { min-height: 100px; }
 .rich-empty { min-height: 80px; margin-top: 0; }
-.rich-table-tools, .rich-link-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 7px; color: #426a53; font-size: 11px; }
-.rich-table-tools button, .rich-link-tools button { padding: 5px 7px; background: #edf5ef; border-radius: 5px; }
-.rich-link-tools input { flex: 1; min-width: 100px; padding: 5px 7px; border: 1px solid #d5e4da; background: white; border-radius: 5px; }
-.rich-link-tools p { width: 100%; color: #a32f23; }
-@media (max-width: 899px) {
-  .rich-toolbar-container { top: calc(var(--view-switch-height, 60px) + env(safe-area-inset-top, 0px)); }
-  .rich-format-toolbar { display: grid; grid-template-rows: repeat(2, 40px); grid-auto-flow: column; grid-auto-columns: 40px; gap: 3px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 3px; }
-  .rich-format-toolbar select { grid-column: span 3; grid-row: span 2; width: 112px; max-width: 112px; align-self: start; }
-  .rich-format-toolbar > button { width: 38px; height: 40px; }
-  .rich-format-toolbar select { height: 40px; }
-}
-@media (max-width: 700px) { .rich-toolbar-container { margin-inline: -17px; padding-inline: 10px; } }

@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "release": "0.4.6",
+  "benchmarkScript": "scripts/profile-rich-input.mjs",
+  "environment": {
+    "browserVersion": "156.0.8078.4",
+    "nodeVersion": "v24.19.0",
+    "platform": "linux",
+    "architecture": "x64",
+    "headless": true,
+    "isNativeDeviceMeasurement": false
+  },
+  "protocol": {
+    "fixture": "src/default-document.md",
+    "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+    "repeat": 1,
+    "characters": 28147,
+    "viewport": {
+      "width": 393,
+      "height": 851
+    },
+    "cpuThrottleRate": 4,
+    "input": " typing responsiveness benchmark",
+    "keyDelayMs": 35,
+    "settleBeforeMs": 800,
+    "settleAfterMs": 1200,
+    "cpuProfiler": true,
+    "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+  },
+  "baseline": {
+    "version": "0.4.5",
+    "commit": "3a9fb8bb3bf02adb31fd4b23943222b4d7958b6d",
+    "recordedAt": "2026-10-22T08:26:11.046Z",
+    "measurements": {
+      "keys": 32,
+      "elapsedMs": 13726,
+      "latencyMedianMs": 331,
+      "latencyP95Ms": 514,
+      "longTaskCount": 35,
+      "longTaskTotalMs": 11231,
+      "maxLongTaskMs": 522
+    }
+  },
+  "after": {
+    "version": "0.4.6",
+    "runs": [
+      {
+        "recordedAt": "2026-10-22T08:29:46.171Z",
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 4191,
+          "latencyMedianMs": 53,
+          "latencyP95Ms": 72,
+          "longTaskCount": 17,
+          "longTaskTotalMs": 1004,
+          "maxLongTaskMs": 104
+        },
+        "improvement": {
+          "medianLatencyReductionPercent": 84,
+          "p95LatencyReductionPercent": 86
+        }
+      },
+      {
+        "recordedAt": "2026-10-22T08:29:56.048Z",
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 4345,
+          "latencyMedianMs": 56,
+          "latencyP95Ms": 99,
+          "longTaskCount": 19,
+          "longTaskTotalMs": 1247,
+          "maxLongTaskMs": 128
+        },
+        "improvement": {
+          "medianLatencyReductionPercent": 83.1,
+          "p95LatencyReductionPercent": 80.7
+        }
+      }
+    ]
+  },
+  "reproduction": {
+    "setup": "Install the lockfile dependencies and the Playwright Chromium browser. Build and serve each revision with Vite preview on a separate port. The baseline was exported with git archive and built independently; the current profiler script supplied the identical fixture to both revisions.",
+    "baselineCommand": "node scripts/profile-rich-input.mjs --label production-before --cpu 4 --repeat 1 --url http://127.0.0.1:1422 --output artifacts/rich-input-production-before.json",
+    "afterCommands": [
+      "node scripts/profile-rich-input.mjs --label production-after-1 --cpu 4 --repeat 1 --url http://127.0.0.1:1421 --output artifacts/rich-input-production-after-1.json",
+      "node scripts/profile-rich-input.mjs --label production-after-2 --cpu 4 --repeat 1 --url http://127.0.0.1:1421 --output artifacts/rich-input-production-after-2.json"
+    ],
+    "cpuProfile": "An optional --profile argument writes a Chrome CPU profile for diagnosis. Full CPU profiles are not committed."
+  },
+  "interpretation": [
+    "These are headless Chromium production-bundle measurements on Linux with 4x CPU throttling, not measurements from a physical Android device.",
+    "Latency ends at the first requestAnimationFrame callback after beforeinput; it does not measure hardware keyboard delay or completed GPU paint.",
+    "The comparison uses one baseline run and two fresh-browser after runs. Individual runs are retained instead of presenting their average as a pooled latency distribution.",
+    "Elapsed time includes the fixed key delay and the 1200ms settling period. Machine timing is diagnostic evidence, not a pass/fail test threshold."
+  ]
+}
