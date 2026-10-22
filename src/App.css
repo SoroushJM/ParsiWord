@@ -21,3 +21,48 @@
 .prose .code-block figcaption { background: #e7edeb; color: #57606a; padding: 5px 14px; font: 600 11px/1.8 "Noto Sans Mono", monospace; text-align: left; }
 .prose .code-block pre { margin: 0; border-radius: 0; background: #f1f4f5; }
 .prose .code-block code { background: transparent; color: #24292f; display: block; white-space: pre; }
+
+.app-header { height: 80px; }
+.intro { padding: 22px 0 26px; }
+.intro h1 { margin: 0 0 10px; }
+.intro-controls { display: flex; margin-block: 12px; }
+.direction-trigger { min-width: 174px; background: #edf5ef; color: #35664d; border-color: #d5e5d9; }
+.workspace { display: block; }
+.document-panel { overflow: visible; }
+.document-heading { gap: 12px; padding: 16px 20px; flex-wrap: wrap; }
+.document-name { flex: 1; }
+.document-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.document-tools .document-actions { padding: 0; }
+.document-export { display: flex; align-items: center; gap: 8px; }
+.live-workspace { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; border-top: 1px solid var(--border); }
+.editing-pane, .preview-pane { min-width: 0; }
+.preview-pane { position: sticky; top: 12px; align-self: start; background: white; border-inline-start: 1px solid var(--border); }
+.pane-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 47px; padding: 10px 20px; background: #fafcfb; border-bottom: 1px solid var(--border); }
+.pane-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: #48715d; font-size: 12px; font-weight: 600; }
+.pane-heading > span { font-size: 10px; color: #8a9d91; }
+.live-label { display: flex; align-items: center; gap: 6px; }
+.live-label > span { width: 5px; height: 5px; background: #4d9979; border-radius: 50%; }
+.format-toolbar { position: sticky; top: 12px; z-index: 10; background: white; box-shadow: 0 1px 0 #e5ebe7; }
+.editing-pane .markdown-editor { height: auto; min-height: 260px; padding: 18px 20px; overflow: hidden; resize: none; }
+.preview-pane .preview-panel { height: calc(100vh - 100px); min-height: 200px; max-height: none; padding: 6px 20px 20px; overflow: auto; }
+.workspace-privacy { padding: 15px 3px 0; align-items: center; }
+.page-footer { padding: 14px 0 32px; }
+@media (max-width: 899px) {
+  .document-export { flex-basis: 100%; }
+  .live-workspace { --mobile-preview-height: clamp(120px, 25vh, 220px); display: flex; flex-direction: column; align-items: stretch; }
+  .preview-pane { order: -1; top: env(safe-area-inset-top, 0px); z-index: 8; align-self: stretch; flex-shrink: 0; border-inline-start: 0; border-bottom: 1px solid var(--border); }
+  .preview-pane .preview-panel { height: var(--mobile-preview-height); min-height: 0; }
+  .format-toolbar { top: calc(var(--mobile-preview-height) + 47px + env(safe-area-inset-top, 0px)); }
+  .editing-pane .markdown-editor { min-height: 220px; }
+}
+@media (max-width: 700px) {
+  .app-header { height: 74px; }
+  .intro { padding: 22px 0; }
+  .intro h1 { font-size: 28px; }
+  .document-heading { padding: 14px; flex-wrap: wrap; }
+  .document-name { flex: 1; }
+  .document-tools { gap: 2px; }
+  .document-tools .document-actions button { padding: 7px 9px; }
+  .pane-heading { padding-inline: 17px; }
+  .editing-pane .markdown-editor, .preview-pane .preview-panel { padding-inline: 17px; }
+}

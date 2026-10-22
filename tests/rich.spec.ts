@@ -10,7 +10,6 @@ test('offline math and Mermaid previews produce native Word equations and real P
   await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort());
   await page.goto('/');
   await page.getByRole('textbox', { name: 'متن Markdown' }).fill(source);
-  await page.getByRole('tab', { name: 'پیش‌نمایش' }).click();
   await expect(page.locator('.katex')).toHaveCount(2);
   await expect(page.locator('.mermaid-diagram svg')).toHaveCount(2, { timeout: 30000 });
   await expect(page.getByRole('alert')).toHaveCount(0);
@@ -33,8 +32,8 @@ test('offline math and Mermaid previews produce native Word equations and real P
     expect(png.readUInt32BE(20)).toBeGreaterThan(100);
   }
   await mkdir('artifacts', { recursive: true });
-  await writeFile(`artifacts/ParsiWord-0.4.3-LaTeX-Mermaid-demo-${testInfo.project.name}.docx`, bytes);
-  await writeFile('artifacts/ParsiWord-0.4.3-LaTeX-Mermaid-demo.md', source);
+  await writeFile(`artifacts/ParsiWord-0.4.4-LaTeX-Mermaid-demo-${testInfo.project.name}.docx`, bytes);
+  await writeFile('artifacts/ParsiWord-0.4.4-LaTeX-Mermaid-demo.md', source);
   await page.screenshot({ path: testInfo.outputPath('rich-preview.png'), fullPage: true });
   expect(errors).toEqual([]);
 });
@@ -42,13 +41,10 @@ test('offline math and Mermaid previews produce native Word equations and real P
 test('invalid diagrams and formulas are visible and block a misleading export', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('textbox', { name: 'متن Markdown' }).fill('```mermaid\nthis is not a diagram\n```');
-  await page.getByRole('tab', { name: 'پیش‌نمایش' }).click();
   await expect(page.getByRole('alert')).toContainText('نمودار Mermaid رسم نشد', { timeout: 30000 });
   await page.getByRole('button', { name: /ذخیرهٔ فایل Word/ }).click();
   await expect(page.locator('[data-sonner-toast]')).toContainText('نمودار Mermaid رسم نشد');
-  await page.getByRole('tab', { name: 'ویرایش متن', exact: true }).click();
   await page.getByRole('textbox', { name: 'متن Markdown' }).fill('$\\notARealCommand{x}$');
-  await page.getByRole('tab', { name: 'پیش‌نمایش' }).click();
   await expect(page.getByRole('alert')).toContainText('فرمول LaTeX معتبر نیست');
   await page.getByRole('button', { name: /ذخیرهٔ فایل Word/ }).click();
   await expect(page.locator('[data-sonner-toast]').last()).toContainText('فرمول LaTeX معتبر نیست');

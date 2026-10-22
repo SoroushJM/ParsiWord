@@ -10,7 +10,6 @@ test('language aliases highlight safely, preserve code and export actual Word co
   const markdown = `متن فارسی (React 19)\n\n\`\`\`ts\n${source}\n\`\`\`\n\n\`\`\`unknown-language\n${literal}\n\`\`\`\n\n\`\`\`\n${literal}\n\`\`\`\n\nکد درون متن: \`const n = 19;\``;
   await page.goto('/');
   await page.getByRole('textbox', { name: 'متن Markdown' }).fill(markdown);
-  await page.getByRole('tab', { name: 'پیش‌نمایش' }).click();
   const blocks = page.locator('.code-block');
   await expect(blocks).toHaveCount(3);
   await expect(blocks.first().locator('figcaption')).toHaveText('TypeScript');

@@ -14,7 +14,6 @@ test('fresh launch renders and exports the difficult default document offline', 
   const markdown = await editor.inputValue();
   expect(markdown).toContain('React (version **19**)');
   for (const id of ['S01', 'S09', 'S11', 'S14', 'E01', 'P01', 'P72']) expect(markdown).toContain(id);
-  await page.getByRole('tab', { name: 'پیش‌نمایش' }).click();
   await expect(page.locator('.katex')).toHaveCount(5);
   await expect(page.locator('.mermaid-diagram svg')).toHaveCount(2, { timeout: 30000 });
   await expect(page.getByRole('alert')).toHaveCount(0);
@@ -60,9 +59,9 @@ test('fresh launch renders and exports the difficult default document offline', 
   for (const font of ['Vazirmatn', 'Noto Sans Mono', 'STIX Two Math', 'ParsiWord Symbols']) expect(table).toContain(font);
   expect(await zip.file('word/settings.xml')!.async('string')).toContain('w:embedTrueTypeFonts');
   await mkdir('artifacts', { recursive: true });
-  await writeFile(`artifacts/ParsiWord-0.4.3-default-checked-${testInfo.project.name}.docx`, bytes);
-  await writeFile('artifacts/ParsiWord-0.4.3-default.md', markdown);
-  await page.screenshot({ path: testInfo.outputPath('default-preview.png'), fullPage: true });
+  await writeFile(`artifacts/ParsiWord-0.4.4-default-checked-${testInfo.project.name}.docx`, bytes);
+  await writeFile('artifacts/ParsiWord-0.4.4-default.md', markdown);
+  await page.screenshot({ path: testInfo.outputPath('default-preview.png'), fullPage: false });
   expect(errors).toEqual([]);
 });
 

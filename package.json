@@ -1,7 +1,7 @@
 {
   "name": "parsiword",
   "private": true,
-  "version": "0.4.3",
+  "version": "0.4.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,7 +20,8 @@
     "ios:build": "tauri ios build --ci",
     "macos:build": "tauri build --bundles dmg --ci",
     "samples:build": "node scripts/build-default-document.mjs",
-    "samples:check": "node scripts/build-default-document.mjs --check"
+    "samples:check": "node scripts/build-default-document.mjs --check",
+    "ui:capture": "node scripts/capture-ui.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",

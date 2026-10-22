@@ -6,10 +6,9 @@ test('mobile editor, preview, persistence and valid DOCX download', async ({ pag
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('.intro h1')).toBeVisible();
   await page.getByRole('textbox', { name: 'متن Markdown' }).fill('# عنوان فارسی\n\nمتن (React 19) درست است.');
-  await page.getByRole('tab', { name: 'پیش‌نمایش' }).click();
-  await expect(page.locator('.prose h1')).toHaveText('عنوان فارسی');
+  await expect(page.locator('.prose h1')).toHaveText(['عنوان فارسی']);
   await page.getByRole('button', { name: 'تنظیمات خروجی' }).click();
   await page.getByLabel('نام فایل', { exact: true }).fill('آزمایش گوشی');
   await page.getByRole('radio', { name: 'خودکار', exact: true }).click();

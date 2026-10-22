@@ -1,19 +1,15 @@
-import { Children, isValidElement, useEffect, useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import { MathView, MermaidView } from './RichPreview';
-import { CodeView } from './CodeView';
-import { mathLanguage, RichContentError } from './rich-content';
+import { DocumentPreview } from './DocumentPreview';
+import { RichContentError } from './rich-content';
 import defaultDocument from './default-document.md?raw';
 import { version as appVersion } from '../package.json';
 import {
-  ArrowDownToLine, ArrowLeft, Bold, BookOpen, Check, CheckCheck,
+  ArrowDownToLine, Bold, BookOpen, Check, CheckCheck,
   ChevronDown, Code2, FilePlus2, FileText, FolderOpen, Heading2,
   Italic, List, LoaderCircle, Settings2, ShieldCheck, Undo2,
 } from 'lucide-react';
-import { defaultSettings, exportWord, paragraphDirection, safeFilename, type ExportSettings } from './converter';
+import { defaultSettings, exportWord, safeFilename, type ExportSettings } from './converter';
 import { openMarkdown, saveDocx } from './files';
 import { FontPicker } from './FontPicker';
 import { activateFont, documentFonts, fontError, normalizeFontFamily } from './fonts';
@@ -31,11 +27,6 @@ import '@fontsource/vazirmatn/600.css';
 import '@fontsource/vazirmatn/700.css';
 
 const storageKey = 'parsiword-draft-v1';
-function renderedText(value: ReactNode): string {
-  return Children.toArray(value).map(child => typeof child === 'string' || typeof child === 'number'
-    ? String(child)
-    : isValidElement<{ children?: ReactNode; className?: string }>(child) ? (/math-(inline|display)/.test(child.props.className || '') ? '\ufffc' : renderedText(child.props.children)) : '').join('');
-}
 function loadDraft() {
   try {
     const raw = localStorage.getItem(storageKey);
@@ -63,7 +54,7 @@ function App() {
   const [initial] = useState(loadDraft);
   const [markdown, setMarkdown] = useState(initial.markdown);
   const [settings, setSettings] = useState(initial.settings);
-  const [tab, setTab] = useState<'edit' | 'preview'>('edit');
+  const [previewMarkdown, setPreviewMarkdown] = useState(initial.markdown);
   const [sheet, setSheet] = useState<'settings' | 'fonts' | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(true);
@@ -72,6 +63,42 @@ function App() {
   const [previous, setPrevious] = useState<string | null>(null);
   const editor = useRef<HTMLTextAreaElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  const focusEditor = useCallback(() => editor.current?.focus(), []);
+  const resizeEditor = useCallback(() => {
+    const element = editor.current;
+    if (!element) return;
+    const scroll = window.scrollY;
+    element.style.height = 'auto';
+    element.style.height = `${element.scrollHeight}px`;
+    element.scrollTop = 0;
+    if (window.scrollY !== scroll) window.scrollTo(0, scroll);
+  }, []);
+  useLayoutEffect(resizeEditor, [markdown, resizeEditor]);
+  useEffect(() => {
+    const element = editor.current;
+    if (!element) return;
+    let width = element.getBoundingClientRect().width;
+    const observer = new ResizeObserver(() => {
+      const next = element.getBoundingClientRect().width;
+      if (next !== width) { width = next; resizeEditor(); }
+    });
+    observer.observe(element);
+    let active = true;
+    document.fonts.ready.then(() => { if (active) resizeEditor(); });
+    return () => { active = false; observer.disconnect(); };
+  }, [resizeEditor]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPreviewMarkdown(markdown), 200);
+    return () => clearTimeout(timer);
+  }, [markdown]);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    let dispose: (() => void) | undefined;
+    let active = true;
+    import('./dev-capture').then(({ installCapture }) => { if (active) dispose = installCapture(setMarkdown); });
+    return () => { active = false; dispose?.(); };
+  }, []);
 
   useEffect(() => {
     setSaved(false);
@@ -128,7 +155,7 @@ function App() {
     if (!isTauri()) { input.current?.click(); return; }
     try {
       const file = await openMarkdown();
-      if (file) { setPrevious(markdown); setMarkdown(file.text); update('title', file.name); setTab('edit'); }
+      if (file) { setPrevious(markdown); setMarkdown(file.text); update('title', file.name); }
     } catch (error) {
       setNotice({ text: String(error).includes('FILE_TOO_LARGE') ? 'برای این نسخه، متن باید کمتر از ۵۰۰ هزار نویسه باشد.' : 'باز کردن فایل انجام نشد. یک فایل متنی یا Markdown انتخاب کن.', error: true });
     }
@@ -137,32 +164,6 @@ function App() {
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/u).length : 0;
   const fa = (n: number) => n.toLocaleString('fa-IR');
   const dirLabel = { rtl: 'راست‌به‌چپ', auto: 'جهت خودکار', ltr: 'چپ‌به‌راست' }[settings.direction];
-  const previewDir = (children: ReactNode) => paragraphDirection(renderedText(children), settings.direction);
-  const components = {
-    pre: ({ children }: ComponentPropsWithoutRef<'pre'>) => {
-      const code = Children.toArray(children).find(child => isValidElement<{ className?: string; children?: ReactNode }>(child));
-      if (!isValidElement<{ className?: string; children?: ReactNode }>(code)) return <pre>{children}</pre>;
-      const language = code.props.className?.match(/language-(\S+)/)?.[1];
-      if (language?.toLowerCase() === 'mermaid' || mathLanguage(language)) return <>{children}</>;
-      return <CodeView source={String(code.props.children).replace(/\n$/, '')} language={language} />;
-    },
-    code: ({ className, children }: ComponentPropsWithoutRef<'code'>) => {
-      const language = className?.match(/language-(\S+)/)?.[1];
-      const source = String(children).replace(/\n$/, '');
-      if (language?.toLowerCase() === 'mermaid') return <MermaidView source={source} />;
-      if (mathLanguage(language)) return <MathView source={source} display={!className?.includes('math-inline')} />;
-      return <code className={className}>{children}</code>;
-    },
-    p: ({ children }: ComponentPropsWithoutRef<'p'>) => <p dir={previewDir(children)}>{children}</p>,
-    h1: ({ children }: ComponentPropsWithoutRef<'h1'>) => <h1 dir={previewDir(children)}>{children}</h1>,
-    h2: ({ children }: ComponentPropsWithoutRef<'h2'>) => <h2 dir={previewDir(children)}>{children}</h2>,
-    h3: ({ children }: ComponentPropsWithoutRef<'h3'>) => <h3 dir={previewDir(children)}>{children}</h3>,
-    li: ({ children, ...rest }: ComponentPropsWithoutRef<'li'>) => <li className={rest.className} dir={previewDir(children)}>{children}</li>,
-    td: ({ children }: ComponentPropsWithoutRef<'td'>) => <td dir={previewDir(children)}>{children}</td>,
-    th: ({ children }: ComponentPropsWithoutRef<'th'>) => <th dir={previewDir(children)}>{children}</th>,
-    a: ({ children }: ComponentPropsWithoutRef<'a'>) => <span className="preview-link">{children}</span>,
-    img: ({ alt }: ComponentPropsWithoutRef<'img'>) => <span className="image-placeholder">تصویر: {alt || 'بدون عنوان'} (خروجی تصویر در این نسخه پشتیبانی نمی‌شود)</span>,
-  };
 
   return (
     <div className="app-shell">
@@ -171,35 +172,38 @@ function App() {
           <span className="brand-mark"><FileText size={23} strokeWidth={1.8} /><span /></span>
           <span className="brand-name">پارسی‌ورد<span>PARSIWORD</span></span>
         </a>
-        <span className="offline-badge"><span className="status-dot" /> روی دستگاه تو</span>
       </header>
 
       <main>
         <section className="intro">
           <h1>متن ساده بنویس.<br /><span>مرتب تحویل بگیر.</span></h1>
+          <div className="intro-controls">
+            <Select dir="rtl" value={settings.direction} onValueChange={value => update('direction', value as ExportSettings['direction'])}>
+              <SelectTrigger aria-label="جهت متن" className="direction-trigger"><Settings2 size={15} /><SelectValue>{dirLabel}</SelectValue></SelectTrigger>
+              <SelectContent><SelectGroup><SelectItem value="auto">جهت خودکار</SelectItem><SelectItem value="rtl">راست‌به‌چپ</SelectItem><SelectItem value="ltr">چپ‌به‌راست</SelectItem></SelectGroup></SelectContent>
+            </Select>
+          </div>
           <p>Markdown تو، در یک فایل Word.<br className="mobile-break" /> با توجه به فارسی و جهت نوشتن.</p>
-          <div className="intro-decoration" aria-hidden="true"><FileText size={88} strokeWidth={1} /><span className="decoration-check"><Check size={20} /></span><span className="decoration-brackets">( )</span></div>
         </section>
 
         <div className="workspace">
           <section className="document-panel" aria-label="ویرایش سند">
             <div className="document-heading">
               <div className="document-name"><span className="file-icon"><FileText size={19} /></span><div><label htmlFor="document-title" className="sr-only">نام سند</label><input id="document-title" value={settings.title} onChange={e => update('title', e.target.value)} maxLength={90} placeholder="نام سند" /><span>پیش‌نویس شخصی</span></div></div>
-              <button className="icon-button" title="یادداشت تازه" aria-label="یادداشت تازه" onClick={() => { setPrevious(markdown); setMarkdown(''); setTab('edit'); update('title', 'یادداشت تازه'); }}><FilePlus2 size={20} /></button>
+              <div className="document-tools">
+                <div className="document-actions"><button onClick={importFile}><FolderOpen size={16} /> باز کردن فایل</button></div>
+                <button className="icon-button" title="یادداشت تازه" aria-label="یادداشت تازه" onClick={() => { setPrevious(markdown); setMarkdown(''); update('title', 'یادداشت تازه'); focusEditor(); }}><FilePlus2 size={20} /></button>
+              </div>
+              <div className="document-export">
+                <Button variant="outline" size="icon" className="size-12" aria-label="تنظیمات خروجی" onClick={() => setSheet('settings')}><Settings2 /></Button>
+                <Button size="lg" className="h-12 flex-1" onClick={convert} disabled={busy || !markdown.trim()}>{busy ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? 'در حال ساخت سند…' : 'ذخیرهٔ فایل Word'}</span><span className="docx-label">.docx</span></Button>
+              </div>
             </div>
 
-            <div className="document-actions">
-              <button onClick={importFile}><FolderOpen size={16} /> باز کردن فایل</button>
-            </div>
-
-            <div className="editor-tabs" role="tablist" aria-label="حالت نمایش">
-              <button id="edit-tab" role="tab" aria-selected={tab === 'edit'} aria-controls="edit-panel" className={tab === 'edit' ? 'active' : ''} onClick={() => setTab('edit')}><Code2 size={17} /> ویرایش متن</button>
-              <button id="preview-tab" role="tab" aria-selected={tab === 'preview'} aria-controls="preview-panel" className={tab === 'preview' ? 'active' : ''} onClick={() => setTab('preview')}><BookOpen size={17} /> پیش‌نمایش</button>
-              <span className="markdown-badge">Markdown</span>
-            </div>
-
-            <div id="edit-panel" role="tabpanel" aria-labelledby="edit-tab" hidden={tab !== 'edit'}>
-              <div className="format-toolbar" aria-label="ابزار قالب‌بندی">
+            <div className="live-workspace">
+            <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading">
+              <div className="pane-heading"><h2 id="edit-heading"><Code2 size={17} /> ویرایش متن</h2><span>Markdown</span></div>
+              <div className="format-toolbar" role="toolbar" aria-label="ابزار قالب‌بندی">
                 <button title="تیتر" aria-label="درج تیتر" onClick={() => wrap('## ')}><Heading2 size={18} /></button>
                 <button title="پررنگ" aria-label="درج متن پررنگ" onClick={() => wrap('**', '**')}><Bold size={17} /></button>
                 <button title="مورب" aria-label="درج متن مورب" onClick={() => wrap('*', '*')}><Italic size={17} /></button>
@@ -209,36 +213,36 @@ function App() {
                 {previous !== null && <button className="restore-button" onClick={() => { setMarkdown(previous); setPrevious(null); }}><Undo2 size={15} /> متن قبلی</button>}
               </div>
               <textarea ref={editor} className="markdown-editor" aria-label="متن Markdown" dir={settings.direction === 'ltr' ? 'ltr' : 'auto'} value={markdown} onChange={e => setMarkdown(e.target.value)} placeholder="از اینجا شروع کن…" spellCheck={false} maxLength={500_000} />
-            </div>
+            </section>
 
-            <div id="preview-panel" role="tabpanel" aria-labelledby="preview-tab" hidden={tab !== 'preview'} className="preview-panel">
-              {tab === 'preview' && (markdown.trim() ? <article className="prose" dir={settings.direction === 'auto' ? 'auto' : settings.direction} style={{ fontSize: `${settings.fontSize + 2}px`, fontFamily: `"${settings.fontFamily}", Vazirmatn, "ParsiWord Symbols", sans-serif` }}><Markdown remarkPlugins={[remarkGfm, remarkMath]} components={components}>{markdown}</Markdown></article> : <div className="empty-preview"><FileText size={36} /><p>هنوز چیزی ننوشته‌ای.</p><button onClick={() => setTab('edit')}>شروع نوشتن <ArrowLeft size={16} /></button></div>)}
-              <p className="preview-disclaimer">پیش‌نمایش متن است؛ صفحه‌بندی و نمایش نهایی را در Word بررسی کن.</p>
+            <section className="preview-pane" aria-labelledby="preview-heading">
+              <div className="pane-heading"><h2 id="preview-heading"><BookOpen size={17} /> پیش‌نمایش</h2></div>
+              <div id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown}>
+                <DocumentPreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onStartWriting={focusEditor} />
+              </div>
+            </section>
             </div>
 
             <div className="editor-status"><span>{fa(wordCount)} واژه <span className="separator">·</span> {fa(markdown.length)} نویسه</span><span className={storageError ? 'storage-error' : ''}>{storageError ? 'ذخیرهٔ خودکار در دسترس نیست' : saved ? <><CheckCheck size={14} /> ذخیره شد</> : 'در حال ذخیره…'}</span></div>
           </section>
 
-          <aside className="side-panel">
-            <div className="direction-card"><span className="card-icon"><Settings2 size={19} /></span><div><h2>جهت درست، از ابتدا</h2><p>راست‌چین بودن با راست‌به‌چپ بودن فرق دارد. جهت متن در فایل Word هم ثبت می‌شود.</p></div><button onClick={() => setSheet('settings')}>{dirLabel}<ChevronDown size={14} /></button></div>
-            <div className="privacy-note"><ShieldCheck size={18} /><span>متن تو از دستگاه خارج نمی‌شود.<br />تبدیل آفلاین؛ اینترنت فقط برای دریافت فونت جدید.</span></div>
-          </aside>
         </div>
+        <div className="privacy-note workspace-privacy"><ShieldCheck size={16} /><span>متن تو از دستگاه خارج نمی‌شود. تبدیل آفلاین؛ اینترنت فقط برای دریافت فونت جدید.</span></div>
         <footer className="page-footer"><span>ساخته‌شده برای نوشتن، به زبان خودت.</span><span>نسخهٔ آزمایشی <bdi dir="ltr">{appVersion}</bdi></span></footer>
       </main>
-
-      <div className="export-dock"><div className="export-dock-inner"><Button variant="outline" size="icon" className="size-12" aria-label="تنظیمات خروجی" onClick={() => setSheet('settings')}><Settings2 /></Button><Button size="lg" className="h-12 flex-1" onClick={convert} disabled={busy || !markdown.trim()}>{busy ? <LoaderCircle className="animate-spin" data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? 'در حال ساخت سند…' : 'ذخیرهٔ فایل Word'}</span><span className="docx-label">.docx</span></Button></div></div>
 
       <input className="sr-only" ref={input} type="file" accept=".md,.markdown,.txt,text/plain,text/markdown" onChange={async e => {
         const file = e.target.files?.[0];
         if (file) {
           if (file.size > 2_000_000) { setNotice({ text: 'حجم فایل برای این نسخه بیش از حد بزرگ است.', error: true }); }
-          else { const text = await file.text(); if (text.length <= 500_000) { setPrevious(markdown); setMarkdown(text); update('title', file.name.replace(/\.(md|markdown|txt)$/i, '')); setTab('edit'); } else setNotice({ text: 'متن باید کمتر از ۵۰۰ هزار نویسه باشد.', error: true }); }
+          else { const text = await file.text(); if (text.length <= 500_000) { setPrevious(markdown); setMarkdown(text); update('title', file.name.replace(/\.(md|markdown|txt)$/i, '')); } else setNotice({ text: 'متن باید کمتر از ۵۰۰ هزار نویسه باشد.', error: true }); }
         }
         e.target.value = '';
       }} />
 
-      <Toaster dir="rtl" position="bottom-center" theme="light" closeButton />
+      <Toaster dir="rtl" position="bottom-center" theme="light" closeButton
+        offset={{ bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', left: 24, right: 24 }}
+        mobileOffset={{ bottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', left: 16, right: 16 }} />
       <Dialog open={sheet !== null} onOpenChange={open => { if (!open) setSheet(null); }}>
         <DialogContent dir="rtl" className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>

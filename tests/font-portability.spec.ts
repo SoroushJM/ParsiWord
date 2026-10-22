@@ -15,7 +15,6 @@ test('offline Word carries the complete selected, Persian fallback, code, math a
   await page.getByLabel('جست‌وجو در Google Fonts').fill('Noto Sans Mono');
   await page.getByRole('button', { name: 'انتخاب فونت Noto Sans Mono', exact: true }).click();
   await page.getByRole('button', { name: 'آماده است' }).click();
-  await page.getByRole('tab', { name: 'پیش‌نمایش' }).click();
   await expect(page.locator('.katex')).toHaveCount(1);
   const downloading = page.waitForEvent('download');
   await page.getByRole('button', { name: /ذخیرهٔ فایل Word/ }).click();
@@ -51,7 +50,7 @@ test('offline Word carries the complete selected, Persian fallback, code, math a
   expect(settings).toContain('m:mathFont m:val="STIX Two Math"');
   expect(await zip.file('word/document.xml')!.async('string')).not.toMatch(/Courier New|Cambria Math/);
   await mkdir('artifacts', { recursive: true });
-  await writeFile(`artifacts/ParsiWord-0.4.3-portable-${testInfo.project.name}.docx`, bytes);
+  await writeFile(`artifacts/ParsiWord-0.4.4-portable-${testInfo.project.name}.docx`, bytes);
   await page.screenshot({ path: testInfo.outputPath('clean-ui.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

@@ -140,3 +140,27 @@ the saved native equations, diagrams, syntax colors and fonts were checked.
 Windows AMD64 linking/NSIS generation and latest-frontend checks succeeded;
 Windows OS execution and Apple builds still require their respective hosts.
 No Android emulator or Android x86 build was used. Downloads: [0.4.3](releases/0.4.3.md).
+
+## 0.4.4 interface and capture workflow
+
+The editor grows with its text; the formatting toolbar and preview stay visible
+while the page scrolls. Mobile uses a compact preview above the editor. Save and
+settings are at the document top, direction is below the main title, and status
+badges were removed. Read [the capture guide](ui-capture.md) before using the
+one-call development screenshot API; it is absent from production assets.
+
+847 unit tests, the corpus synchronization check and TypeScript/Vite pass.
+Actual Chromium screenshots cover desktop, 393 px and 320 px viewports and a
+120-paragraph document scrolled 1400 px. No horizontal overflow or textarea
+internal scrolling was found; the toolbar remains visible. The full Playwright
+suite was not rerun after the final layout changes.
+
+Android ARM64 version code 4004 is signed with the same certificate, 8,797,755
+bytes (unchanged). Signature, ZIP, ABI, current frontend and 16 KiB alignment
+checks pass. Windows AMD64 linking/NSIS and Linux DEB packaging pass; both
+binaries contain the final frontend. The release Linux UI was launched under
+Xvfb and the top Save button exported the corpus through the native save dialog.
+Its Word ZIP, code colors, five equations, two diagrams and all six complete
+embedded font files were verified. Phone installation, Windows OS execution and Apple builds remain subject
+to the same host limitations as before. No emulator or Android x86 build was
+used. Downloads: [0.4.4](releases/0.4.4.md).
