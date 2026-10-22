@@ -130,8 +130,8 @@ await window.parsiwordDev.screenshot({
 ۳۰ ثانیه است. مسیر ذخیره، ابعاد و اتصال CDP را runner تعیین می‌کند؛ این
 تابع در یک تب معمولی که bridge ندارد، پیام اجرای `npm run ui:capture` می‌دهد.
 
-پیاده‌سازی: [src/dev-capture.ts](../src/dev-capture.ts)، بارگذاری توسعه‌ای در
-[src/App.tsx](../src/App.tsx) و runner در
+پیاده‌سازی: [packages/core/src/dev-capture.ts](../packages/core/src/dev-capture.ts)، بارگذاری توسعه‌ای در
+[packages/core/src/App.tsx](../packages/core/src/App.tsx) و runner در
 [scripts/capture-ui.mjs](../scripts/capture-ui.mjs).
 این API فقط با `import.meta.env.DEV` بارگذاری می‌شود؛ داخل خروجی production
 یا APK قابلیت عکس‌گرفتن و اتصال دیباگ اضافه نمی‌شود. هیچ کتابخانهٔ اجرایی

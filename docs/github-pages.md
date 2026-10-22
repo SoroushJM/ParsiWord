@@ -45,7 +45,7 @@ JavaScript، CSS، آیکن، فرمول و فونت‌های همراه از م
 پیش‌نویس، نام سند و تنظیمات را عوض نمی‌کند. ترجمه‌ها در `packages/core/src/locales/en.json`
 و مدیریت زبان در `packages/core/src/locale.tsx` است. لینک پروفایل مالک و سورس در footer قرار دارد.
 
-برای دامنه یا نام مخزن متفاوت، نشانی‌های `index.html`، `en/index.html`، `packages/core/src/locale.tsx` و `packages/core/public/sitemap.xml`
+برای دامنه یا نام مخزن متفاوت، نشانی‌های `apps/parsiword/index.html`، `apps/parsiword/en/index.html`، `packages/core/src/locale.tsx` و `packages/core/public/sitemap.xml`
 و پیوندهای README را هم تغییر بده. `robots.txt` فقط در ریشهٔ یک دامنه معتبر
 است؛ قرار دادن آن در زیرپوشهٔ این پروژه سیاست خزیدن کل دامنه را تغییر نمی‌دهد.
 نمایه‌سازی و رتبهٔ جست‌وجو به خزیدن موتور جست‌وجو وابسته‌اند و فوری یا تضمینی نیستند.

@@ -46,7 +46,7 @@ P01–P72 و نمونهٔ هر ۳۶ زبان را دارد. نمودار/فرم�
 
 ۳۵ نمونهٔ زبان از تست‌های رسمی highlight.js در commit
 `f7f7d3803bd898e37c017ffb881317f0cde04a70` گرفته شده‌اند؛ نمونهٔ C متعلق به
-پروژه است. مجوز BSD-3-Clause و منبع در `public/licenses/highlight.js` هستند.
+پروژه است. مجوز BSD-3-Clause و منبع در `packages/core/public/licenses/highlight.js` هستند.
 
 منابع: [API رسمی highlight.js](https://highlightjs.readthedocs.io/en/latest/api.html)،
 [قالب‌بندی متن در docx](https://docx.js.org/api/types/index.IRunStylePropertiesOptions.html).

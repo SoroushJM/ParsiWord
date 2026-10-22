@@ -37,7 +37,7 @@ characters and diagram source to 50,000. These are resource bounds, not a
 claim that every possible valid expression is supported.
 
 Licenses and the unmodified mathml2omml distributed module are included under
-`public/licenses`; see its NOTICE and LGPL/GPL texts. The source distribution
+`packages/core/public/licenses`; see its NOTICE and LGPL/GPL texts. The source distribution
 allows rebuilding with a modified library. Native Word Android rendering is
 still a separate device check from the XML and browser tests.
 
