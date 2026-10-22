@@ -121,3 +121,22 @@ signature, metadata, ZIP, latest frontend and 16 KiB alignment checks pass.
 Phone installation remains pending. Desktop binaries are still the 0.4.1 builds;
 their source receives the same sample and math correction on its next build.
 Downloads and details: [0.4.2](releases/0.4.2.md).
+
+## 0.4.3 syntax highlighting and corpus
+
+The 36 common highlight.js grammars are bundled offline. Shared tokens supply
+React preview spans and editable colored Word runs, with language captions.
+The starter includes S01–S14/E01, all 72 delimiter rows, the previous math and
+Mermaid examples, and a code sample for every grammar. 847 unit tests and ten
+tests in each Chromium and WebKit passed. Both full browser exports passed
+independent restoration and complete-byte comparison of all six font faces.
+
+Android is ARM64-only, version code 4003, 8,797,755 bytes. Signature continuity,
+ZIP metadata, latest frontend and 16 KiB alignment checks pass. The increase
+from 0.4.2 is 53,248 bytes (52 KiB). Phone installation remains pending.
+Linux DEB and Windows NSIS packages were rebuilt. The actual release Linux app
+imported the full corpus, previewed it and saved Word through native dialogs;
+the saved native equations, diagrams, syntax colors and fonts were checked.
+Windows AMD64 linking/NSIS generation and latest-frontend checks succeeded;
+Windows OS execution and Apple builds still require their respective hosts.
+No Android emulator or Android x86 build was used. Downloads: [0.4.3](releases/0.4.3.md).

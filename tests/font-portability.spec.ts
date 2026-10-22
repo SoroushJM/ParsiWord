@@ -51,7 +51,7 @@ test('offline Word carries the complete selected, Persian fallback, code, math a
   expect(settings).toContain('m:mathFont m:val="STIX Two Math"');
   expect(await zip.file('word/document.xml')!.async('string')).not.toMatch(/Courier New|Cambria Math/);
   await mkdir('artifacts', { recursive: true });
-  await writeFile(`artifacts/ParsiWord-0.4.1-portable-${testInfo.project.name}.docx`, bytes);
+  await writeFile(`artifacts/ParsiWord-0.4.3-portable-${testInfo.project.name}.docx`, bytes);
   await page.screenshot({ path: testInfo.outputPath('clean-ui.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

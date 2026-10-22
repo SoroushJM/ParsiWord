@@ -1,5 +1,9 @@
 # LaTeX and Mermaid
 
+Ordinary code blocks also support [offline syntax highlighting](code-highlighting.md)
+for the 36 common highlight.js grammars. Preview and Word share tokens and colors;
+code remains editable, with a language caption. Unknown/untagged code stays literal.
+
 Inline math uses `$...$`; block math uses `$$` on separate lines. Fenced `math`,
 `tex` or `latex` also creates a display equation. This supports KaTeX math
 expressions, not full LaTeX documents, packages, macros from earlier blocks,

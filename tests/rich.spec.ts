@@ -33,8 +33,8 @@ test('offline math and Mermaid previews produce native Word equations and real P
     expect(png.readUInt32BE(20)).toBeGreaterThan(100);
   }
   await mkdir('artifacts', { recursive: true });
-  await writeFile('artifacts/ParsiWord-0.4.1-LaTeX-Mermaid-demo.docx', bytes);
-  await writeFile('artifacts/ParsiWord-0.4.1-LaTeX-Mermaid-demo.md', source);
+  await writeFile(`artifacts/ParsiWord-0.4.3-LaTeX-Mermaid-demo-${testInfo.project.name}.docx`, bytes);
+  await writeFile('artifacts/ParsiWord-0.4.3-LaTeX-Mermaid-demo.md', source);
   await page.screenshot({ path: testInfo.outputPath('rich-preview.png'), fullPage: true });
   expect(errors).toEqual([]);
 });

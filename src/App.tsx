@@ -4,6 +4,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { MathView, MermaidView } from './RichPreview';
+import { CodeView } from './CodeView';
 import { mathLanguage, RichContentError } from './rich-content';
 import defaultDocument from './default-document.md?raw';
 import { version as appVersion } from '../package.json';
@@ -139,8 +140,11 @@ function App() {
   const previewDir = (children: ReactNode) => paragraphDirection(renderedText(children), settings.direction);
   const components = {
     pre: ({ children }: ComponentPropsWithoutRef<'pre'>) => {
-      const rich = Children.toArray(children).some(child => isValidElement<{ className?: string }>(child) && /language-(mermaid|math|latex|tex)\b/i.test(child.props.className || ''));
-      return rich ? <>{children}</> : <pre>{children}</pre>;
+      const code = Children.toArray(children).find(child => isValidElement<{ className?: string; children?: ReactNode }>(child));
+      if (!isValidElement<{ className?: string; children?: ReactNode }>(code)) return <pre>{children}</pre>;
+      const language = code.props.className?.match(/language-(\S+)/)?.[1];
+      if (language?.toLowerCase() === 'mermaid' || mathLanguage(language)) return <>{children}</>;
+      return <CodeView source={String(code.props.children).replace(/\n$/, '')} language={language} />;
     },
     code: ({ className, children }: ComponentPropsWithoutRef<'code'>) => {
       const language = className?.match(/language-(\S+)/)?.[1];

@@ -17,3 +17,7 @@
 @font-face { font-family: "Noto Sans Mono"; src: url('/fonts/NotoSansMono-Regular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Noto Sans Mono"; src: url('/fonts/NotoSansMono-Bold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
 .prose pre, .prose code { font-family: "Noto Sans Mono", Vazirmatn, monospace; }
+.prose .code-block { margin: 1em 0; border: 1px solid #dfe8e2; border-radius: 9px; overflow: hidden; }
+.prose .code-block figcaption { background: #e7edeb; color: #57606a; padding: 5px 14px; font: 600 11px/1.8 "Noto Sans Mono", monospace; text-align: left; }
+.prose .code-block pre { margin: 0; border-radius: 0; background: #f1f4f5; }
+.prose .code-block code { background: transparent; color: #24292f; display: block; white-space: pre; }

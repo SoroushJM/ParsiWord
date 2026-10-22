@@ -46,9 +46,11 @@ export function caseMarkdown(parts: Part[]): string {
     return value;
   }).join('');
 }
-export const hardMarkdown = [
+export function hardStressMarkdown(referenceImages = true): string { return [
   '# آزمون سخت جهت متن و علامت‌های جفت',
-  'هر مورد با شناسهٔ S مشخص شده است. تصویر مرجعِ موارد اصلی در انتهای سند قرار دارد. شکل فونت و محل شکست خط می‌تواند متفاوت باشد؛ جای علامت‌ها و ترتیب متن را مقایسه کنید.',
+  referenceImages
+    ? 'هر مورد با شناسهٔ S مشخص شده است. تصویر مرجعِ موارد اصلی در انتهای سند قرار دارد. شکل فونت و محل شکست خط می‌تواند متفاوت باشد؛ جای علامت‌ها و ترتیب متن را مقایسه کنید.'
+    : 'موارد S01 تا S14 همان آزمون‌های سخت قبلی‌اند. E01 عمداً علامت‌های ناقص دارد و فقط حفظ متن آن سنجیده می‌شود. فهرست P01 تا P72 همهٔ جفت‌های قبلی را در متن فارسی، انگلیسی و ترکیبی نشان می‌دهد.',
   ...hardCases.flatMap(test => [`### ${test.id}`, test.title, caseMarkdown(test.parts)]),
   '## فهرست کامل جفت‌ها',
   'این فهرست شامل همهٔ ۶۵ جفتِ جدول Unicode 18 و هفت جفت زاویه و نقل‌قول تکمیلی است. نبودن شکل یک علامت می‌تواند از فونت باشد؛ کد Unicode همان سطر مشخص است.',
@@ -60,4 +62,5 @@ export const hardMarkdown = [
     pair.open + 'React 19' + pair.close,
     pair.open + 'React و فارسی' + pair.close,
   ].map(escapeMarkdown).join(' | ') + ' |'),
-].join('\n\n').replace(/\|\n\n(?=\|)/g, '|\n');
+].join('\n\n').replace(/\|\n\n(?=\|)/g, '|\n'); }
+export const hardMarkdown = hardStressMarkdown();

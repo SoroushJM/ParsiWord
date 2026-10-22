@@ -7,6 +7,7 @@ import { Buffer } from 'buffer';
 import type { FontBundle } from './fonts';
 import { paragraphBaseDirection, wordDirectionSpans } from './word-direction';
 import { delimiterFont, delimiterFontParts } from './delimiter-font';
+import { highlightCode } from './code-highlight';
 import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel,
   LevelFormat, Packer, Paragraph, ShadingType, Table, TableCell, TableRow,
@@ -208,12 +209,21 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
             altText: { name: 'Mermaid', title: 'Mermaid diagram', description: node.value },
           })] })];
         }
-        return node.value.split('\n').map(line => new Paragraph({
-        bidirectional: false, alignment: AlignmentType.LEFT,
-        shading: { fill: 'F1F4F5' }, spacing: { after: 0, line: 280 },
-        children: fallbackPieces([{ text: line || ' ', style: { font: codeRunFont, size: 20 } }])
-          .map(piece => new TextRun({ ...piece.style, text: piece.text })),
-      }));
+        const code = highlightCode(node.value, node.lang);
+        const header = new Paragraph({
+          bidirectional: false, alignment: AlignmentType.LEFT, keepNext: true,
+          shading: { fill: 'E7EDEB' }, spacing: { before: 160, after: 0 },
+          children: [new TextRun({ text: code.label, font: codeRunFont, size: 16, color: '57606A', bold: true })],
+        });
+        return [header, ...code.lines.map(line => new Paragraph({
+          bidirectional: false, alignment: AlignmentType.LEFT,
+          shading: { fill: 'F1F4F5' }, spacing: { after: 0, line: 280 },
+          children: fallbackPieces(line.length ? line.map(token => ({ text: token.text, style: {
+            font: codeRunFont, size: 20, color: token.color, bold: token.bold,
+            boldComplexScript: token.bold, italics: token.italic, italicsComplexScript: token.italic,
+          } })) : [{ text: '', style: { font: codeRunFont, size: 20 } }])
+            .map(piece => new TextRun({ ...piece.style, text: piece.text })),
+        }))];
       }
       case 'thematicBreak': return [new Paragraph({ border: { bottom: { color: 'CEDBD7', size: 6, style: BorderStyle.SINGLE } } })];
       case 'html': return [para([{ type: 'text', value: node.value }])];
