@@ -1,3 +1,4 @@
+import { useLocale } from './locale';
 import { useEffect, useState } from 'react';
 import { Check, Download, RefreshCw, Trash2, Type, CircleAlert } from 'lucide-react';
 import { activateFont, bundledFont, cachedFonts, ensureFont, fontCatalogue, fontError, initialCatalogue, refreshCatalogue, removeFont, isBundledFont, type FontBundle } from './fonts';
@@ -11,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
 
 export function FontPicker({ value, onSelect }: { value: string; onSelect: (family: string) => void }) {
+  const { t, dir, number } = useLocale();
   const [fonts, setFonts] = useState(initialCatalogue);
   const [cache, setCache] = useState<FontBundle[]>([]);
   const [filter, setFilter] = useState('arabic');
@@ -42,33 +44,33 @@ export function FontPicker({ value, onSelect }: { value: string; onSelect: (fami
   return <div className="flex min-h-0 flex-col gap-4">
     <FieldGroup>
       <Field>
-        <FieldLabel htmlFor="font-search">جست‌وجو در Google Fonts</FieldLabel>
-        <Input id="font-search" placeholder="Vazirmatn، Roboto، وزیرمتن…" value={query} onChange={e => { setQuery(e.target.value); setLimit(40); }} />
-        <FieldDescription>فونت انتخاب‌شده روی دستگاه می‌ماند و داخل فایل Word هم جاسازی می‌شود.</FieldDescription>
+        <FieldLabel htmlFor="font-search">{t("جست‌وجو در Google Fonts")}</FieldLabel>
+        <Input id="font-search" placeholder={t("Vazirmatn، Roboto، وزیرمتن…")} value={query} onChange={e => { setQuery(e.target.value); setLimit(40); }} />
+        <FieldDescription>{t("فونت انتخاب‌شده روی دستگاه می‌ماند و داخل فایل Word هم جاسازی می‌شود.")}</FieldDescription>
       </Field>
     </FieldGroup>
-    <ToggleGroup type="single" variant="outline" value={filter} onValueChange={v => { if (v) { setFilter(v); setLimit(40); } }} dir="rtl" aria-label="فیلتر فونت‌ها" className="w-full">
-      <ToggleGroupItem value="arabic" className="flex-1">فارسی / عربی</ToggleGroupItem>
-      <ToggleGroupItem value="all" className="flex-1">همه</ToggleGroupItem>
-      <ToggleGroupItem value="cached" className="flex-1">دانلودشده</ToggleGroupItem>
+    <ToggleGroup type="single" variant="outline" value={filter} onValueChange={v => { if (v) { setFilter(v); setLimit(40); } }} dir={dir} aria-label={t("فیلتر فونت‌ها")} className="w-full">
+      <ToggleGroupItem value="arabic" className="flex-1">{t("فارسی / عربی")}</ToggleGroupItem>
+      <ToggleGroupItem value="all" className="flex-1">{t("همه")}</ToggleGroupItem>
+      <ToggleGroupItem value="cached" className="flex-1">{t("دانلودشده")}</ToggleGroupItem>
     </ToggleGroup>
-    {error && <Alert variant="destructive"><CircleAlert /><AlertDescription>{error}</AlertDescription></Alert>}
-    <div className="flex items-center justify-between gap-2"><Badge variant="secondary">{matches.length.toLocaleString('fa-IR')} فونت</Badge><span className="text-muted-foreground text-xs">{(cache.reduce((n, f) => n + f.regular.byteLength + (f.bold?.byteLength || 0), 0) / 1024 / 1024).toLocaleString('fa-IR', { maximumFractionDigits: 1 })} مگابایت دانلودشده</span></div>
+    {error && <Alert variant="destructive"><CircleAlert /><AlertDescription>{t(error)}</AlertDescription></Alert>}
+    <div className="flex items-center justify-between gap-2"><Badge variant="secondary">{number(matches.length)} {t("فونت")}</Badge><span className="text-muted-foreground text-xs">{number(cache.reduce((n, f) => n + f.regular.byteLength + (f.bold?.byteLength || 0), 0) / 1024 / 1024, { maximumFractionDigits: 1 })} {t("مگابایت دانلودشده")}</span></div>
     <div className="flex max-h-[42dvh] flex-col gap-2 overflow-y-auto pe-1">
       {matches.slice(0, limit).map(font => {
         const stored = isBundledFont(font.family) || cache.some(f => f.family === font.family);
         return <div key={font.family} className="flex items-center gap-2">
-          <Button variant={font.family === value ? 'secondary' : 'outline'} className="h-auto min-h-14 flex-1 justify-between gap-3 py-3" disabled={!!busy} onClick={() => choose(font.family)} aria-label={`انتخاب فونت ${font.family}`}>
-            <span className="flex min-w-0 flex-col items-start gap-1"><span dir="ltr">{font.family === bundledFont ? 'وزیرمتن · Vazirmatn' : font.family}</span><span className="text-muted-foreground text-xs">{isBundledFont(font.family) ? 'همراه اپ؛ آفلاین' : stored ? 'ذخیره‌شده روی دستگاه' : font.arabic ? 'با حروف فارسی / عربی' : 'فارسی با وزیرمتن نمایش داده می‌شود'}</span></span>
-            {busy === font.family ? <Spinner aria-label="در حال دریافت فونت" data-icon="inline-end" /> : value === font.family ? <Check data-icon="inline-end" /> : stored ? <Type data-icon="inline-end" /> : <Download data-icon="inline-end" />}
+          <Button variant={font.family === value ? 'secondary' : 'outline'} className="h-auto min-h-14 flex-1 justify-between gap-3 py-3" disabled={!!busy} onClick={() => choose(font.family)} aria-label={`${t('انتخاب فونت')} ${font.family}`}>
+            <span className="flex min-w-0 flex-col items-start gap-1"><span dir="ltr">{font.family === bundledFont ? t("وزیرمتن · Vazirmatn") : font.family}</span><span className="text-muted-foreground text-xs">{isBundledFont(font.family) ? t("همراه اپ؛ آفلاین") : stored ? t("ذخیره‌شده روی دستگاه") : font.arabic ? t("با حروف فارسی / عربی") : t("فارسی با وزیرمتن نمایش داده می‌شود")}</span></span>
+            {busy === font.family ? <Spinner aria-label={t("در حال دریافت فونت")} data-icon="inline-end" /> : value === font.family ? <Check data-icon="inline-end" /> : stored ? <Type data-icon="inline-end" /> : <Download data-icon="inline-end" />}
           </Button>
-          {stored && !isBundledFont(font.family) && <Button variant="ghost" size="icon" disabled={!!busy} aria-label={`حذف فونت ${font.family}`} onClick={async () => { try { await removeFont(font.family); setCache(await cachedFonts()); if (value === font.family) onSelect(bundledFont); } catch (e) { setError(fontError(e)); } }}><Trash2 data-icon="inline-start" /></Button>}
+          {stored && !isBundledFont(font.family) && <Button variant="ghost" size="icon" disabled={!!busy} aria-label={`${t('حذف فونت')} ${font.family}`} onClick={async () => { try { await removeFont(font.family); setCache(await cachedFonts()); if (value === font.family) onSelect(bundledFont); } catch (e) { setError(fontError(e)); } }}><Trash2 data-icon="inline-start" /></Button>}
         </div>;
       })}
-      {!matches.length && <Empty><EmptyHeader><EmptyTitle>فونتی پیدا نشد</EmptyTitle><EmptyDescription>فیلتر یا عبارت جست‌وجو را تغییر بده.</EmptyDescription></EmptyHeader></Empty>}
-      {matches.length > limit && <Button variant="ghost" onClick={() => setLimit(n => n + 40)}>نمایش بیشتر</Button>}
+      {!matches.length && <Empty><EmptyHeader><EmptyTitle>{t("فونتی پیدا نشد")}</EmptyTitle><EmptyDescription>{t("فیلتر یا عبارت جست‌وجو را تغییر بده.")}</EmptyDescription></EmptyHeader></Empty>}
+      {matches.length > limit && <Button variant="ghost" onClick={() => setLimit(n => n + 40)}>{t("نمایش بیشتر")}</Button>}
     </div>
-    <Button variant="ghost" disabled={!!busy} onClick={async () => { setBusy('catalogue'); setError(''); try { setFonts(await refreshCatalogue()); } catch (e) { setError(fontError(e)); } finally { setBusy(''); } }}>{busy === 'catalogue' ? <Spinner aria-label="در حال به‌روزرسانی فونت‌ها" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}به‌روزرسانی فهرست فونت‌ها</Button>
-    <p className="text-muted-foreground text-xs leading-6">اینترنت فقط برای دریافت فونت جدید و به‌روزرسانی فهرست لازم است. متن سند به گوگل ارسال نمی‌شود. نمایش فونت جاسازی‌شده در Word به پشتیبانی نسخهٔ آن بستگی دارد.</p>
+    <Button variant="ghost" disabled={!!busy} onClick={async () => { setBusy('catalogue'); setError(''); try { setFonts(await refreshCatalogue()); } catch (e) { setError(fontError(e)); } finally { setBusy(''); } }}>{busy === 'catalogue' ? <Spinner aria-label={t("در حال به‌روزرسانی فونت‌ها")} data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}{t("به‌روزرسانی فهرست فونت‌ها")}</Button>
+    <p className="text-muted-foreground text-xs leading-6">{t("اینترنت فقط برای دریافت فونت جدید و به‌روزرسانی فهرست لازم است. متن سند به گوگل ارسال نمی‌شود. نمایش فونت جاسازی‌شده در Word به پشتیبانی نسخهٔ آن بستگی دارد.")}</p>
   </div>;
 }

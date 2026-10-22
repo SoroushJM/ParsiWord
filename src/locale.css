@@ -1,0 +1,18 @@
+.language-switch { display: flex; align-items: center; gap: .25rem; }
+.language-switch a { min-height: 2.75rem; padding-inline: .75rem; }
+.intro .intro-description { max-width: 48rem; }
+.product-explanation { padding-block: 2rem; max-width: 48rem; }
+.product-explanation h2 { margin-block: 0 .75rem; font-size: 1.25rem; font-weight: 600; }
+.product-explanation p { line-height: 1.9; color: var(--muted-foreground); margin-block: .5rem; }
+html[dir="ltr"] .intro h1 { letter-spacing: -.04em; line-height: 1.25; max-width: 48rem; }
+html[dir="ltr"] .intro h1 span { margin-inline-start: 0; }
+html[dir="ltr"] .format-toolbar { direction: ltr; }
+html[dir="ltr"] .brand-name { letter-spacing: -.02em; }
+.editor-status { flex-wrap: wrap; }
+.page-footer { flex-wrap: wrap; gap: 1rem; }
+.footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.footer-links a { display: inline-flex; align-items: center; min-height: 2.75rem; text-decoration: underline; text-underline-offset: .2rem; }
+@media (max-width: 43.75rem) {
+  .language-switch a { padding-inline: .5rem; }
+  .product-explanation { padding-block: 1.5rem; }
+}

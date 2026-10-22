@@ -1,3 +1,4 @@
+import { useLocale } from './locale';
 import { memo, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { MarkdownSourceHighlighter, type MarkdownSourceLine } from './markdown-source-highlight';
@@ -20,6 +21,7 @@ const SourceLine = memo(function SourceLine({ line, index }: { line: MarkdownSou
 // The native textarea remains the input, selection and sizing surface. Color
 // spans are decorative: they never change font metrics or execute source HTML.
 export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorRef, value, direction, onChange, onFocus }: Props) {
+  const { t } = useLocale();
   const paint = useRef<HTMLDivElement>(null);
   const surface = useRef<HTMLDivElement>(null);
   const highlighter = useRef<MarkdownSourceHighlighter | null>(null);
@@ -88,9 +90,9 @@ export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorR
     <div ref={paint} className="markdown-source-highlight" dir={direction} aria-hidden="true">
       {lines?.map((line, index) => <SourceLine key={line.id} line={line} index={index} />)}
     </div>
-    <Textarea id="markdown-source" ref={editorRef} className="markdown-editor rounded-none" aria-label="متن Markdown" dir={direction}
+    <Textarea id="markdown-source" ref={editorRef} className="markdown-editor rounded-none" aria-label={t("متن Markdown")} dir={direction}
       value={value} onFocus={onFocus} onChange={event => onChange(event.target.value)}
       onCompositionStart={() => { if (surface.current) surface.current.dataset.highlighted = 'false'; setComposing(true); }}
-      onCompositionEnd={() => setComposing(false)} placeholder="از اینجا شروع کن…" spellCheck={false} maxLength={500_000} />
+      onCompositionEnd={() => setComposing(false)} placeholder={t("از اینجا شروع کن…")} spellCheck={false} maxLength={500_000} />
   </div>;
 });

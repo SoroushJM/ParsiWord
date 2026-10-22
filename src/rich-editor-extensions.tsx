@@ -1,3 +1,4 @@
+import { useLocale } from './locale';
 import { useId, useMemo, useState } from 'react';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { CodeBlock } from '@tiptap/extension-code-block';
@@ -18,6 +19,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 function CodeBlockView({ node }: NodeViewProps) {
+  const { t } = useLocale();
   const language = String(node.attrs.language || '');
   const diagram = language.toLowerCase() === 'mermaid';
   const math = mathLanguage(language);
@@ -26,7 +28,7 @@ function CodeBlockView({ node }: NodeViewProps) {
   return <NodeViewWrapper className={diagram || math ? 'rich-source-block' : 'code-block'} dir="ltr" data-language={code.language || ''}>
     {diagram || math ? <>
       <div contentEditable={false}>{diagram ? <MermaidView source={node.textContent} /> : <MathView source={node.textContent} display />}</div>
-      <details className="rich-source-details"><summary contentEditable={false}>{diagram ? 'ویرایش نمودار' : 'ویرایش فرمول'}</summary><pre><NodeViewContent<'code'> as="code" /></pre></details>
+      <details className="rich-source-details"><summary contentEditable={false}>{diagram ? t("ویرایش نمودار") : t("ویرایش فرمول")}</summary><pre><NodeViewContent<'code'> as="code" /></pre></details>
     </> : <><figcaption contentEditable={false}>{code.label}</figcaption><pre><NodeViewContent<'code'> as="code" /></pre></>}
   </NodeViewWrapper>;
 }
@@ -95,6 +97,7 @@ export const RichCodeBlock = CodeBlock.extend({
 });
 
 function MathNodeView({ node, updateAttributes }: NodeViewProps) {
+  const { t, dir } = useLocale();
   const [editing, setEditing] = useState(false);
   const sourceId = useId();
   const display = node.type.name === 'mathBlock';
@@ -102,14 +105,14 @@ function MathNodeView({ node, updateAttributes }: NodeViewProps) {
   return <NodeViewWrapper as={Tag} className={display ? 'rich-math-block' : 'rich-math-inline'} contentEditable={false}>
     {display && <MathView source={String(node.attrs.source)} display />}
     <Dialog open={editing} onOpenChange={setEditing}>
-      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="rich-math-button h-auto max-w-full" aria-label="ویرایش فرمول">{display ? 'ویرایش فرمول' : <MathView source={String(node.attrs.source)} />}</Button></DialogTrigger>
-      <DialogContent dir="rtl">
-        <DialogHeader><DialogTitle>ویرایش فرمول</DialogTitle><DialogDescription>متن LaTeX را تغییر بده؛ فرمول و Markdown هم‌زمان به‌روز می‌شوند.</DialogDescription></DialogHeader>
+      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="rich-math-button h-auto max-w-full" aria-label={t("ویرایش فرمول")}>{display ? t("ویرایش فرمول") : <MathView source={String(node.attrs.source)} />}</Button></DialogTrigger>
+      <DialogContent dir={dir}>
+        <DialogHeader><DialogTitle>{t("ویرایش فرمول")}</DialogTitle><DialogDescription>{t("متن LaTeX را تغییر بده؛ فرمول و Markdown هم‌زمان به‌روز می‌شوند.")}</DialogDescription></DialogHeader>
         <FieldGroup>
-          <Field><FieldLabel htmlFor={sourceId}>متن فرمول LaTeX</FieldLabel>{display
-            ? <Textarea id={sourceId} dir="ltr" aria-label="متن فرمول LaTeX" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} />
-            : <Input id={sourceId} dir="ltr" aria-label="متن فرمول LaTeX" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); setEditing(false); } }} />}</Field>
-          <Button type="button" onClick={() => setEditing(false)}>تأیید</Button>
+          <Field><FieldLabel htmlFor={sourceId}>{t("متن فرمول LaTeX")}</FieldLabel>{display
+            ? <Textarea id={sourceId} dir="ltr" aria-label={t("متن فرمول LaTeX")} value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} />
+            : <Input id={sourceId} dir="ltr" aria-label={t("متن فرمول LaTeX")} value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); setEditing(false); } }} />}</Field>
+          <Button type="button" onClick={() => setEditing(false)}>{t("تأیید")}</Button>
         </FieldGroup>
       </DialogContent>
     </Dialog>
@@ -132,17 +135,18 @@ export const MathBlock = Node.create({
 });
 
 function RawNodeView({ node, updateAttributes }: NodeViewProps) {
+  const { t, dir } = useLocale();
   const [editing, setEditing] = useState(false);
   const sourceId = useId();
   const inline = node.type.name === 'rawInline';
   return <NodeViewWrapper as={inline ? 'span' : 'div'} className={inline ? 'rich-raw-inline' : 'rich-raw-block'} contentEditable={false}>
     <Dialog open={editing} onOpenChange={setEditing}>
-      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="h-auto max-w-full whitespace-normal" aria-label="ویرایش نشانه‌گذاری">{node.attrs.label || node.attrs.source}</Button></DialogTrigger>
-      <DialogContent dir="rtl">
-        <DialogHeader><DialogTitle>ویرایش نشانه‌گذاری</DialogTitle><DialogDescription>نشانه‌گذاری این بخش در Markdown حفظ می‌شود.</DialogDescription></DialogHeader>
+      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="h-auto max-w-full whitespace-normal" aria-label={t("ویرایش نشانه‌گذاری")}>{node.attrs.label || node.attrs.source}</Button></DialogTrigger>
+      <DialogContent dir={dir}>
+        <DialogHeader><DialogTitle>{t("ویرایش نشانه‌گذاری")}</DialogTitle><DialogDescription>{t("نشانه‌گذاری این بخش در Markdown حفظ می‌شود.")}</DialogDescription></DialogHeader>
         <FieldGroup>
-          <Field><FieldLabel htmlFor={sourceId}>نشانه‌گذاری Markdown</FieldLabel><Textarea id={sourceId} aria-label="نشانه‌گذاری Markdown" value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} /></Field>
-          <Button type="button" onClick={() => setEditing(false)}>تأیید</Button>
+          <Field><FieldLabel htmlFor={sourceId}>{t("نشانه‌گذاری Markdown")}</FieldLabel><Textarea id={sourceId} aria-label={t("نشانه‌گذاری Markdown")} value={String(node.attrs.source)} onChange={event => updateAttributes({ source: event.target.value })} /></Field>
+          <Button type="button" onClick={() => setEditing(false)}>{t("تأیید")}</Button>
         </FieldGroup>
       </DialogContent>
     </Dialog>

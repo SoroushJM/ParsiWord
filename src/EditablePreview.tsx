@@ -1,3 +1,4 @@
+import { useLocale } from './locale';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export const EditablePreview = memo(function EditablePreview({ markdown, direction, fontFamily, fontSize, onChange, onStartWriting }: Props) {
+  const { t } = useLocale();
   const onChangeRef = useRef(onChange);
   const applied = useRef(markdown);
   const source = useRef(markdown);
@@ -97,7 +99,7 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
     shouldRerenderOnTransaction: false,
     content: initial.document,
     editorProps: {
-      attributes: { class: 'prose rich-document', role: 'textbox', 'aria-label': 'ویرایش پیش‌نمایش', 'aria-multiline': 'true', spellcheck: 'false' },
+      attributes: { class: 'prose rich-document', role: 'textbox', 'aria-label': t("ویرایش پیش‌نمایش"), 'aria-multiline': 'true', spellcheck: 'false' },
     },
     onCreate: ({ editor }) => scheduleAnnotation(editor),
     onUpdate: ({ editor }) => {
@@ -141,17 +143,20 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
   useLayoutEffect(() => {
     if (!editor) return;
     editor.view.dom.dir = direction === 'auto' ? 'auto' : direction;
-    editor.view.dom.style.fontSize = `${fontSize + 2}px`;
+    editor.view.dom.style.fontSize = `${(fontSize + 2) / parseFloat(getComputedStyle(document.documentElement).fontSize)}rem`;
     editor.view.dom.style.fontFamily = `"${fontFamily}", Vazirmatn, "ParsiWord Symbols", sans-serif`;
     scheduleAnnotation(editor);
   }, [editor, direction, fontFamily, fontSize, scheduleAnnotation]);
+  useEffect(() => {
+    if (editor) editor.view.dom.setAttribute('aria-label', t('ویرایش پیش‌نمایش'));
+  }, [editor, t]);
   useEffect(() => () => cancelAnimationFrame(annotationFrame.current), []);
 
   return <>
     {editor && <RichToolbar editor={editor} />}
     <article className="editable-preview-content" data-empty={!markdown.trim()}><EditorContent editor={editor} />
-      {!markdown.trim() && <Empty className="rich-empty"><EmptyHeader><EmptyTitle>هنوز چیزی ننوشته‌ای.</EmptyTitle><EmptyDescription>اینجا بنویس یا از ویرایش Markdown شروع کن.</EmptyDescription></EmptyHeader><EmptyContent><Button type="button" variant="outline" onClick={onStartWriting}>شروع نوشتن</Button></EmptyContent></Empty>}
+      {!markdown.trim() && <Empty className="rich-empty"><EmptyHeader><EmptyTitle>{t("هنوز چیزی ننوشته‌ای.")}</EmptyTitle><EmptyDescription>{t("اینجا بنویس یا از ویرایش Markdown شروع کن.")}</EmptyDescription></EmptyHeader><EmptyContent><Button type="button" variant="outline" onClick={onStartWriting}>{t("شروع نوشتن")}</Button></EmptyContent></Empty>}
     </article>
-    <p className="preview-disclaimer">اینجا مستقیماً ویرایش کن؛ تغییرات در Markdown ذخیره می‌شوند. صفحه‌بندی نهایی را در Word بررسی کن.</p>
+    <p className="preview-disclaimer">{t("اینجا مستقیماً ویرایش کن؛ تغییرات در Markdown ذخیره می‌شوند. صفحه‌بندی نهایی را در Word بررسی کن.")}</p>
   </>;
 });

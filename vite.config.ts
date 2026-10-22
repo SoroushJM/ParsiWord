@@ -18,7 +18,13 @@ export default defineConfig(() => ({
   //
   // 1. prevent Vite from obscuring rust errors
   clearScreen: false,
-  build: { target: ['chrome87', 'safari16.4'] },
+  build: {
+    target: ['chrome87', 'safari16.4'],
+    rolldownOptions: { input: {
+      main: fileURLToPath(new URL('./index.html', import.meta.url)),
+      en: fileURLToPath(new URL('./en/index.html', import.meta.url)),
+    } },
+  },
   // 2. tauri expects a fixed port, fail if that port is not available
   server: {
     port: 1420,
