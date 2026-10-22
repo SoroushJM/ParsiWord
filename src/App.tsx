@@ -20,6 +20,7 @@ import '@fontsource/vazirmatn/400.css';
 import '@fontsource/vazirmatn/500.css';
 import '@fontsource/vazirmatn/600.css';
 import '@fontsource/vazirmatn/700.css';
+import '@fontsource-variable/geist';
 
 const storageKey = 'parsiword-draft-v1';
 function loadDraft(locale: 'fa' | 'en') {

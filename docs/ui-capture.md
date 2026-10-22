@@ -37,6 +37,9 @@ npm run ui:capture -- --chrome /path/to/chrome --output artifacts/ui.png
 # دسکتاپ
 npm run ui:capture -- --width 1100 --height 800 --markdown /tmp/demo.md --output artifacts/desktop.png
 
+# رابط انگلیسی
+npm run ui:capture -- --language en --width 1100 --height 800 --output artifacts/desktop-en.png
+
 # ویرایش موبایل و پیش‌نمایش همان متن
 npm run ui:capture -- --width 393 --height 851 --view edit --markdown /tmp/demo.md --output artifacts/mobile-edit.png
 npm run ui:capture -- --width 393 --height 851 --view preview --markdown /tmp/demo.md --output artifacts/mobile-preview.png

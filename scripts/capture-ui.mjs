@@ -14,6 +14,7 @@ const width = Number(args.width || 1100), height = Number(args.height || 800);
 const output = resolve(args.output || 'artifacts/ui-preview.png');
 if (!(width >= 320 && height >= 320)) throw new Error('Width and height must be at least 320.');
 if (args.view !== undefined && !['edit', 'preview'].includes(args.view)) throw new Error('View must be edit or preview.');
+if (args.language !== undefined && !['fa', 'en'].includes(args.language)) throw new Error('Language must be fa or en.');
 let chrome = args.chrome || process.env.CHROME_BIN;
 if (!chrome) {
   const cache = join(homedir(), '.cache/ms-playwright');
@@ -77,7 +78,7 @@ try {
   await send('Runtime.addBinding', { name: '__parsiwordCapture' });
   await send('Page.enable');
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 900 });
-  await send('Page.navigate', { url });
+  await send('Page.navigate', { url: args.language === 'en' ? `${url}/en/` : url });
   let ready = false;
   for (let attempt = 0; attempt < 150; attempt++) {
     const result = await send('Runtime.evaluate', { expression: 'Boolean(window.parsiwordDev)' });

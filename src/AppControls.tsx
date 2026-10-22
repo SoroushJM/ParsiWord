@@ -38,13 +38,23 @@ export const IntroControls = memo(function IntroControls({ direction, onDirectio
   const { t, dir } = useLocale();
   const dirLabel = { rtl: t("راست‌به‌چپ"), auto: t("جهت خودکار"), ltr: t("چپ‌به‌راست") }[direction];
   return (<section className="intro">
-          <h1>{t('Markdown راست‌به‌چپ را ببین و ویرایش کن.')}</h1>
+        <div className="intro-copy">
+          <h1><span>{t('Markdown راست‌به‌چپ را')}</span>{' '}<span>{t('ببین و ویرایش کن.')}</span></h1>
           <div className="intro-controls">
             <ToggleGroup type="single" variant="outline" dir={dir} value={direction} onValueChange={value => { if (value) onDirectionChange(value as ExportSettings['direction']); }} aria-label={t("جهت متن")} title={dirLabel} className="w-full max-w-sm gap-1">
               <ToggleGroupItem value="rtl" className="h-10 min-w-0 flex-1 px-2">{t("راست‌به‌چپ")}</ToggleGroupItem><ToggleGroupItem value="auto" className="h-10 min-w-0 flex-1 px-2">{t("جهت خودکار")}</ToggleGroupItem><ToggleGroupItem value="ltr" className="h-10 min-w-0 flex-1 px-2">{t("چپ‌به‌راست")}</ToggleGroupItem>
             </ToggleGroup>
           </div>
           <p className="intro-description">{t('پیش‌نمایش قابل ویرایش برای متن فارسی، عربی و ترکیبی؛ با خروجی Word و PDF.')}</p>
+        </div>
+        <div className="intro-art" aria-hidden="true">
+          <div className="intro-decoration">
+            <FileText size="6.5rem" strokeWidth={1} />
+            <span className="decoration-check"><Check size="1.5rem" strokeWidth={2.5} /></span>
+            <span className="decoration-brackets">( )</span>
+          </div>
+          <span className="decoration-spark" />
+        </div>
         </section>);
 });
 
