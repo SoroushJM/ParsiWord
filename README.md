@@ -17,9 +17,29 @@ to a server. The web app is free to use in a modern browser.
 
 [نسخهٔ ۰.۴.۷ و دانلود APK](docs/releases/0.4.7.md) برای تبدیل Markdown به Word و PDF روی دستگاه، با رابط فارسی، جهت متن
 فارسی/انگلیسی، فرمول LaTeX و نمودار Mermaid. کنترل‌های نمونه و مقایسه از رابط
-حذف شده‌اند. شروع نخست با یک [متن ترکیبی سخت](src/default-document.md) شامل
+حذف شده‌اند. شروع نخست با یک [متن ترکیبی سخت](packages/core/src/default-document.md) شامل
 همهٔ موارد سخت قبلی، ۷۲ جفت علامت، LaTeX، Mermaid و نمونهٔ ۳۶ زبان کد است؛ پیش‌نویس قبلی (حتی خالی) حفظ می‌شود و
 «یادداشت تازه» همچنان یک سند خالی باز می‌کند.
+
+## سه پروژه در یک مخزن
+
+| پروژه | مسیر | مسئولیت |
+| --- | --- | --- |
+| هستهٔ مشترک | `packages/core` | ویرایشگر، RTL، Markdown، فرمول، نمودار، فونت و خروجی‌ها |
+| اکستنشن VS Code | `apps/vscode` | اتصال به TextDocument، منبع و پیش‌نمایش بومی، diff گیت و Webview |
+| وب و اپ پارسی‌ورد | `apps/parsiword` | سایت دوزبانه، پیش‌نویس و پروژه‌های Tauri دسکتاپ/موبایل |
+
+`npm run dev`، `npm run build` و فرمان‌های ساخت اپ از ریشه اجرا می‌شوند.
+برای اکستنشن: `npm run package:vscode`؛ بسته در `artifacts/parsiword-vscode-0.1.0.vsix` قرار می‌گیرد.
+آزمون واقعی VS Code: `npm run test:vscode`، با پروفایل و مخزن آزمایشی مستقل.
+[راهنمای اکستنشن](apps/vscode/README.md) · [طرح و معیارهای پذیرش](docs/vscode-plan.md) · [نتایج آزمون](docs/vscode-validation.md).
+
+اکستنشن، نمای پیش‌فرض Markdown است. دکمهٔ «منبع بومی VS Code» همان سند را کنار
+پیش‌نمایش باز می‌کند تا تکمیل خودکار، Outline، folding، پیوندها و سایر امکانات
+Markdown و افزونه‌های نصب‌شده در ادیتور بومی باقی بمانند. «Git diff» و
+«Staged diff» مقایسه‌های بومی VS Code را باز می‌کنند. قابلیت‌های ادیتور بومی
+به textarea وب منتقل نشده‌اند؛ هر دو نما از یک سند و تاریخچهٔ Undo/Redo استفاده می‌کنند.
+
 
 ## استفاده
 
@@ -109,13 +129,13 @@ PDF متن و کد را برداری و قابل جست‌وجو، با فونت
 بایت‌ها** را با اصل مقایسه می‌کند. برای بررسی مستقل یک خروجی:
 
 ```sh
-python scripts/verify-docx-fonts.py document.docx --font-dir public/fonts
+python scripts/verify-docx-fonts.py document.docx --font-dir packages/core/public/fonts
 ```
 
 این ابزار به fontTools نیاز دارد. منبع و مجوز فونت‌های همراه در
-`public/fonts/FONT-SOURCES.txt` و فایل‌های OFL کنار فونت‌ها است؛ بازسازی فونت
+`packages/core/public/fonts/FONT-SOURCES.txt` و فایل‌های OFL کنار فونت‌ها است؛ بازسازی فونت
 کد با `scripts/build-document-fonts.py` انجام می‌شود. مجوز و منبع کتابخانهٔ
-mathml2omml در `public/licenses` همراه بسته قرار دارند.
+mathml2omml در `packages/core/public/licenses` همراه بسته قرار دارند.
 
 ## ساخت و تست
 
@@ -126,7 +146,7 @@ bidi-js، ریاضی با KaTeX/mathml2omml، نمودار با Mermaid و پو�
 Node.js 22.12+ یا 24 و Rust stable لازم‌اند. اندروید به JDK 21، SDK Platform
 36، Build Tools 36 و NDK 28.2.13676358 نیاز دارد؛ مسیرهای JAVA_HOME،
 ANDROID_HOME و NDK_HOME را برای دستگاه خود تنظیم کن. پروژهٔ Android Studio
-در `src-tauri/gen/android` است. کلید امضا بیرون مخزن نگه داشته می‌شود.
+در `apps/parsiword/src-tauri/gen/android` است. کلید امضا بیرون مخزن نگه داشته می‌شود.
 
 ```sh
 npm ci
@@ -182,8 +202,8 @@ APK تحویلی ۰.۴.۷ با Preview نسخهٔ ۰.۴.۶ گواهی امضای
 تست‌های واحد و مرورگر، حفظ جهت متن، ذخیرهٔ پیش‌نویس، تبدیل فرمول/نمودار و
 جاسازی فونت را بررسی می‌کنند؛ نتیجهٔ هر انتشار در یادداشت همان نسخه ثبت است.
 
-متن شروع از `src/starter-document.md`، همان corpus تست RTL و نمونه‌های دارای
-مجوز در `src/data/code-samples.json` ساخته می‌شود. بعد از تغییر آن‌ها،
+متن شروع از `packages/core/src/starter-document.md`، همان corpus تست RTL و نمونه‌های دارای
+مجوز در `packages/core/src/data/code-samples.json` ساخته می‌شود. بعد از تغییر آن‌ها،
 `npm run samples:build` را اجرا کن؛ `samples:check` همگام بودن خروجی را بررسی می‌کند.
 
 فرمان‌های `linux:build`، `windows:build`، `macos:build` و `ios:simulator` برای

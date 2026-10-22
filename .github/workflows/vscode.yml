@@ -1,0 +1,32 @@
+name: Build and test VS Code extension
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['apps/vscode/**', 'packages/core/**', 'package*.json', 'tsconfig*.json', '.github/workflows/vscode.yml']
+  pull_request:
+    paths: ['apps/vscode/**', 'packages/core/**', 'package*.json', 'tsconfig*.json', '.github/workflows/vscode.yml']
+permissions:
+  contents: read
+jobs:
+  extension:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:vscode
+      - run: npm run package:vscode
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ParsiWord-VSCode
+          path: |
+            artifacts/*.vsix
+            artifacts/vscode-test/results.json
+            artifacts/vscode-test/*.png
+          if-no-files-found: warn

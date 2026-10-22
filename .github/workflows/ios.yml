@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts
-          app_path="$(find src-tauri/gen/apple src-tauri/target -type d -name '*.app' -prune -print | head -1)"
+          app_path="$(find apps/parsiword/src-tauri/gen/apple apps/parsiword/src-tauri/target -type d -name '*.app' -prune -print | head -1)"
           test -n "$app_path"
           tar -czf artifacts/ParsiWord-iOS-simulator.tar.gz -C "$(dirname "$app_path")" "$(basename "$app_path")"
       - uses: actions/upload-artifact@v4

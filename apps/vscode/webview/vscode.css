@@ -1,0 +1,14 @@
+body { padding: 0; }
+.app-shell[data-host="vscode"] { max-width: none; padding: 1rem; }
+[data-host="vscode"] .app-header { height: 3.75rem; }
+[data-host="vscode"] .intro { margin-block: .5rem; padding: .5rem; min-height: 0; grid-template-columns: 1fr; gap: 0; }
+.app-shell[data-host="vscode"] .intro h1 { font-size: 1.375rem; max-width: none; }
+.app-shell[data-host="vscode"] .intro h1 > span { display: inline; }
+[data-host="vscode"] .intro-controls { margin-block: .5rem; }
+[data-host="vscode"] .intro-art,
+[data-host="vscode"] .product-explanation,
+[data-host="vscode"] .privacy-note { display: none; }
+.host-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .75rem; }
+/* The document remains a light paper surface; chrome follows the workbench. */
+body.vscode-dark .app-header { background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
+body.vscode-high-contrast .document-panel { outline: .125rem solid var(--vscode-contrastBorder); }

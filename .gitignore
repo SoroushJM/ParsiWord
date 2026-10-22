@@ -28,8 +28,8 @@ key.properties
 *.xcarchive
 *.ipa
 .DS_Store
-src-tauri/gen/apple/build/
-src-tauri/gen/apple/DerivedData/
+apps/parsiword/src-tauri/gen/apple/build/
+apps/parsiword/src-tauri/gen/apple/DerivedData/
 
 # Editor directories and files
 .vscode/*
@@ -44,3 +44,7 @@ src-tauri/gen/apple/DerivedData/
 
 # Python verification/build helpers
 __pycache__/
+
+*.vsix
+apps/vscode/.test-profile/
+apps/vscode/.test-extensions/

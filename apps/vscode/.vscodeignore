@@ -1,0 +1,10 @@
+src/**
+webview/**
+test/**
+scripts/**
+tsconfig.json
+vite.config.ts
+dist/**/*.map
+dist/test.cjs
+.test-*/**
+node_modules/**

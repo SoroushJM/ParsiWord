@@ -1,0 +1,143 @@
+{
+  "name": "parsiword-vscode",
+  "displayName": "ParsiWord — RTL Markdown Editor",
+  "description": "View and edit Persian, Arabic and mixed RTL/LTR Markdown, with editable preview, LaTeX, Mermaid and Word/PDF export.",
+  "version": "0.1.0",
+  "publisher": "SoroushJM",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "keywords": [
+    "markdown",
+    "rtl",
+    "persian",
+    "arabic",
+    "latex",
+    "mermaid"
+  ],
+  "main": "./dist/extension.cjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SoroushJM/ParsiWord"
+  },
+  "dependencies": {
+    "@parsiword/core": "*"
+  },
+  "activationEvents": [
+    "onCustomEditor:parsiword.markdown",
+    "onLanguage:markdown"
+  ],
+  "extensionDependencies": [
+    "vscode.markdown-language-features"
+  ],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "parsiword.markdown",
+        "displayName": "ParsiWord RTL Markdown",
+        "selector": [
+          {
+            "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "parsiword.open",
+        "title": "ParsiWord: Open in ParsiWord",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "parsiword.source",
+        "title": "ParsiWord: Open Native Source Beside",
+        "icon": "$(code)"
+      },
+      {
+        "command": "parsiword.nativePreview",
+        "title": "ParsiWord: Open VS Code Markdown Preview",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "parsiword.gitDiff",
+        "title": "ParsiWord: Git Diff (Working Tree)",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "parsiword.stagedDiff",
+        "title": "ParsiWord: Git Diff (Staged)",
+        "icon": "$(git-compare)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "parsiword.source",
+          "when": "resourceLangId == markdown",
+          "group": "navigation"
+        },
+        {
+          "command": "parsiword.open",
+          "when": "resourceLangId == markdown"
+        },
+        {
+          "command": "parsiword.gitDiff",
+          "when": "resourceLangId == markdown"
+        },
+        {
+          "command": "parsiword.stagedDiff",
+          "when": "resourceLangId == markdown"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ParsiWord",
+      "properties": {
+        "parsiword.direction": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "rtl",
+            "ltr"
+          ],
+          "default": "auto",
+          "description": "Default document direction."
+        },
+        "parsiword.language": {
+          "type": "string",
+          "enum": [
+            "fa",
+            "en"
+          ],
+          "default": "fa",
+          "description": "Initial interface language."
+        },
+        "parsiword.fontFamily": {
+          "type": "string",
+          "default": "Vazirmatn",
+          "description": "Default document/export font."
+        },
+        "parsiword.fontSize": {
+          "type": "number",
+          "enum": [
+            10,
+            11,
+            12,
+            14,
+            16,
+            18
+          ],
+          "default": 12,
+          "description": "Export font size in points."
+        }
+      }
+    }
+  },
+  "type": "module",
+  "icon": "dist/webview/icon.png"
+}

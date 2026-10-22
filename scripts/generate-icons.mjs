@@ -8,12 +8,12 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const manifest = JSON.parse(await readFile(join(root, 'assets/app-icon.manifest.json'), 'utf8'));
 execFileSync(process.execPath, [
   join(root, 'node_modules/@tauri-apps/cli/tauri.js'),
-  'icon', 'assets/app-icon.manifest.json',
+  'icon', 'assets/app-icon.manifest.json', '--output', 'apps/parsiword/src-tauri/icons',
 ], { cwd: root, stdio: 'inherit' });
 // Tauri scales explicit adaptive foregrounds to the full 108dp canvas. Apply
 // their safe-area inset through Android's standard drawable packaging instead.
-const nativeRes = join(root, 'src-tauri/gen/android/app/src/main/res');
-const androidRes = await access(nativeRes).then(() => nativeRes, () => join(root, 'src-tauri/icons/android'));
+const nativeRes = join(root, 'apps/parsiword/src-tauri/gen/android/app/src/main/res');
+const androidRes = await access(nativeRes).then(() => nativeRes, () => join(root, 'apps/parsiword/src-tauri/icons/android'));
 const inset = (100 - (manifest.android_fg_scale ?? 100)) / 2;
 if (!Number.isFinite(inset) || inset < 0 || inset >= 50) throw new Error('Invalid Android foreground scale.');
 await mkdir(join(androidRes, 'drawable'), { recursive: true });
@@ -29,5 +29,5 @@ const adaptivePath = join(androidRes, 'mipmap-anydpi-v26/ic_launcher.xml');
 const adaptive = await readFile(adaptivePath, 'utf8');
 if (!adaptive.includes('@mipmap/ic_launcher_foreground')) throw new Error('Adaptive icon output was not found.');
 await writeFile(adaptivePath, adaptive.replace('@mipmap/ic_launcher_foreground', '@drawable/parsiword_launcher_foreground'));
-await copyFile(join(root, 'src-tauri/icons/64x64.png'), join(root, 'public/icon.png'));
+await copyFile(join(root, 'apps/parsiword/src-tauri/icons/64x64.png'), join(root, 'packages/core/public/icon.png'));
 console.log('Generated desktop, iOS, Android launcher icons and the PNG favicon.');

@@ -45,7 +45,7 @@ function files(directory) {
     return entry.isDirectory() ? files(path) : [path];
   });
 }
-const apks = files(join(root, 'src-tauri/gen/android/app/build/outputs/apk'))
+const apks = files(join(root, 'apps/parsiword/src-tauri/gen/android/app/build/outputs/apk'))
   .filter(path => path.includes('/release/') && path.endsWith('-unsigned.apk'))
   .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
 if (!apks.length) throw new Error('The ARM64 unsigned release APK was not generated.');

@@ -30,8 +30,8 @@ jobs:
         with:
           name: ParsiWord-${{ runner.os }}
           path: |
-            src-tauri/target/release/bundle/**/*.deb
-            src-tauri/target/release/bundle/**/*.AppImage
-            src-tauri/target/release/bundle/**/*.exe
-            src-tauri/target/release/bundle/**/*.dmg
+            apps/parsiword/src-tauri/target/release/bundle/**/*.deb
+            apps/parsiword/src-tauri/target/release/bundle/**/*.AppImage
+            apps/parsiword/src-tauri/target/release/bundle/**/*.exe
+            apps/parsiword/src-tauri/target/release/bundle/**/*.dmg
           if-no-files-found: error

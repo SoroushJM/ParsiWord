@@ -11,7 +11,7 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 
 base = 'https://raw.githubusercontent.com/google/fonts/main/ofl/'
-output = Path('public/fonts')
+output = Path('packages/core/public/fonts')
 output.mkdir(exist_ok=True)
 
 def read(path):

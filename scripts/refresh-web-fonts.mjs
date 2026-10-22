@@ -4,8 +4,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-const catalogue = JSON.parse(await readFile(new URL('../src/data/google-fonts.json', import.meta.url), 'utf8'));
-const destination = new URL('../public/font-catalogue.json', import.meta.url);
+const catalogue = JSON.parse(await readFile(new URL('../packages/core/src/data/google-fonts.json', import.meta.url), 'utf8'));
+const destination = new URL('../packages/core/public/font-catalogue.json', import.meta.url);
 const requestedWeights = font => [...new Set([400, 700].map(target => [...font.weights].sort((a, b) => Math.abs(a - target) - Math.abs(b - target))[0]))];
 const faces = new Map();
 const failures = [];

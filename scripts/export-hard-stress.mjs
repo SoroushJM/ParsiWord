@@ -31,12 +31,12 @@ function toHtml(test) {
   return html;
 }
 try {
-  const { createWord, defaultSettings } = await server.ssrLoadModule('/src/converter.ts');
+  const { createWord, defaultSettings } = await server.ssrLoadModule('/../../packages/core/src/converter.ts');
   const { hardCases, hardMarkdown, catalogPairs } = await server.ssrLoadModule('/tests/fixtures/rtl-stress.ts');
   await writeFile(new URL('ParsiWord-hard-stress.md', out), hardMarkdown);
   const document = createWord(hardMarkdown, { ...defaultSettings, title: 'آزمون سخت علامت‌های جفت', fontFamily: 'Arial', fontSize: 11 });
-  const regular = (await readFile('public/fonts/Vazirmatn-Regular.ttf')).toString('base64');
-  const bold = (await readFile('public/fonts/Vazirmatn-Bold.ttf')).toString('base64');
+  const regular = (await readFile('packages/core/public/fonts/Vazirmatn-Regular.ttf')).toString('base64');
+  const bold = (await readFile('packages/core/public/fonts/Vazirmatn-Bold.ttf')).toString('base64');
   const cases = hardCases.filter(test => !test.malformed);
   const page = await browser.newPage({ viewport: { width: 1100, height: 1600 }, deviceScaleFactor: 1 });
   let references = 0;

@@ -71,7 +71,7 @@ test('export immediately after rich input includes the final characters without 
 });
 
 test('a rapid burst in the real starter document keeps every character and unrelated rich nodes', async ({ page }) => {
-  const source = await readFile('src/default-document.md', 'utf8');
+  const source = await readFile('packages/core/src/default-document.md', 'utf8');
   const rich = await openPreview(page, source);
   await expect(page.locator('.mermaid-diagram svg')).toHaveCount(2, { timeout: 30_000 });
   const untouchedCode = rich.locator('.code-block').first();

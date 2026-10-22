@@ -62,7 +62,7 @@ font.setupPost()
 font.setupMaxp()
 font.font['head'].created = font.font['head'].modified = 3875385600
 font.font.recalcTimestamp = False
-path = root / 'public/fonts/ParsiWordSymbols-Regular.ttf'
+path = root / 'packages/core/public/fonts/ParsiWordSymbols-Regular.ttf'
 font.save(path)
 assert set(font.font.getBestCmap()) == set(cmap) and len(cmap) == 14
 data = {'family': 'ParsiWord Symbols', 'codepoints': sorted(cmap), 'ttfBase64': base64.b64encode(path.read_bytes()).decode()}

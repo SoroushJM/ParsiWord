@@ -42,7 +42,7 @@ test('offline Word carries the complete selected, Persian fallback, code, math a
       // the reversed GUID bytes. Compare the entire restored font, including header.
       const key = Buffer.from(embedded.getAttribute('w:fontKey')!.replace(/[{}-]/g, ''), 'hex').reverse();
       for (let i = 0; i < 32; i++) stored[i] ^= key[i % 16];
-      expect(stored.equals(await readFile('public/fonts/' + filename)), filename).toBe(true);
+      expect(stored.equals(await readFile('packages/core/public/fonts/' + filename)), filename).toBe(true);
     }
   }
   const settings = await zip.file('word/settings.xml')!.async('string');

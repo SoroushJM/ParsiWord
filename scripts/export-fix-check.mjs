@@ -9,7 +9,7 @@ await mkdir(out, { recursive: true });
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 const browser = await chromium.launch();
 try {
-  const { createWord, defaultSettings } = await server.ssrLoadModule('/src/converter.ts');
+  const { createWord, defaultSettings } = await server.ssrLoadModule('/../../packages/core/src/converter.ts');
   const { hardCases, caseMarkdown, escapeMarkdown } = await server.ssrLoadModule('/tests/fixtures/rtl-stress.ts');
   const glyphs = '༺ ༻   ༼ ༽   ⹕ ⹖   ⹗ ⹘   ⹙ ⹚   ⹛ ⹜   ⹢ ⹣';
   const cases = [
@@ -21,8 +21,8 @@ try {
   ];
   const markdown = ['# بررسی اصلاحات ۰.۲.۳', 'جای علامت‌ها و ترتیب عبارت‌ها را با تصویر مرجع در صفحهٔ بعد مقایسه کنید. در FONT باید هر ۱۴ علامت دیده شوند.', ...cases.flatMap(c => [`###### ${c.id}`, c.markdown])].join('\n\n');
   const doc = createWord(markdown, { ...defaultSettings, title: 'بررسی اصلاحات ۰.۲.۳', fontFamily: 'Arial', fontSize: 11 });
-  const regular = (await readFile('public/fonts/Vazirmatn-Regular.ttf')).toString('base64');
-  const symbols = (await readFile('public/fonts/ParsiWordSymbols-Regular.ttf')).toString('base64');
+  const regular = (await readFile('packages/core/public/fonts/Vazirmatn-Regular.ttf')).toString('base64');
+  const symbols = (await readFile('packages/core/public/fonts/ParsiWordSymbols-Regular.ttf')).toString('base64');
   const page = await browser.newPage({ viewport: { width: 1100, height: 1500 } });
   await page.setContent(`<!doctype html><html lang="fa"><meta charset="utf-8"><style>
     @font-face{font-family:Reference;src:url(data:font/ttf;base64,${regular})}

@@ -30,7 +30,7 @@ const width = Number(options.width || 393), height = Number(options.height || 85
 if (!(cpu >= 1 && cpu <= 20 && Number.isInteger(repeat) && repeat >= 1 && repeat <= 10 && width >= 320 && height >= 320)) throw new Error('Invalid CPU rate, repeat count or viewport.');
 const url = options.url || 'http://127.0.0.1:1420';
 const output = resolve(options.output || `${projectRoot}/artifacts/${editor === 'source' ? 'source' : 'rich'}-input-${label}.json`);
-const fixture = await readFile(`${projectRoot}/src/default-document.md`, 'utf8');
+const fixture = await readFile(`${projectRoot}/packages/core/src/default-document.md`, 'utf8');
 const source = '# Typing performance\n\nEditable paragraph: \n\n' + fixture.repeat(repeat);
 if (source.length > 500_000) throw new Error('The performance fixture exceeds the draft limit.');
 const text = ' typing responsiveness benchmark';
@@ -130,7 +130,7 @@ try {
     schemaVersion: 1, label, recordedAt: new Date().toISOString(),
     environment: { browserVersion: browser.version(), nodeVersion: process.version, platform: process.platform, architecture: process.arch },
     protocol: {
-      editor, fixture: 'src/default-document.md', fixtureSha256: createHash('sha256').update(fixture).digest('hex'),
+      editor, fixture: 'packages/core/src/default-document.md', fixtureSha256: createHash('sha256').update(fixture).digest('hex'),
       repeat, characters: source.length, viewport: { width, height }, cpuThrottleRate: cpu,
       input: text, keyDelayMs: 35, settleBeforeMs: 800, settleAfterMs: 1200, cpuProfiler: true,
       latencyDefinition: 'beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee',

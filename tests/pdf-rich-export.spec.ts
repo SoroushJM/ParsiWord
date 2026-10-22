@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import tauri from '../src-tauri/tauri.conf.json' with { type: 'json' };
+import tauri from '../apps/parsiword/src-tauri/tauri.conf.json' with { type: 'json' };
 
 test('offline PDF contains visible local formula and Mermaid images alongside searchable text', async ({ page }) => {
   test.setTimeout(90_000);

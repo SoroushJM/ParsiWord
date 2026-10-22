@@ -27,8 +27,8 @@ const rows = [
 ];
 const english = 'This is an English sentence (with parentheses) and number 123.';
 const escape = value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-const font = await readFile(new URL('../public/fonts/Vazirmatn-Regular.ttf', import.meta.url));
-const boldFont = await readFile(new URL('../public/fonts/Vazirmatn-Bold.ttf', import.meta.url));
+const font = await readFile(new URL('../packages/core/public/fonts/Vazirmatn-Regular.ttf', import.meta.url));
+const boldFont = await readFile(new URL('../packages/core/public/fonts/Vazirmatn-Bold.ttf', import.meta.url));
 const toHtml = row => {
   let result = '';
   for (let i = 0; i < row.length;) {

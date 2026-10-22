@@ -42,10 +42,10 @@ JavaScript، CSS، آیکن، فرمول و فونت‌های همراه از م
 
 انتخابگر زبان در بالای صفحه، زبان رابط را بدون بارگذاری مجدد تغییر می‌دهد.
 زبان رابط مستقل از جهت سند است؛ انتخاب English متن RTL را LTR نمی‌کند و
-پیش‌نویس، نام سند و تنظیمات را عوض نمی‌کند. ترجمه‌ها در `src/locales/en.json`
-و مدیریت زبان در `src/locale.tsx` است. لینک پروفایل مالک و سورس در footer قرار دارد.
+پیش‌نویس، نام سند و تنظیمات را عوض نمی‌کند. ترجمه‌ها در `packages/core/src/locales/en.json`
+و مدیریت زبان در `packages/core/src/locale.tsx` است. لینک پروفایل مالک و سورس در footer قرار دارد.
 
-برای دامنه یا نام مخزن متفاوت، نشانی‌های `index.html`، `en/index.html`، `src/locale.tsx` و `public/sitemap.xml`
+برای دامنه یا نام مخزن متفاوت، نشانی‌های `index.html`، `en/index.html`، `packages/core/src/locale.tsx` و `packages/core/public/sitemap.xml`
 و پیوندهای README را هم تغییر بده. `robots.txt` فقط در ریشهٔ یک دامنه معتبر
 است؛ قرار دادن آن در زیرپوشهٔ این پروژه سیاست خزیدن کل دامنه را تغییر نمی‌دهد.
 نمایه‌سازی و رتبهٔ جست‌وجو به خزیدن موتور جست‌وجو وابسته‌اند و فوری یا تضمینی نیستند.
@@ -66,7 +66,7 @@ JavaScript، CSS، آیکن، فرمول و فونت‌های همراه از م
 
 ## فهرست فونت‌های وب
 
-[public/font-catalogue.json](../public/font-catalogue.json) نشانی TTFهای ایستا
+[packages/core/public/font-catalogue.json](../packages/core/public/font-catalogue.json) نشانی TTFهای ایستا
 و وزن‌های قابل دریافت را دارد؛ مرورگر فایل را از همان سایت و فونت را
 مستقیماً از `fonts.gstatic.com` می‌گیرد. دکمهٔ به‌روزرسانی فهرست در وب آخرین
 snapshot منتشرشدهٔ سایت را می‌خواند؛ دانلودکنندهٔ بومی همچنان از metadata

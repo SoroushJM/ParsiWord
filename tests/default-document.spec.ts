@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import JSZip from 'jszip';
 import { DOMParser } from '@xmldom/xmldom';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import codeSamples from '../src/data/code-samples.json' with { type: 'json' };
+import codeSamples from '../packages/core/src/data/code-samples.json' with { type: 'json' };
 const { samples } = codeSamples;
 
 test('fresh launch renders and exports the difficult default document offline', async ({ page }, testInfo) => {

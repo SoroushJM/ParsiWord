@@ -7,9 +7,9 @@ import assert from 'node:assert/strict';
 
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
 try {
-  const { hardStressMarkdown } = await server.ssrLoadModule('/tests/fixtures/rtl-stress.ts');
-  const intro = await readFile('src/starter-document.md', 'utf8');
-  const { samples } = JSON.parse(await readFile('src/data/code-samples.json', 'utf8'));
+  const { hardStressMarkdown } = await server.ssrLoadModule('/../../tests/fixtures/rtl-stress.ts');
+  const intro = await readFile('packages/core/src/starter-document.md', 'utf8');
+  const { samples } = JSON.parse(await readFile('packages/core/src/data/code-samples.json', 'utf8'));
   assert.deepEqual(samples.map(s => s.language).sort(), hljs.listLanguages().sort());
   assert.equal(samples.length, 36);
   const code = samples.map(sample => {
@@ -22,7 +22,7 @@ try {
     'نام زبان بالای هر بلوک آمده است. این‌ها نمونهٔ رنگ‌آمیزی‌اند و اجرا نمی‌شوند. بلوک plaintext عمداً متن ساده است. نمونه‌های دیگر، از جمله HTML/XML، Markdown و خروجی ترمینال، ساختار کد خود را حفظ می‌کنند.',
     ...code, 'پایان مجموعهٔ آزمون‌ها؛ متن، جهت نوشتن، LaTeX، Mermaid و ۳۶ زبان کد.',
   ].join('\n\n') + '\n';
-  if (process.argv.includes('--check')) assert.equal(await readFile('src/default-document.md', 'utf8'), markdown, 'Run npm run samples:build to update the starter document');
-  else await writeFile('src/default-document.md', markdown);
+  if (process.argv.includes('--check')) assert.equal(await readFile('packages/core/src/default-document.md', 'utf8'), markdown, 'Run npm run samples:build to update the starter document');
+  else await writeFile('packages/core/src/default-document.md', markdown);
   console.log(`Starter document: ${markdown.length} characters, ${samples.length} code languages, S01–S14/E01 and P01–P72.`);
 } finally { await server.close(); }
