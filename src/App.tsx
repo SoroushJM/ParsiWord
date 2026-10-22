@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { EditablePreview } from './EditablePreview';
+import { MarkdownSourceEditor } from './MarkdownSourceEditor';
 import { BrandHeader, DocumentHeading, ExportSettingsDialog, IntroControls, MobileViewSwitch, SourceToolbar } from './AppControls';
 import { usePreviewScroll } from './use-preview-scroll';
 import { RichContentError } from './rich-content';
@@ -8,9 +9,8 @@ import defaultDocument from './default-document.md?raw';
 import { version as appVersion } from '../package.json';
 import { BookOpen, CheckCheck, Code2, ShieldCheck } from 'lucide-react';
 import { defaultSettings, exportWord, safeFilename, type ExportSettings } from './converter';
-import { openMarkdown, saveDocx } from './files';
+import { openMarkdown, saveDocx, saveMarkdown, savePdf } from './files';
 import { activateFont, documentFonts, fontError, normalizeFontFamily } from './fonts';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Toaster } from '@/components/ui/sonner';
@@ -58,6 +58,7 @@ function App() {
   const [previewMarkdown, setPreviewMarkdown] = useState(initial.markdown);
   const [sheet, setSheet] = useState<'settings' | 'fonts' | null>(null);
   const [busy, setBusy] = useState(false);
+  const exporting = useRef(false);
   const [saved, setSaved] = useState(true);
   const [storageError, setStorageError] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
@@ -187,22 +188,29 @@ function App() {
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + before.length, end + before.length); });
   }, []);
 
-  const convert = useCallback(async () => {
+  const convert = useCallback(async (format: 'docx' | 'pdf' | 'md') => {
     const markdown = markdownRef.current;
     const settings = settingsRef.current;
-    if (!markdown.trim() || busy) return;
+    if ((!markdown.trim() && format !== 'md') || exporting.current) return;
+    exporting.current = true;
     setBusy(true);
     try {
-      const fonts = await documentFonts(settings.fontFamily, markdown);
-      const bytes = await exportWord(markdown, settings, fonts);
-      if (await saveDocx(bytes, safeFilename(settings.title))) {
-        setNotice({ text: 'فایل Word آماده شد و ذخیره شد.' });
+      const filename = safeFilename(settings.title).replace(/\.docx$/i, `.${format}`);
+      let saved: boolean;
+      if (format === 'md') saved = await saveMarkdown(markdown, filename);
+      else {
+        const fonts = await documentFonts(settings.fontFamily, markdown);
+        if (format === 'pdf') {
+          const { exportPdf } = await import('./pdf-export');
+          saved = await savePdf(await exportPdf(markdown, settings, fonts), filename);
+        } else saved = await saveDocx(await exportWord(markdown, settings, fonts), filename);
       }
+      if (saved) setNotice({ text: `فایل ${format === 'docx' ? 'Word' : format === 'md' ? 'Markdown' : 'PDF'} آماده شد و ذخیره شد.` });
     } catch (error) {
-      console.error('DOCX export failed', error);
+      console.error(`${format.toUpperCase()} export failed`, error);
       setNotice({ text: error instanceof RichContentError ? error.message : String(error).includes('FONT_') ? fontError(error) : 'ذخیرهٔ فایل انجام نشد. فضای خالی و محل ذخیره را بررسی کن و دوباره امتحان کن.', error: true });
-    } finally { setBusy(false); }
-  }, [busy]);
+    } finally { exporting.current = false; setBusy(false); }
+  }, []);
 
   const importFile = useCallback(async () => {
     if (!isTauri()) { input.current?.click(); return; }
@@ -227,7 +235,9 @@ function App() {
     if (previous !== null) { setMarkdown(previous); setPrevious(null); }
   }, [previous]);
   const onOpen = importFile;
-  const onExport = convert;
+  const onExport = useCallback(() => { void convert('docx'); }, [convert]);
+  const onExportPdf = useCallback(() => { void convert('pdf'); }, [convert]);
+  const onExportMarkdown = useCallback(() => { void convert('md'); }, [convert]);
   const onWrap = wrap;
 
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/u).length : 0;
@@ -242,14 +252,14 @@ function App() {
 
         <div className="workspace">
           <section className="document-panel" aria-label="ویرایش سند">
-            <DocumentHeading title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} />
+            <DocumentHeading title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} onExportPdf={onExportPdf} onExportMarkdown={onExportMarkdown} />
 
             <div className="live-workspace" data-view={mobileView}>
             <MobileViewSwitch view={mobileView} onSelect={selectView} />
             <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading">
               <div className="pane-heading"><h2 id="edit-heading"><Code2 size={17} /> ویرایش متن</h2><span>Markdown</span></div>
               <SourceToolbar canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
-              <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">متن Markdown</FieldLabel><Textarea id="markdown-source" ref={editor} className="markdown-editor" aria-label="متن Markdown" dir={settings.direction === 'ltr' ? 'ltr' : 'auto'} value={sourceMarkdown} onFocus={onSourceFocus} onChange={e => setMarkdown(e.target.value)} placeholder="از اینجا شروع کن…" spellCheck={false} maxLength={500_000} /></Field></FieldGroup>
+              <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">متن Markdown</FieldLabel><MarkdownSourceEditor editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} /></Field></FieldGroup>
             </section>
 
             <section id="preview-pane" className="preview-pane" aria-labelledby="preview-heading">

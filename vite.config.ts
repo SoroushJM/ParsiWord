@@ -8,6 +8,9 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
+  // A relative default works in Tauri and under a static host's project folder.
+  // GitHub Pages supplies its exact project path through configure-pages.
+  base: process.env.VITE_BASE_PATH || './',
   plugins: [react(), tailwindcss()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
 

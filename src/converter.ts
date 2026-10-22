@@ -8,6 +8,7 @@ import type { FontBundle } from './fonts';
 import { paragraphBaseDirection, wordDirectionSpans } from './word-direction';
 import { delimiterFont, delimiterFontParts } from './delimiter-font';
 import { highlightCode } from './code-highlight';
+import { documentFontSize, documentHeadingSize, documentLayout } from './document-layout';
 import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel,
   LevelFormat, Packer, Paragraph, ShadingType, Table, TableCell, TableRow,
@@ -139,7 +140,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
       children,
       bidirectional: settings.alignmentOnly ? false : rtl,
       alignment: rtl || settings.alignmentOnly ? AlignmentType.RIGHT : AlignmentType.LEFT,
-      spacing: { after: 160, line: 340 },
+      spacing: { ...documentLayout.paragraph },
       ...extra,
     });
   }
@@ -234,13 +235,13 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
     }
   }
 
-  const fontSize = Math.min(24, Math.max(9, settings.fontSize)) * 2;
+  const fontSize = documentFontSize(settings.fontSize) * 2;
   const family = settings.fontFamily || bundledFont;
   const selectedFont = fonts.find(f => f.family === family);
   const documentFont = { ascii: family, hAnsi: family, eastAsia: family, cs: selectedFont?.arabic === false ? 'Vazirmatn' : family };
   const headings = Array.from({ length: 6 }, (_, i) => ({
     id: `Heading${i + 1}`, name: `heading ${i + 1}`, basedOn: 'Normal', next: 'Normal',
-    run: { font: documentFont, size: Math.max(fontSize, 44 - i * 4), sizeComplexScript: Math.max(fontSize, 44 - i * 4), bold: true, boldComplexScript: true, color: '183D36' },
+    run: { font: documentFont, size: documentHeadingSize(settings.fontSize, i + 1) * 2, sizeComplexScript: documentHeadingSize(settings.fontSize, i + 1) * 2, bold: true, boldComplexScript: true, color: '183D36' },
   }));
   // Walk the content first: embed the fallback only when a run actually uses it.
   const children = root.children.flatMap(block);
@@ -255,7 +256,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
     },
     numbering: { config: numbering },
     fonts: embeddedFonts,
-    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1100, bottom: 1100, left: 1000, right: 1000 } } }, children }],
+    sections: [{ properties: { page: { size: { width: documentLayout.width, height: documentLayout.height }, margin: { ...documentLayout.margins } } }, children }],
   });
   if (documentFontUsage(markdown).math) document.Settings.addChildElement(new BuilderElement({
     name: 'm:mathPr', attributes: { xmlns: { key: 'xmlns:m', value: 'http://schemas.openxmlformats.org/officeDocument/2006/math' } },

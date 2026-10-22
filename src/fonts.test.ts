@@ -53,3 +53,50 @@ it('detects required fonts through Markdown structure, including nested math and
   expect(documentFontUsage('```latex\nx^2\n```')).toEqual({ code: false, math: true });
   expect(documentFontUsage('```js\n$x^2$\n```')).toEqual({ code: true, math: false });
 });
+
+it('downloads browser fonts from static TTF URLs and refreshes the project-path catalogue', async () => {
+  vi.resetModules();
+  const { downloadFace, refreshCatalogue, ensureFont } = await import('./fonts');
+  const regular = new Uint8Array(await readFile('public/fonts/Vazirmatn-Regular.ttf'));
+  const bold = new Uint8Array(await readFile('public/fonts/Vazirmatn-Bold.ttf'));
+  const urls = { '400': 'https://fonts.gstatic.com/s/roboto/test-regular.ttf', '700': 'https://fonts.gstatic.com/s/roboto/test-bold.ttf' };
+  const fetch = vi.fn(async (url: string | URL | Request) => {
+    if (String(url) === '/parsiword/font-catalogue.json') return Response.json({ updated: '2026-10-22', families: [
+      { family: 'Roboto', arabic: false, weights: [400, 700], faces: urls },
+      { family: 'Single Weight', arabic: false, weights: [400], faces: { '400': urls['400'] } },
+    ] });
+    if (String(url) === urls['400']) return new Response(regular.slice().buffer);
+    if (String(url) === urls['700']) return new Response(bold.slice().buffer);
+    throw new Error(`Unexpected resource: ${url}`);
+  });
+  vi.stubEnv('BASE_URL', '/parsiword/');
+  vi.stubGlobal('fetch', fetch);
+  try {
+    expect((await refreshCatalogue())[0].family).toBe('Roboto');
+    expect(await downloadFace('Roboto', 400)).toEqual(regular);
+    expect(await downloadFace('Roboto', 700)).toEqual(bold);
+    expect(fetch.mock.calls.map(call => String(call[0]))).toEqual(['/parsiword/font-catalogue.json', urls['400'], urls['700']]);
+    const single = await ensureFont({ family: 'Single Weight', arabic: false, weights: [400, 700] });
+    expect(single.regular).toEqual(regular);
+    expect(single.bold).toBeUndefined();
+    expect(fetch).toHaveBeenCalledTimes(4);
+  } finally {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  }
+});
+
+it('ships static TTF URLs for every searchable family with distinct regular/bold examples', async () => {
+  const manifest = JSON.parse(await readFile('public/font-catalogue.json', 'utf8')) as { families: { family: string; faces: Record<string, string> }[] };
+  expect(manifest.families.map(font => font.family)).toEqual(initialCatalogue.map(font => font.family));
+  for (const font of manifest.families) {
+    expect(Object.values(font.faces).length).toBeGreaterThan(0);
+    for (const url of Object.values(font.faces)) expect(url).toMatch(/^https:\/\/fonts\.gstatic\.com\/s\/.*\.(?:ttf|otf)$/);
+  }
+  for (const family of ['Roboto', 'Noto Naskh Arabic']) {
+    const faces = manifest.families.find(font => font.family === family)!.faces;
+    expect(faces['400']).toBeTruthy();
+    expect(faces['700']).toBeTruthy();
+    expect(faces['400']).not.toBe(faces['700']);
+  }
+});

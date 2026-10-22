@@ -1,6 +1,6 @@
 [package]
 name = "parsiword"
-version = "0.4.6"
+version = "0.4.7"
 description = "Offline Markdown to Word with Persian and bidirectional text support"
 authors = ["ParsiWord"]
 edition = "2024"

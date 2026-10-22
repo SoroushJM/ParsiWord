@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "release": "0.4.7",
+  "baseline": {
+    "commit": "db0bfbb",
+    "isolation": "git archive into /tmp/sourcehighlightbaseline; shared installed dependencies; independent production build",
+    "mainAsset": "index-DEtVFZ3-.js",
+    "url": "http://127.0.0.1:1423"
+  },
+  "environment": {
+    "browserVersion": "156.0.8078.4",
+    "nodeVersion": "v24.19.0",
+    "platform": "linux",
+    "architecture": "x64"
+  },
+  "protocol": {
+    "fixture": "src/default-document.md",
+    "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+    "repeat": 1,
+    "characters": 28147,
+    "viewport": {
+      "width": 393,
+      "height": 851
+    },
+    "cpuThrottleRate": 4,
+    "input": " typing responsiveness benchmark",
+    "keyDelayMs": 35,
+    "settleBeforeMs": 800,
+    "settleAfterMs": 1200,
+    "cpuProfiler": true,
+    "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+  },
+  "summary": {
+    "source": {
+      "baselineMedianMs": 28,
+      "finalMedianMs": 34,
+      "medianDeltaMs": 6,
+      "baselineP95Ms": 44,
+      "finalP95Ms": 45,
+      "p95DeltaMs": 1,
+      "baselineLongTaskCount": 3,
+      "finalLongTaskCount": 3
+    },
+    "preview": {
+      "baselineMedianMs": 64,
+      "finalMedianMs": 49,
+      "medianDeltaMs": -15,
+      "baselineP95Ms": 96,
+      "finalP95Ms": 92,
+      "p95DeltaMs": -4,
+      "baselineLongTaskCount": 30,
+      "finalLongTaskCount": 12
+    },
+    "interpretation": "The final colored source adds 6 ms to the measured median and 1 ms to p95 at CPU x4, while retaining incremental line DOM and exact input. The preview remains within the previous timing range. These are measured browser scheduling results, not a native Android latency guarantee."
+  },
+  "renderingEvidence": {
+    "overlayAvailable": true,
+    "highlighted": true,
+    "initialLineCount": 1263,
+    "mutatedLineIndexes": [
+      2
+    ],
+    "originalLineNodesStillConnected": 1263,
+    "finalLineCount": 1263,
+    "sourceMatchesExpected": true,
+    "overlayMatchesNativeValue": true,
+    "coloredInputFrames": 32,
+    "staleHighlightFrames": 0
+  },
+  "runs": {
+    "sourceBefore": {
+      "schemaVersion": 1,
+      "label": "source-baseline-db0bfbb",
+      "recordedAt": "2026-10-22T08:50:41.379Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.19.0",
+        "platform": "linux",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "source",
+        "fixture": "src/default-document.md",
+        "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+        "repeat": 1,
+        "characters": 28147,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": " typing responsiveness benchmark",
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+      },
+      "measurements": {
+        "keys": 32,
+        "elapsedMs": 3398,
+        "latencyMedianMs": 28,
+        "latencyP95Ms": 44,
+        "longTaskCount": 3,
+        "longTaskTotalMs": 561,
+        "maxLongTaskMs": 360
+      },
+      "sourceRendering": {
+        "highlighted": false,
+        "initialLineCount": 0,
+        "mutatedLineIndexes": [],
+        "originalLineNodesStillConnected": 0,
+        "finalLineCount": 0,
+        "sourceMatchesExpected": true,
+        "overlayMatchesNativeValue": null
+      }
+    },
+    "sourceAfter": {
+      "schemaVersion": 1,
+      "label": "source-after-block-lines-0_4_7",
+      "recordedAt": "2026-10-22T09:10:32.818Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.19.0",
+        "platform": "linux",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "source",
+        "fixture": "src/default-document.md",
+        "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+        "repeat": 1,
+        "characters": 28147,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": " typing responsiveness benchmark",
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+      },
+      "measurements": {
+        "keys": 32,
+        "elapsedMs": 3300,
+        "latencyMedianMs": 34,
+        "latencyP95Ms": 45,
+        "longTaskCount": 3,
+        "longTaskTotalMs": 501,
+        "maxLongTaskMs": 315
+      },
+      "sourceRendering": {
+        "overlayAvailable": true,
+        "highlighted": true,
+        "initialLineCount": 1263,
+        "mutatedLineIndexes": [
+          2
+        ],
+        "originalLineNodesStillConnected": 1263,
+        "finalLineCount": 1263,
+        "sourceMatchesExpected": true,
+        "overlayMatchesNativeValue": true,
+        "coloredInputFrames": 32,
+        "staleHighlightFrames": 0
+      }
+    },
+    "previewBefore": {
+      "schemaVersion": 1,
+      "label": "preview-baseline-db0bfbb",
+      "recordedAt": "2026-10-22T08:50:51.562Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.19.0",
+        "platform": "linux",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "preview",
+        "fixture": "src/default-document.md",
+        "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+        "repeat": 1,
+        "characters": 28147,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": " typing responsiveness benchmark",
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+      },
+      "measurements": {
+        "keys": 32,
+        "elapsedMs": 4634,
+        "latencyMedianMs": 64,
+        "latencyP95Ms": 96,
+        "longTaskCount": 30,
+        "longTaskTotalMs": 2056,
+        "maxLongTaskMs": 152
+      }
+    },
+    "previewAfter": {
+      "schemaVersion": 1,
+      "label": "preview-final-block-lines-0_4_7",
+      "recordedAt": "2026-10-22T09:11:00.706Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.19.0",
+        "platform": "linux",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "preview",
+        "fixture": "src/default-document.md",
+        "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+        "repeat": 1,
+        "characters": 28147,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": " typing responsiveness benchmark",
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+      },
+      "measurements": {
+        "keys": 32,
+        "elapsedMs": 4082,
+        "latencyMedianMs": 49,
+        "latencyP95Ms": 92,
+        "longTaskCount": 12,
+        "longTaskTotalMs": 772,
+        "maxLongTaskMs": 124
+      }
+    }
+  },
+  "rejectedPrototypes": [
+    {
+      "name": "single inline formatting context for the entire colored source",
+      "mainAsset": "index-dFFqbIr1.js",
+      "shipped": false,
+      "reason": "Only one DOM line changed, but textarea height=auto/scrollHeight forced expensive layout of the document-wide inline flow. The final source uses separate logical-line blocks without deferring color updates.",
+      "profileAttribution": {
+        "baselineResizeEditorSelfMs": 161.9,
+        "prototypeResizeEditorSelfMs": 1970.7,
+        "prototypeSampledDurationMs": 7315.0,
+        "note": "Sampled callback time includes blocking browser style/layout performed inside resizeEditor; it is not lexer time."
+      },
+      "sourceResult": {
+        "schemaVersion": 1,
+        "label": "source-after-0_4_7",
+        "recordedAt": "2026-10-22T09:07:48.415Z",
+        "environment": {
+          "browserVersion": "156.0.8078.4",
+          "nodeVersion": "v24.19.0",
+          "platform": "linux",
+          "architecture": "x64"
+        },
+        "protocol": {
+          "editor": "source",
+          "fixture": "src/default-document.md",
+          "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+          "repeat": 1,
+          "characters": 28147,
+          "viewport": {
+            "width": 393,
+            "height": 851
+          },
+          "cpuThrottleRate": 4,
+          "input": " typing responsiveness benchmark",
+          "keyDelayMs": 35,
+          "settleBeforeMs": 800,
+          "settleAfterMs": 1200,
+          "cpuProfiler": true,
+          "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+        },
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 5076,
+          "latencyMedianMs": 101,
+          "latencyP95Ms": 118,
+          "longTaskCount": 34,
+          "longTaskTotalMs": 3030,
+          "maxLongTaskMs": 315
+        },
+        "sourceRendering": {
+          "overlayAvailable": true,
+          "highlighted": true,
+          "initialLineCount": 1263,
+          "mutatedLineIndexes": [
+            2
+          ],
+          "originalLineNodesStillConnected": 1263,
+          "finalLineCount": 1263,
+          "sourceMatchesExpected": true,
+          "overlayMatchesNativeValue": true,
+          "coloredInputFrames": 32,
+          "staleHighlightFrames": 0
+        }
+      },
+      "previewResult": {
+        "schemaVersion": 1,
+        "label": "preview-after-0_4_7",
+        "recordedAt": "2026-10-22T09:07:57.820Z",
+        "environment": {
+          "browserVersion": "156.0.8078.4",
+          "nodeVersion": "v24.19.0",
+          "platform": "linux",
+          "architecture": "x64"
+        },
+        "protocol": {
+          "editor": "preview",
+          "fixture": "src/default-document.md",
+          "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+          "repeat": 1,
+          "characters": 28147,
+          "viewport": {
+            "width": 393,
+            "height": 851
+          },
+          "cpuThrottleRate": 4,
+          "input": " typing responsiveness benchmark",
+          "keyDelayMs": 35,
+          "settleBeforeMs": 800,
+          "settleAfterMs": 1200,
+          "cpuProfiler": true,
+          "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+        },
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 4207,
+          "latencyMedianMs": 54,
+          "latencyP95Ms": 71,
+          "longTaskCount": 19,
+          "longTaskTotalMs": 1148,
+          "maxLongTaskMs": 106
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Each reported final editor measurement is one clean, isolated run with 32 input events; differences of a few milliseconds can reflect run-to-run variation.",
+    "Long-task totals include the 1200 ms settle period and delayed preview/source synchronization, not just key handling.",
+    "Chromium CPU throttling and beforeinput-to-first-requestAnimationFrame do not reproduce native phone hardware, the Android keyboard, or input-to-display presentation latency."
+  ],
+  "reproduce": [
+    "node scripts/profile-rich-input.mjs --editor source --label source-after --cpu 4 --url http://127.0.0.1:1421 --output artifacts/source-input-after.json",
+    "node scripts/profile-rich-input.mjs --editor preview --label preview-after --cpu 4 --url http://127.0.0.1:1421 --output artifacts/preview-input-after.json"
+  ],
+  "measuredBuild": {
+    "mainAsset": "index-CkLn-qc-.js",
+    "url": "http://127.0.0.1:1421",
+    "sourceAndPreviewUseSameProductionBuild": true
+  },
+  "shippedBuild": {
+    "mainAsset": "index-DetOZvpk.js",
+    "mainAssetSha256": "802c15d0224191556d54cbb08b2b96c664edbc62b7c1e1c367f68b64b3f9c0c5",
+    "changeSinceMeasurement": "The paragraph style SelectValue was wrapped in a real visually hidden span because Radix ignores its className. Source highlighting and both input implementations are unchanged.",
+    "benchmarkRepeatedForThisVisualOnlyChange": false
+  }
+}

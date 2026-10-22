@@ -2,14 +2,32 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 import catalogue from './data/google-fonts.json';
 import { bundledFont, bundledFaces, codeFont, mathFont, isBundledFont } from './font-assets';
 import { documentFontUsage } from './markdown';
+import { publicAsset } from './public-assets';
 export { bundledFont, isBundledFont, normalizeFontFamily } from './font-assets';
 
 export type GoogleFont = { family: string; arabic: boolean; weights: number[]; subsets?: string[] };
 export type FontBundle = { family: string; arabic: boolean; regular: Uint8Array; bold?: Uint8Array; savedAt: number };
+type WebFont = GoogleFont & { faces: Record<string, string> };
+type WebFontCatalogue = { updated: string; families: WebFont[] };
 export const initialCatalogue = catalogue.families as GoogleFont[];
 const databaseName = 'parsiword-fonts-v1';
 const pending = new Map<string, Promise<FontBundle>>();
 const loaded = new Map<string, FontFace[]>();
+let webCatalogueRequest: Promise<WebFontCatalogue> | undefined;
+
+async function webFontCatalogue(refresh = false): Promise<WebFontCatalogue> {
+  if (!webCatalogueRequest || refresh) {
+    webCatalogueRequest = (async () => {
+      const response = await fetch(publicAsset('font-catalogue.json'), { cache: refresh ? 'no-cache' : 'default' });
+      if (!response.ok) throw new Error('FONT_CATALOGUE');
+      const data = await response.json() as WebFontCatalogue;
+      if (!Array.isArray(data.families) || !data.families.length) throw new Error('FONT_CATALOGUE');
+      return data;
+    })();
+    webCatalogueRequest.catch(() => { webCatalogueRequest = undefined; });
+  }
+  return webCatalogueRequest;
+}
 
 async function database(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -64,6 +82,18 @@ export function validateFont(bytes: Uint8Array): void {
 }
 
 export async function downloadFace(family: string, weight: number): Promise<Uint8Array> {
+  if (!isTauri()) {
+    // Browsers receive WOFF2 from Google's CSS API. The checked-in snapshot
+    // contains its full static TTF URLs, fetched directly with gstatic CORS.
+    const font = (await webFontCatalogue()).families.find(font => font.family === family);
+    if (!font) throw new Error('FONT_MISSING');
+    const nearest = Object.keys(font.faces).map(Number).sort((a, b) => Math.abs(a - weight) - Math.abs(b - weight))[0];
+    const url = font.faces[nearest];
+    if (!/^https:\/\/fonts\.gstatic\.com\/s\//.test(url || '')) throw new Error('FONT_FORMAT');
+    const bytes = await googleResource(url);
+    validateFont(bytes);
+    return bytes;
+  }
   const record = (await fontCatalogue()).find(f => f.family === family);
   const subsets = (record?.subsets || ['latin', ...(record?.arabic ? ['arabic'] : [])]).join(',');
   const css = new TextDecoder().decode(await googleResource(`https://fonts.googleapis.com/css?family=${encodeURIComponent(family)}:${weight}&subset=${encodeURIComponent(subsets)}&display=swap`));
@@ -82,7 +112,7 @@ export async function ensureFont(font: GoogleFont, transport = downloadFace): Pr
     if (isBundledFont(font.family)) {
       const asset = bundledFaces[font.family];
       const read = async (name: string) => {
-        const response = await fetch(`/fonts/${name}.ttf`);
+        const response = await fetch(publicAsset(`fonts/${name}.ttf`));
         if (!response.ok) throw new Error('FONT_FORMAT');
         const bytes = new Uint8Array(await response.arrayBuffer()); validateFont(bytes); return bytes;
       };
@@ -91,7 +121,10 @@ export async function ensureFont(font: GoogleFont, transport = downloadFace): Pr
     }
     const cached = await transaction<FontBundle | undefined>('fonts', 'readonly', store => store.get(font.family));
     if (cached) return cached;
-    const nearest = (target: number) => [...font.weights].sort((a, b) => Math.abs(a - target) - Math.abs(b - target))[0];
+    const weights = !isTauri() && transport === downloadFace
+      ? (await webFontCatalogue()).families.find(candidate => candidate.family === font.family)?.weights || font.weights
+      : font.weights;
+    const nearest = (target: number) => [...weights].sort((a, b) => Math.abs(a - target) - Math.abs(b - target))[0];
     const regularWeight = nearest(400); const boldWeight = nearest(700);
     const regular = await transport(font.family, regularWeight);
     const bold = regularWeight !== boldWeight ? await transport(font.family, boldWeight) : undefined;
@@ -121,6 +154,13 @@ export async function fontCatalogue(): Promise<GoogleFont[]> {
 }
 
 export async function refreshCatalogue(): Promise<GoogleFont[]> {
+  if (!isTauri()) {
+    // A static deployment supplies its latest public snapshot, with no CORS
+    // proxy or runtime API key. Native apps keep Google's live metadata API.
+    const list = (await webFontCatalogue(true)).families.map(({ faces: _faces, ...font }) => font);
+    await transaction('metadata', 'readwrite', store => store.put(list, 'catalogue'));
+    return list;
+  }
   const text = new TextDecoder().decode(await googleResource('https://fonts.google.com/metadata/fonts'));
   const data = JSON.parse(text.slice(text.indexOf('{')));
   const list: GoogleFont[] = (data.familyMetadataList || data.familyMetadata || []).filter((f: { isOpenSource?: boolean }) => f.isOpenSource !== false).map((f: { family: string; subsets: string[]; fonts: Record<string, unknown> }) => ({

@@ -1,7 +1,7 @@
 import { memo, useState, type ReactNode } from 'react';
 import { useEditorState, type Editor } from '@tiptap/react';
 import { closeHistory } from '@tiptap/pm/history';
-import { Bold, Italic, Strikethrough, List, ListOrdered, Quote, Code2, SquareCode, Undo2, Redo2, Link2, Table2, Sigma, RemoveFormatting, IndentIncrease, IndentDecrease } from 'lucide-react';
+import { Bold, Italic, Strikethrough, List, ListOrdered, Quote, Code2, SquareCode, Undo2, Redo2, Link2, Table2, Sigma, RemoveFormatting, IndentIncrease, IndentDecrease, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { Input } from '@/components/ui/input';
@@ -12,14 +12,14 @@ import './rich-toolbar.css';
 function FormatToggle({ label, active, action, children }: {
   label: string; active: boolean; action: () => void; children: ReactNode;
 }) {
-  return <Toggle className="size-10 shrink-0" title={label} aria-label={label} pressed={active}
+  return <Toggle className="size-[44px] shrink-0" title={label} aria-label={label} pressed={active}
     onMouseDown={event => event.preventDefault()} onPressedChange={action}>{children}</Toggle>;
 }
 
 function FormatButton({ label, disabled = false, action, children }: {
   label: string; disabled?: boolean; action: () => void; children: ReactNode;
 }) {
-  return <Button type="button" variant="ghost" size="icon-lg" className="size-10" title={label} aria-label={label} disabled={disabled}
+  return <Button type="button" variant="ghost" size="icon-lg" className="size-[44px]" title={label} aria-label={label} disabled={disabled}
     onMouseDown={event => event.preventDefault()} onClick={action}>{children}</Button>;
 }
 
@@ -35,6 +35,7 @@ export const RichToolbar = memo(function RichToolbar({ editor }: { editor: Edito
     table: editor.isActive('table'), canIndent: editor.can().sinkListItem('listItem'), canOutdent: editor.can().liftListItem('listItem'),
     canUndo: editor.can().undo(), canRedo: editor.can().redo(),
   }) });
+  const headingLabel = state.heading === 'paragraph' ? 'متن عادی' : `تیتر ${Number(state.heading).toLocaleString('fa-IR')}`;
   const historyBoundary = () => editor.view.dispatch(closeHistory(editor.state.tr));
   const setLink = () => {
     const href = url.trim();
@@ -55,7 +56,7 @@ export const RichToolbar = memo(function RichToolbar({ editor }: { editor: Edito
           historyBoundary();
           if (value === 'paragraph') editor.chain().focus().setParagraph().run();
           else editor.chain().focus().setHeading({ level: Number(value) as 1 | 2 | 3 | 4 | 5 | 6 }).run();
-        }}><SelectTrigger id="rich-heading" aria-label="سبک پاراگراف" className="h-10 w-28"><SelectValue /></SelectTrigger>
+        }}><SelectTrigger id="rich-heading" aria-label="سبک پاراگراف" aria-describedby="rich-heading-value" title={`سبک پاراگراف: ${headingLabel}`} className="size-[44px] data-[size=default]:h-[44px] justify-center px-0 [&>svg:last-child]:hidden"><Type aria-hidden="true" /><span className="sr-only"><SelectValue id="rich-heading-value" /></span></SelectTrigger>
           <SelectContent><SelectGroup><SelectItem value="paragraph">متن عادی</SelectItem>{[1, 2, 3, 4, 5, 6].map(level => <SelectItem value={String(level)} key={level}>تیتر {level.toLocaleString('fa-IR')}</SelectItem>)}</SelectGroup></SelectContent>
         </Select>
       </Field></FieldGroup>
@@ -69,7 +70,7 @@ export const RichToolbar = memo(function RichToolbar({ editor }: { editor: Edito
       <FormatToggle label="نقل‌قول" active={state.blockquote} action={() => editor.chain().focus().toggleBlockquote().run()}><Quote data-icon="inline-start" /></FormatToggle>
       <FormatToggle label="کد درون متن" active={state.code} action={() => editor.chain().focus().toggleCode().run()}><Code2 data-icon="inline-start" /></FormatToggle>
       <FormatToggle label="بلوک کد" active={state.codeBlock} action={() => editor.chain().focus().toggleCodeBlock().run()}><SquareCode data-icon="inline-start" /></FormatToggle>
-      <Button type="button" variant="ghost" size="icon-lg" className="size-10" title="درج یا ویرایش پیوند" aria-label="درج یا ویرایش پیوند" aria-expanded={linkOpen} aria-controls="rich-link-tools"
+      <Button type="button" variant="ghost" size="icon-lg" className="size-[44px]" title="درج یا ویرایش پیوند" aria-label="درج یا ویرایش پیوند" aria-expanded={linkOpen} aria-controls="rich-link-tools"
         onMouseDown={event => event.preventDefault()} onClick={() => { setUrl(editor.getAttributes('link').href || ''); setLinkOpen(value => !value); }}><Link2 data-icon="inline-start" /></Button>
       <FormatButton label="درج جدول" action={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 data-icon="inline-start" /></FormatButton>
       <FormatButton label="درج فرمول" action={() => editor.chain().focus().insertContent({ type: 'mathInline', attrs: { source: 'x^2' } }).run()}><Sigma data-icon="inline-start" /></FormatButton>

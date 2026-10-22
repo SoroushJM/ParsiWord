@@ -28,6 +28,7 @@
 .intro-controls { display: flex; margin-block: 12px; }
 .workspace { display: block; }
 .document-panel { overflow: visible; }
+.editor-status { border-end-start-radius: inherit; border-end-end-radius: inherit; }
 .document-heading { gap: 12px; padding: 16px 20px; flex-wrap: wrap; }
 .document-name { flex: 1; }
 .document-tools { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }

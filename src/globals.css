@@ -13,6 +13,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
+:root {
+  --source-syntax-heading: #0550ae;
+  --source-syntax-emphasis: #8250df;
+  --source-syntax-code: #953800;
+  --source-syntax-list: #cf222e;
+}
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: Vazirmatn, Tahoma, sans-serif;

@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "release": "0.4.7",
+  "verificationHost": "local static HTTP server with a GitHub Pages project-path layout",
+  "publishedToGitHub": false,
+  "publicationOwner": "user",
+  "staticOfflineExports": {
+    "base": "/parsiword/",
+    "externalNetworkBlocked": true,
+    "pageErrors": [],
+    "failedResponses": [],
+    "externalRequestsAttempted": [],
+    "allHttpAssetsUnderProjectPath": true,
+    "documents": {
+      "Word": {
+        "filename": "Pages47.docx",
+        "bytes": 1362722,
+        "sha256": "e3f9b832ebf8a10c003f6c3c9fbc2d86968553ec9b2d44f2509fc1a4c2436f41",
+        "embeddedFonts": 5
+      },
+      "Markdown": {
+        "filename": "Pages47.md",
+        "bytes": 242,
+        "sha256": "fdd4eac2c32d6b805099b285a4acc1a22cdc7a2f86c85c4a1adcf3b39a81ea10",
+        "exactUtf8SourceVerified": true
+      },
+      "PDF": {
+        "filename": "Pages47.pdf",
+        "bytes": 25520,
+        "sha256": "e52f4c1491a3f30113f334d03f67369352e219d07dee8b012e4f0b8f4abe3fe3",
+        "searchablePersianAndLatinVerified": true,
+        "formulaAndMermaidImages": 3,
+        "pages": 1
+      }
+    },
+    "fontRequests": [
+      "http://127.0.0.1:4178/parsiword/fonts/NotoSansMono-Bold.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/NotoSansMono-Regular.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/Vazirmatn-Regular.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/Vazirmatn-Bold.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/Vazirmatn-Regular.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/Vazirmatn-Bold.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/NotoSansMono-Regular.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/NotoSansMono-Bold.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/STIXTwoMath-Regular.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/Vazirmatn-Regular.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/Vazirmatn-Bold.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/NotoSansMono-Regular.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/NotoSansMono-Bold.ttf",
+      "http://127.0.0.1:4178/parsiword/fonts/STIXTwoMath-Regular.ttf"
+    ]
+  },
+  "browserFontDownloads": {
+    "projectPath": "/parsiword/",
+    "browserCatalogueRefresh": "same-origin snapshot",
+    "metadataOrCssRequests": 0,
+    "pageErrors": [],
+    "downloads": [
+      {
+        "family": "Roboto",
+        "filename": "Roboto.docx"
+      },
+      {
+        "family": "Noto Naskh Arabic",
+        "filename": "NotoNaskhArabic.docx"
+      }
+    ],
+    "fonts": [
+      {
+        "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbWmT.ttf",
+        "status": 200,
+        "bytes": 123720,
+        "sha256": "dece7c71bbe61710787f0839c722c65e87355dd2eb4a823e6b5488121ff81e4b",
+        "trueTypeMagicVerified": true,
+        "latinGreekCyrillicCoverageVerified": true,
+        "staticTrueTypeVerified": true,
+        "weight": 400,
+        "unicodeCharacters": 927
+      },
+      {
+        "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYjammT.ttf",
+        "status": 200,
+        "bytes": 124292,
+        "sha256": "35757eaa996b3359022f47f164a67ee9eac04971af24c5b8fbd4b89e844ff190",
+        "trueTypeMagicVerified": true,
+        "latinGreekCyrillicCoverageVerified": true,
+        "staticTrueTypeVerified": true,
+        "weight": 700,
+        "unicodeCharacters": 927
+      },
+      {
+        "url": "https://fonts.gstatic.com/s/notonaskharabic/v44/RrQ5bpV-9Dd1b1OAGA6M9PkyDuVBePeKNaxcsss0Y7bwvc5krA.ttf",
+        "status": 200,
+        "bytes": 197420,
+        "sha256": "e62e84cf72fe9e8953a21c3337c68155a116d4bbdcd9522d860d46686b28c6e0",
+        "trueTypeMagicVerified": true,
+        "persianCoverageVerified": true,
+        "staticTrueTypeVerified": true,
+        "weight": 400,
+        "unicodeCharacters": 1551
+      },
+      {
+        "url": "https://fonts.gstatic.com/s/notonaskharabic/v44/RrQ5bpV-9Dd1b1OAGA6M9PkyDuVBePeKNaxcsss0Y7bwWslkrA.ttf",
+        "status": 200,
+        "bytes": 197532,
+        "sha256": "76e7b3b17abc5068fda755d657d475863df2d48cee60dc21bd22efb11ecb2268",
+        "trueTypeMagicVerified": true,
+        "persianCoverageVerified": true,
+        "staticTrueTypeVerified": true,
+        "weight": 700,
+        "unicodeCharacters": 1551
+      }
+    ]
+  },
+  "downloadedFontEmbedding": {
+    "Roboto": {
+      "document": "Roboto.docx",
+      "usedFamilies": [
+        "Roboto",
+        "Vazirmatn"
+      ],
+      "faces": [
+        {
+          "family": "Roboto",
+          "face": "embedRegular",
+          "bytes": 123720,
+          "sha256": "dece7c71bbe61710787f0839c722c65e87355dd2eb4a823e6b5488121ff81e4b",
+          "matchesSource": "download-0.ttf",
+          "hasMathTable": false
+        },
+        {
+          "family": "Roboto",
+          "face": "embedBold",
+          "bytes": 124292,
+          "sha256": "35757eaa996b3359022f47f164a67ee9eac04971af24c5b8fbd4b89e844ff190",
+          "matchesSource": "download-1.ttf",
+          "hasMathTable": false
+        },
+        {
+          "family": "Vazirmatn",
+          "face": "embedRegular",
+          "bytes": 104640,
+          "sha256": "7f3c44f0a0b45cd748519b2ad5729f8af5f7bf58dd48767c956d79f46611a3fb",
+          "matchesSource": "Vazirmatn-Regular.ttf",
+          "hasMathTable": false
+        },
+        {
+          "family": "Vazirmatn",
+          "face": "embedBold",
+          "bytes": 105228,
+          "sha256": "489c29f4ba685a8f4aeb3f15e66f51197362cc60ae96bc7cdaa8ea1a52d58235",
+          "matchesSource": "Vazirmatn-Bold.ttf",
+          "hasMathTable": false
+        }
+      ],
+      "allUsedFamiliesEmbedded": true,
+      "completeSourceByteCheck": true
+    },
+    "NotoNaskhArabic": {
+      "document": "NotoNaskhArabic.docx",
+      "usedFamilies": [
+        "Noto Naskh Arabic"
+      ],
+      "faces": [
+        {
+          "family": "Noto Naskh Arabic",
+          "face": "embedRegular",
+          "bytes": 197420,
+          "sha256": "e62e84cf72fe9e8953a21c3337c68155a116d4bbdcd9522d860d46686b28c6e0",
+          "matchesSource": "download-2.ttf",
+          "hasMathTable": false
+        },
+        {
+          "family": "Noto Naskh Arabic",
+          "face": "embedBold",
+          "bytes": 197532,
+          "sha256": "76e7b3b17abc5068fda755d657d475863df2d48cee60dc21bd22efb11ecb2268",
+          "matchesSource": "download-3.ttf",
+          "hasMathTable": false
+        }
+      ],
+      "allUsedFamiliesEmbedded": true,
+      "completeSourceByteCheck": true
+    }
+  }
+}

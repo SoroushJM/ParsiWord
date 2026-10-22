@@ -2,20 +2,36 @@ import { isTauri } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeFile } from '@tauri-apps/plugin-fs';
 
-export async function saveDocx(bytes: Uint8Array, filename: string): Promise<boolean> {
+type DownloadFormat = { label: string; extension: string; mime: string };
+
+async function saveBytes(bytes: Uint8Array, filename: string, format: DownloadFormat): Promise<boolean> {
   if (isTauri()) {
-    const path = await save({ defaultPath: filename, filters: [{ name: 'Word document', extensions: ['docx'] }] });
+    const path = await save({ defaultPath: filename, filters: [{ name: format.label, extensions: [format.extension] }] });
     if (!path) return false;
     await writeFile(path, bytes);
     return true;
   }
-  const url = URL.createObjectURL(new Blob([bytes.slice().buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+  const url = URL.createObjectURL(new Blob([bytes.slice().buffer], { type: format.mime }));
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
   return true;
+}
+
+export function saveDocx(bytes: Uint8Array, filename: string): Promise<boolean> {
+  return saveBytes(bytes, filename, { label: 'Word document', extension: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+}
+
+export function saveMarkdown(markdown: string, filename: string): Promise<boolean> {
+  // Encode the logical source directly: preserve escapes, line endings and
+  // trailing whitespace without adding a BOM or passing through a renderer.
+  return saveBytes(new TextEncoder().encode(markdown), filename, { label: 'Markdown document', extension: 'md', mime: 'text/markdown;charset=utf-8' });
+}
+
+export function savePdf(bytes: Uint8Array, filename: string): Promise<boolean> {
+  return saveBytes(bytes, filename, { label: 'PDF document', extension: 'pdf', mime: 'application/pdf' });
 }
 
 export async function openMarkdown(): Promise<{ name: string; text: string } | null> {

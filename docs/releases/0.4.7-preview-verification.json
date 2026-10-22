@@ -1,0 +1,50 @@
+{
+  "package": "app.parsiword.mobile.preview",
+  "version": "0.4.7-preview",
+  "versionCode": 4007,
+  "bytes": 9436787,
+  "sha256": "9fcc5eaf6fc712f1731f7e3a3b98616fde1e791eed9b12e17e3ce76a2085dc31",
+  "certificateSha256": "3ecbf82f6ab36ba252818e1200def8b9651ebf08121ad7afa935f6d0a8d2e273",
+  "architecture": "arm64-v8a",
+  "debuggable": false,
+  "testOnly": false,
+  "nativeExtraction": true,
+  "nativeBytes": 11212048,
+  "nativeCompressedBytes": 7503397,
+  "elfLoadAlignments": [
+    16384,
+    16384,
+    16384,
+    16384
+  ],
+  "frontendBundle": "index-DetOZvpk.js",
+  "signatureVerified": true,
+  "zipCrcVerified": true,
+  "deviceInstallation": "pending",
+  "frontendBundleSha256": "802c15d0224191556d54cbb08b2b96c664edbc62b7c1e1c367f68b64b3f9c0c5",
+  "comparedWith": "ParsiWord-0.4.6-preview-arm64.apk",
+  "comparisonApkSha256": "2dd7aec54b18883fa516d421efafb7161875edb4e30f32cb01393740de576d4a",
+  "signingKeyMatchesComparison": true,
+  "signatureSchemesVerified": [
+    "v2",
+    "v3"
+  ],
+  "nativeCspWorkerSourceBundled": true,
+  "browserFontCatalogue": {
+    "families": 1949,
+    "bytes": 471804,
+    "sha256": "b822a7c4dc341e648dca4e355809a69c23110048466ebbca6ed91f8493fe1440",
+    "bundledPathVerified": true
+  },
+  "pdfBundle": "pdf-export-Cq9ejGKq.js",
+  "pdfBundlePathVerified": true,
+  "upload": {
+    "filename": "ParsiWord-0.4.7-preview-arm64.apk",
+    "bytes": 9436787,
+    "md5": "b1210f411bd1a88aecd8fa6281cd3b42",
+    "sha256": "9fcc5eaf6fc712f1731f7e3a3b98616fde1e791eed9b12e17e3ce76a2085dc31",
+    "downloadPage": "https://gofile.io/d/VnwASSPS",
+    "downloadPageHttpStatus": 200,
+    "uploadedNameSizeAndMd5Match": true
+  }
+}
