@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('apk', type=Path)
 parser.add_argument('--compare-with', type=Path)
 parser.add_argument('--report', type=Path)
+parser.add_argument('--expected-package', default='app.parsiword.mobile')
 args = parser.parse_args()
 sdk = Path(os.environ['ANDROID_HOME'])
 tools = sdk / 'build-tools' / '36.0.0'
@@ -40,7 +41,7 @@ badging = run('aapt', 'dump', 'badging', args.apk)
 manifest = run('aapt', 'dump', 'xmltree', args.apk, 'AndroidManifest.xml')
 assert "native-code: 'arm64-v8a'\n" in badging
 assert "sdkVersion:'24'" in badging
-assert "name='app.parsiword.mobile'" in badging
+assert f"name='{args.expected_package}'" in badging
 assert not re.search(r'android:(?:debuggable|testOnly)\([^\n]*0xffffffff', manifest), 'Not a normal release APK'
 assert re.search(r'android:extractNativeLibs\([^\n]*0xffffffff', manifest), 'Native extraction not enabled'
 version = re.search(r"versionCode='(\d+)' versionName='([^']+)'", badging)
@@ -70,6 +71,7 @@ with zipfile.ZipFile(args.apk) as archive:
     assert b'ParsiWordSymbols-Regular.ttf' in data, 'Bundled delimiter font is missing'
 
 result = {
+    'package': args.expected_package,
     'version': version.group(2), 'versionCode': int(version.group(1)),
     'bytes': args.apk.stat().st_size,
     'sha256': hashlib.sha256(args.apk.read_bytes()).hexdigest(),

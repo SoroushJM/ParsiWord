@@ -13,6 +13,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, value, i, a
 const width = Number(args.width || 1100), height = Number(args.height || 800);
 const output = resolve(args.output || 'artifacts/ui-preview.png');
 if (!(width >= 320 && height >= 320)) throw new Error('Width and height must be at least 320.');
+if (args.view !== undefined && !['edit', 'preview'].includes(args.view)) throw new Error('View must be edit or preview.');
 let chrome = args.chrome || process.env.CHROME_BIN;
 if (!chrome) {
   const cache = join(homedir(), '.cache/ms-playwright');
@@ -86,10 +87,34 @@ try {
   if (!ready) throw new Error('The development screenshot function did not load.');
   const options = {};
   if (args.markdown) options.markdown = await readFile(args.markdown, 'utf8');
-  if (args.scroll) options.scrollY = Number(args.scroll);
+  if (args.scroll !== undefined) options.scrollY = Number(args.scroll);
+  if (args.view !== undefined) options.view = args.view;
   const result = await send('Runtime.evaluate', { expression: `window.parsiwordDev.screenshot(${JSON.stringify(options)})`, awaitPromise: true, returnByValue: true });
   if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || 'Capture failed');
-  const layout = await send('Runtime.evaluate', { expression: `JSON.stringify({ width: innerWidth, height: innerHeight, overflow: document.documentElement.scrollWidth > innerWidth, editorHeight: document.querySelector('textarea').clientHeight, editorScrollHeight: document.querySelector('textarea').scrollHeight, toolbarTop: document.querySelector('.format-toolbar').getBoundingClientRect().top, badges: document.querySelectorAll('.offline-badge, .live-label').length })`, returnByValue: true });
+  const layout = await send('Runtime.evaluate', { expression: `JSON.stringify((() => {
+    const editor = document.querySelector('textarea');
+    const preview = document.querySelector('.preview-panel');
+    const toolbar = document.querySelector('.format-toolbar');
+    const richToolbar = document.querySelector('.rich-toolbar-container');
+    const viewSwitch = document.querySelector('.mobile-view-switch');
+    const visible = element => Boolean(element && element.getClientRects().length);
+    const editorVisible = visible(editor), previewVisible = visible(preview);
+    return {
+      width: innerWidth, height: innerHeight,
+      view: editorVisible && previewVisible ? 'both' : previewVisible ? 'preview' : 'edit',
+      overflow: document.documentElement.scrollWidth > innerWidth,
+      editorVisible, previewVisible,
+      editorHeight: editorVisible ? editor.clientHeight : null,
+      editorScrollHeight: editorVisible ? editor.scrollHeight : null,
+      previewHeight: previewVisible ? preview.clientHeight : null,
+      previewScrollHeight: previewVisible ? preview.scrollHeight : null,
+      toolbarTop: visible(toolbar) ? toolbar.getBoundingClientRect().top : null,
+      richToolbarTop: visible(richToolbar) ? richToolbar.getBoundingClientRect().top : null,
+      viewSwitchTop: visible(viewSwitch) ? viewSwitch.getBoundingClientRect().top : null,
+      richEditorEditable: previewVisible ? Boolean(document.querySelector('.rich-document')?.isContentEditable) : null,
+      badges: document.querySelectorAll('.offline-badge, .live-label').length,
+    };
+  })())`, returnByValue: true });
   console.log(JSON.stringify({ screenshot: result.result.value, ...JSON.parse(layout.result.value) }));
   await send('Browser.close').catch(() => {});
 } finally {

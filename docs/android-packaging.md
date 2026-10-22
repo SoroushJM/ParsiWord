@@ -1,4 +1,16 @@
-# Android distribution, 0.2.4 and 0.4.0
+# Android distribution
+
+For the current 0.4.5 test build, use `npm run android:test-apk -- /path/output.apk`.
+It builds an optimized, nondebug ARM64 release with application ID
+`app.parsiword.mobile.preview` and label `ParsiWord Preview`, so it can coexist
+with the normal app. The prior signing key was absent from the source archive.
+The test-build script creates/reuses a separate key outside the repository in
+`PARSIWORD_SIGNING_DIR` (default `~/.local/share/parsiword/signing`); retain that
+directory and its password file for later Preview updates. Normal
+`npm run android:apk` keeps `app.parsiword.mobile`. The distribution signing key
+is not part of the source. See [0.4.5](releases/0.4.5.md) for build instructions.
+
+## Historical distribution, 0.2.4 and 0.4.0
 
 The user requested a replacement for the APK that their Samsung installer rejected and explicitly requested that future Android builds contain no x86 output.
 

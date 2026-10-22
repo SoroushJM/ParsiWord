@@ -37,26 +37,43 @@ npm run ui:capture -- --chrome /path/to/chrome --output artifacts/ui.png
 # دسکتاپ
 npm run ui:capture -- --width 1100 --height 800 --markdown /tmp/demo.md --output artifacts/desktop.png
 
-# موبایل و موبایل باریک
-npm run ui:capture -- --width 393 --height 851 --markdown /tmp/demo.md --output artifacts/mobile.png
-npm run ui:capture -- --width 320 --height 780 --markdown /tmp/demo.md --output artifacts/mobile-small.png
+# ویرایش موبایل و پیش‌نمایش همان متن
+npm run ui:capture -- --width 393 --height 851 --view edit --markdown /tmp/demo.md --output artifacts/mobile-edit.png
+npm run ui:capture -- --width 393 --height 851 --view preview --markdown /tmp/demo.md --output artifacts/mobile-preview.png
+
+# پیش‌نمایش موبایل باریک
+npm run ui:capture -- --width 320 --height 780 --view preview --markdown /tmp/demo.md --output artifacts/mobile-small.png
 
 # متن بلند، بعد از اسکرول صفحه؛ برای دیدن toolbar چسبان
-npm run ui:capture -- --width 393 --height 851 --markdown /tmp/long.md --scroll 1400 --output artifacts/mobile-scroll.png
+npm run ui:capture -- --width 393 --height 851 --view edit --markdown /tmp/long.md --scroll 1400 --output artifacts/mobile-scroll.png
 ```
 
 اندازه‌ها بر حسب CSS pixel هستند؛ کوچک‌ترین اندازهٔ پذیرفته‌شده ۳۲۰×۳۲۰
 است. خروجی PNG فقط viewport است تا سندهای بلند تصویر چندده‌هزارپیکسلی
-نسازند. اسکرول مربوط به **صفحه** است، نه اسکرول مستقل پیش‌نمایش. این عکس‌ها
+نسازند. `--view` در موبایل تا عرض ۸۹۹px پنل فعال را انتخاب می‌کند؛ بدون آن
+حالت آغازین ویرایش است. در دسکتاپ هر دو پنل دیده می‌شوند و این گزینه
+چیدمان را تغییر نمی‌دهد. `--scroll` مربوط به **صفحه** است؛ در موبایل هر
+دو حالت با صفحه اسکرول می‌شوند و در دسکتاپ پیش‌نمایش اسکرول داخلی دارد.
+اسکرول ویرایش و پیش‌نمایش بر اساس بلوک‌های متن هماهنگ می‌شود. این عکس‌ها
 شبیه‌سازی viewport مرورگرند، تأیید اجرای بومی Android/iOS محسوب نمی‌شوند.
 
-خروجی فرمان یک JSON کوتاه با مسیر عکس، ابعاد، `overflow` افقی، ارتفاع
-ادیتور و محتوایش، موقعیت toolbar و تعداد badgeهای حذف‌شده است.
+خروجی فرمان یک JSON کوتاه با مسیر عکس، ابعاد، `overflow` افقی، حالت واقعی
+نمایش (`edit`، `preview` یا `both`)، دیده‌شدن و ارتفاع دو پنل، موقعیت نوار
+قالب‌بندی Markdown (`toolbarTop`)، نوار ویرایش پیش‌نمایش (`richToolbarTop`)
+و انتخابگر موبایل (`viewSwitchTop`) و تعداد badgeهای حذف‌شده است.
+`richEditorEditable` نیز فعال‌بودن ویرایش مستقیم پیش‌نمایش را گزارش می‌کند.
+اندازه‌های پنل پنهان و موقعیت toolbar پنهان
+`null` هستند؛ صفر به معنی قد واقعی متن نیست.
 برای بررسی نتیجه، PNG را واقعاً باز کن. در متن بلند انتظار داریم:
 
 - `overflow` برابر `false` باشد.
-- `editorHeight` و `editorScrollHeight` برابر باشند؛ ادیتور اسکرول داخلی ندارد.
-- نوار قالب‌بندی پس از اسکرول در دید بماند؛ در موبایل زیر پیش‌نمایش می‌چسبد.
+- وقتی ادیتور دیده می‌شود، `editorHeight` و `editorScrollHeight` برابر باشند؛
+  ادیتور اسکرول داخلی ندارد.
+- در موبایل فقط پنل انتخابی دیده شود و انتخابگر هنگام اسکرول در دید بماند؛
+  در حالت ویرایش، نوار قالب‌بندی زیر آن بچسبد.
+- نوار ابزار پیش‌نمایش موبایل دو ردیف و اسکرول افقی داخلی داشته باشد؛
+  نمودارهای عریض هم داخل محفظهٔ خودشان اسکرول شوند. راهنمای نمودار فقط وقتی
+  محتوا از محفظه عریض‌تر است دیده شود؛ صفحه نباید overflow افقی پیدا کند.
 - `badges` برابر صفر باشد؛ «زنده» و «روی دستگاه تو» حذف شده‌اند.
 - ذخیره و تنظیمات بالای سند باشند؛ جهت زیر تیتر اصلی قرار بگیرد.
 
@@ -67,13 +84,16 @@ npm run ui:capture -- --width 393 --height 851 --markdown /tmp/long.md --scroll 
 ```ts
 await window.parsiwordDev.screenshot({
   markdown: '# عنوان\n\nمتن فارسی با React (version **19**).',
+  view: 'preview',
   scrollY: 1400,
 }); // Promise<string>: مسیر PNG ذخیره‌شده
 ```
 
-هر دو گزینه اختیاری‌اند. تابع ابتدا متن React را تنظیم می‌کند، منتظر
-پیش‌نمایش با تأخیر ۲۰۰ میلی‌ثانیه، فونت‌ها، نمودارها و دو فریم مرورگر
-می‌ماند و سپس عکس را درخواست می‌کند. انتظار آماده‌شدن پیش‌نمایش حداکثر
+همهٔ گزینه‌ها اختیاری‌اند. تابع ابتدا متن React را تنظیم می‌کند، منتظر
+پیش‌نمایش با تأخیر ۲۰۰ میلی‌ثانیه، فونت‌ها و نمودارها می‌ماند، حالت موبایل
+درخواستی را انتخاب می‌کند و پس از تثبیت چیدمان، `scrollY` را اعمال می‌کند.
+پس از تغییر حالت نیز منتظر آماده‌شدن پیش‌نمایش می‌ماند و دو فریم مرورگر
+پیش از درخواست عکس صبر می‌کند. انتظار آماده‌شدن پیش‌نمایش حداکثر
 ۳۰ ثانیه است. مسیر ذخیره، ابعاد و اتصال CDP را runner تعیین می‌کند؛ این
 تابع در یک تب معمولی که bridge ندارد، پیام اجرای `npm run ui:capture` می‌دهد.
 

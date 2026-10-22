@@ -6,18 +6,31 @@ const cache = new Map<string, Promise<Diagram>>();
 let queue = Promise.resolve();
 let counter = 0;
 
+// Render geometry at one font size; preview scales the whole SVG with the text.
+export const diagramFontSize = 16;
+
+function fontSizeKeys(config: unknown): string[] {
+  if (!config || typeof config !== 'object') return [];
+  return Object.entries(config).flatMap(([key, value]) => [
+    ...(/fontSize$/i.test(key) ? [key] : []), ...fontSizeKeys(value),
+  ]);
+}
+
 async function render(source: string): Promise<Diagram> {
   if (source.length > 50_000) throw new RichContentError('نمودار بیش از حد بزرگ است. آن را به چند نمودار تقسیم کن.');
   const { default: mermaid } = await import('mermaid');
   mermaid.initialize({
     startOnLoad: false, securityLevel: 'strict', theme: 'default',
-    fontFamily: 'Arial, sans-serif', htmlLabels: false,
+    fontFamily: 'Arial, sans-serif', fontSize: diagramFontSize,
+    themeVariables: { fontSize: `${diagramFontSize}px` }, htmlLabels: false,
     flowchart: { htmlLabels: false }, maxTextSize: 50_000,
     suppressErrorRendering: true,
-    secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'htmlLabels', 'flowchart', 'fontFamily'],
+    // Mermaid applies these keys recursively, including init/frontmatter options.
+    // Keep labels at document scale even when a source requests huge font sizes.
+    secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'htmlLabels', 'flowchart', 'fontFamily', 'fontSize', 'themeCSS', ...new Set(fontSizeKeys(mermaid.mermaidAPI.defaultConfig))],
   });
   const host = document.createElement('div');
-  host.style.cssText = 'position:fixed;left:-20000px;top:0;visibility:hidden;width:1200px';
+  host.style.cssText = `position:fixed;left:-20000px;top:0;visibility:hidden;width:1200px;font:${diagramFontSize}px Arial,sans-serif;line-height:normal`;
   document.body.append(host);
   try {
     const { svg } = await mermaid.render(`parsiword-diagram-${++counter}`, source, host);

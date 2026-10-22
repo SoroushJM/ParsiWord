@@ -13,11 +13,16 @@ val tauriProperties = Properties().apply {
         propFile.inputStream().use { load(it) }
     }
 }
+// An opt-in test build can coexist with an installation signed by a different
+// distribution key. Keep namespace/JNI classes tied to the original package.
+val parsiwordPreview = providers.gradleProperty("parsiwordPreview").orNull == "true"
 
 android {
     compileSdk = 36
     namespace = "app.parsiword.mobile"
     defaultConfig {
+        manifestPlaceholders["appLabel"] = if (parsiwordPreview) "ParsiWord Preview" else "@string/app_name"
+        manifestPlaceholders["activityLabel"] = if (parsiwordPreview) "ParsiWord Preview" else "@string/main_activity_title"
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "app.parsiword.mobile"
         minSdk = 24
@@ -46,6 +51,10 @@ android {
             isMinifyEnabled = false
         }
         getByName("release") {
+            if (parsiwordPreview) {
+                applicationIdSuffix = ".preview"
+                versionNameSuffix = "-preview"
+            }
             optimization {
                enable = true
             }

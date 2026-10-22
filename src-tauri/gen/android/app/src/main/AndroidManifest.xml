@@ -7,7 +7,7 @@
 
     <application
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="${appLabel}"
         android:supportsRtl="true"
         android:theme="@style/Theme.parsiword"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
@@ -15,7 +15,7 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
-            android:label="@string/main_activity_title"
+            android:label="${activityLabel}"
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

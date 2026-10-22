@@ -1,6 +1,15 @@
 // Loaded only by Vite development builds. The capture runner supplies a CDP
 // binding, so screenshots use the browser's real pixels, including sticky UI.
-type CaptureOptions = { markdown?: string; scrollY?: number };
+type CaptureOptions = { markdown?: string; scrollY?: number; view?: 'edit' | 'preview' };
+async function settlePreview() {
+  await document.fonts.ready;
+  const start = performance.now();
+  do {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    if (performance.now() - start > 30_000) throw new Error('Preview did not settle before capture.');
+  } while (performance.now() - start < 300 || document.querySelector('[aria-busy="true"], .preview-panel [role="status"]'));
+  await document.fonts.ready;
+}
 declare global {
   interface Window {
     parsiwordDev?: { screenshot: (options?: CaptureOptions) => Promise<string> };
@@ -20,15 +29,19 @@ export function installCapture(setMarkdown: (markdown: string) => void) {
   window.parsiwordDev = {
     async screenshot(options = {}) {
       if (!window.__parsiwordCapture) throw new Error('Run npm run ui:capture to connect the screenshot bridge.');
+      if (options.view !== undefined && !['edit', 'preview'].includes(options.view)) throw new Error('Capture view must be edit or preview.');
       if (options.markdown !== undefined) setMarkdown(options.markdown);
-      await document.fonts.ready;
       // Wait for React, the 200 ms preview debounce and local diagram rendering.
-      const start = performance.now();
-      do {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        if (performance.now() - start > 30_000) throw new Error('Preview did not settle before capture.');
-      } while (performance.now() - start < 300 || document.querySelector('[aria-busy="true"], .preview-panel [role="status"]'));
-      await document.fonts.ready;
+      await settlePreview();
+      if (options.view && window.matchMedia('(max-width: 899px)').matches) {
+        const button = document.querySelector<HTMLButtonElement>(`[data-mobile-view="${options.view}"]`);
+        if (!button) throw new Error('The mobile view selector is unavailable.');
+        button.click();
+        // The view switch restores the corresponding source block after React
+        // reveals its panel; let that layout finish before applying scrollY.
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        await settlePreview();
+      }
       if (options.scrollY !== undefined) window.scrollTo(0, options.scrollY);
       await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
       const id = ++nextId;

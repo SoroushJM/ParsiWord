@@ -49,7 +49,9 @@ function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href
       case 'link': return leaves(n.children, style, /^(https?:|mailto:)/i.test(n.url) ? n.url : undefined);
       case 'break': return [{ text: '\n', style, break: true }];
       case 'image': return [{ text: `[تصویر: ${n.alt || 'بدون عنوان'}]`, style }];
-      case 'html': return [{ text: n.value, style }];
+      case 'html': return /^<br\s*\/?\s*>$/i.test(n.value)
+        ? [{ text: '\n', style, href, break: true }]
+        : [{ text: n.value, style }];
       case 'footnoteReference': return [{ text: `[${n.label || n.identifier}]`, style }];
       case 'linkReference': return leaves(n.children, style);
       case 'imageReference': return [{ text: `[تصویر: ${n.alt || n.identifier}]`, style }];

@@ -1,0 +1,27 @@
+{
+  "package": "app.parsiword.mobile.preview",
+  "version": "0.4.5-preview",
+  "versionCode": 4005,
+  "bytes": 9129587,
+  "sha256": "b631741d5982d20521d22da599e490ac434409080c99c2c6e5c5c9d182a327c2",
+  "certificateSha256": "3ecbf82f6ab36ba252818e1200def8b9651ebf08121ad7afa935f6d0a8d2e273",
+  "architecture": "arm64-v8a",
+  "debuggable": false,
+  "testOnly": false,
+  "nativeExtraction": true,
+  "nativeBytes": 10904616,
+  "nativeCompressedBytes": 7197608,
+  "elfLoadAlignments": [
+    16384,
+    16384,
+    16384,
+    16384
+  ],
+  "frontendBundle": "index-Dx2gQGJ1.js",
+  "signatureVerified": true,
+  "zipCrcVerified": true,
+  "deviceInstallation": "pending",
+  "launcherIconPixelsVerified": true,
+  "launcherAdaptiveInset": "12.5%",
+  "launcherBackground": "#087b68"
+}

@@ -1,0 +1,215 @@
+Third-party MIT licenses for ParsiWord rich-text editing
+
+Package versions and source repositories are from the installed npm releases.
+Exact dependency resolutions are recorded in package-lock.json.
+Copyright and permission notices below are copied from the distributed licenses.
+
+========================================================================
+Packages covered by the following notice:
+
+@tiptap/core 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/core)
+@tiptap/extension-blockquote 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-blockquote)
+@tiptap/extension-bold 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-bold)
+@tiptap/extension-bubble-menu 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-bubble-menu)
+@tiptap/extension-bullet-list 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-bullet-list)
+@tiptap/extension-code 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-code)
+@tiptap/extension-code-block 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-code-block)
+@tiptap/extension-document 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-document)
+@tiptap/extension-dropcursor 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages-deprecated/extension-dropcursor)
+@tiptap/extension-floating-menu 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-floating-menu)
+@tiptap/extension-gapcursor 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages-deprecated/extension-gapcursor)
+@tiptap/extension-hard-break 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-hard-break)
+@tiptap/extension-heading 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-heading)
+@tiptap/extension-horizontal-rule 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-horizontal-rule)
+@tiptap/extension-italic 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-italic)
+@tiptap/extension-link 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-link)
+@tiptap/extension-list 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-list)
+@tiptap/extension-list-item 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-list-item)
+@tiptap/extension-list-keymap 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-list-keymap)
+@tiptap/extension-ordered-list 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-ordered-list)
+@tiptap/extension-paragraph 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-paragraph)
+@tiptap/extension-strike 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-strike)
+@tiptap/extension-table 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-table)
+@tiptap/extension-text 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-text)
+@tiptap/extension-underline 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension-underline)
+@tiptap/extensions 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/extension)
+@tiptap/pm 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/pm)
+@tiptap/react 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/react)
+@tiptap/starter-kit 3.32.0
+Source: https://github.com/ueberdosis/tiptap (directory: packages/starter-kit)
+
+MIT License
+
+Copyright (c) 2025, Tiptap GmbH
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========================================================================
+Packages covered by the following notice:
+
+prosemirror-changeset 2.4.4
+Source: git+https://code.haverbeke.berlin/prosemirror/prosemirror-changeset.git
+
+Copyright (C) 2017 by Marijn Haverbeke <marijn@haverbeke.berlin> and others
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+========================================================================
+Packages covered by the following notice:
+
+prosemirror-commands 1.7.2
+Source: git+https://code.haverbeke.berlin/prosemirror/prosemirror-commands.git
+prosemirror-dropcursor 1.8.4
+Source: git+https://code.haverbeke.berlin/prosemirror/prosemirror-dropcursor.git
+prosemirror-gapcursor 1.4.1
+Source: git://github.com/prosemirror/prosemirror-gapcursor.git
+prosemirror-history 1.5.1
+Source: git+https://code.haverbeke.berlin/prosemirror/prosemirror-history.git
+prosemirror-inputrules 1.5.1
+Source: git://github.com/prosemirror/prosemirror-inputrules.git
+prosemirror-keymap 1.2.3
+Source: git://github.com/prosemirror/prosemirror-keymap.git
+prosemirror-model 1.25.12
+Source: git+https://code.haverbeke.berlin/prosemirror/prosemirror-model.git
+prosemirror-schema-list 1.5.1
+Source: git://github.com/prosemirror/prosemirror-schema-list.git
+prosemirror-state 1.4.4
+Source: git://github.com/prosemirror/prosemirror-state.git
+prosemirror-transform 1.12.2
+Source: git+https://code.haverbeke.berlin/prosemirror/prosemirror-transform.git
+prosemirror-view 1.42.6
+Source: git+https://code.haverbeke.berlin/prosemirror/prosemirror-view.git
+
+Copyright (C) 2015-2017 by Marijn Haverbeke <marijn@haverbeke.berlin> and others
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+========================================================================
+Packages covered by the following notice:
+
+prosemirror-tables 1.8.5
+Source: https://github.com/ProseMirror/prosemirror-tables.git
+
+Copyright (C) 2015-2016 by Marijn Haverbeke <marijnh@gmail.com> and others
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+========================================================================
+Packages covered by the following notice:
+
+remark-stringify 11.0.0
+Source: https://github.com/remarkjs/remark/tree/main/packages/remark-stringify
+
+(The MIT License)
+
+Copyright (c) 2014 Titus Wormer <tituswormer@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.

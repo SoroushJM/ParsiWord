@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
-import { DocumentPreview } from './DocumentPreview';
+import { EditablePreview } from './EditablePreview';
+import { usePreviewScroll } from './use-preview-scroll';
 import { RichContentError } from './rich-content';
 import defaultDocument from './default-document.md?raw';
 import { version as appVersion } from '../package.json';
@@ -62,30 +63,45 @@ function App() {
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
   const [previous, setPrevious] = useState<string | null>(null);
   const editor = useRef<HTMLTextAreaElement>(null);
+  const preview = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const focusEditor = useCallback(() => editor.current?.focus(), []);
+  const { mobileView, selectView, activateView } = usePreviewScroll(editor, preview, markdown, previewMarkdown);
+  const updateFromPreview = useCallback((value: string) => {
+    setMarkdown(value);
+    setPreviewMarkdown(value);
+  }, []);
+  const focusEditor = useCallback(() => {
+    selectView('edit');
+    requestAnimationFrame(() => editor.current?.focus());
+  }, [selectView]);
   const resizeEditor = useCallback(() => {
     const element = editor.current;
-    if (!element) return;
+    if (!element?.clientWidth) return;
     const scroll = window.scrollY;
     element.style.height = 'auto';
     element.style.height = `${element.scrollHeight}px`;
     element.scrollTop = 0;
     if (window.scrollY !== scroll) window.scrollTo(0, scroll);
   }, []);
-  useLayoutEffect(resizeEditor, [markdown, resizeEditor]);
+  useLayoutEffect(resizeEditor, [markdown, mobileView, resizeEditor]);
   useEffect(() => {
     const element = editor.current;
     if (!element) return;
     let width = element.getBoundingClientRect().width;
+    let resizeFrame = 0;
     const observer = new ResizeObserver(() => {
       const next = element.getBoundingClientRect().width;
-      if (next !== width) { width = next; resizeEditor(); }
+      if (next !== width) {
+        width = next;
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(resizeEditor);
+      }
     });
     observer.observe(element);
     let active = true;
     document.fonts.ready.then(() => { if (active) resizeEditor(); });
-    return () => { active = false; observer.disconnect(); };
+    document.fonts.addEventListener('loadingdone', resizeEditor);
+    return () => { active = false; cancelAnimationFrame(resizeFrame); observer.disconnect(); document.fonts.removeEventListener('loadingdone', resizeEditor); };
   }, [resizeEditor]);
 
   useEffect(() => {
@@ -200,7 +216,11 @@ function App() {
               </div>
             </div>
 
-            <div className="live-workspace">
+            <div className="live-workspace" data-view={mobileView}>
+            <div className="mobile-view-switch" role="group" aria-label="نمای سند">
+              <button type="button" data-mobile-view="edit" aria-pressed={mobileView === 'edit'} aria-controls="edit-panel" onClick={() => selectView('edit')}><Code2 size={17} /> ویرایش متن</button>
+              <button type="button" data-mobile-view="preview" aria-pressed={mobileView === 'preview'} aria-controls="preview-pane" onClick={() => selectView('preview')}><BookOpen size={17} /> پیش‌نمایش</button>
+            </div>
             <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading">
               <div className="pane-heading"><h2 id="edit-heading"><Code2 size={17} /> ویرایش متن</h2><span>Markdown</span></div>
               <div className="format-toolbar" role="toolbar" aria-label="ابزار قالب‌بندی">
@@ -212,13 +232,13 @@ function App() {
                 <button title="کد" aria-label="درج کد" onClick={() => wrap('`', '`')}><Code2 size={17} /></button>
                 {previous !== null && <button className="restore-button" onClick={() => { setMarkdown(previous); setPrevious(null); }}><Undo2 size={15} /> متن قبلی</button>}
               </div>
-              <textarea ref={editor} className="markdown-editor" aria-label="متن Markdown" dir={settings.direction === 'ltr' ? 'ltr' : 'auto'} value={markdown} onChange={e => setMarkdown(e.target.value)} placeholder="از اینجا شروع کن…" spellCheck={false} maxLength={500_000} />
+              <textarea ref={editor} className="markdown-editor" aria-label="متن Markdown" dir={settings.direction === 'ltr' ? 'ltr' : 'auto'} value={markdown} onFocus={() => activateView('edit')} onChange={e => setMarkdown(e.target.value)} placeholder="از اینجا شروع کن…" spellCheck={false} maxLength={500_000} />
             </section>
 
-            <section className="preview-pane" aria-labelledby="preview-heading">
+            <section id="preview-pane" className="preview-pane" aria-labelledby="preview-heading">
               <div className="pane-heading"><h2 id="preview-heading"><BookOpen size={17} /> پیش‌نمایش</h2></div>
-              <div id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown}>
-                <DocumentPreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onStartWriting={focusEditor} />
+              <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={() => activateView('preview')}>
+                <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} />
               </div>
             </section>
             </div>
