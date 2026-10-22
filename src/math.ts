@@ -38,6 +38,24 @@ export function wordMath(source: string, display = false): ParagraphChild {
     const omml = new DOMParser().parseFromString(mml2omml(mathml, { disableDecode: true }), 'application/xml');
     const element = omml.documentElement;
     if (!element || element.nodeName !== 'm:oMath') throw new Error('Invalid OMML');
+    const m = 'http://schemas.openxmlformats.org/officeDocument/2006/math';
+    // mathml2omml can merge text following a plain n-ary operand directly
+    // into m:e instead of a run (e.g. the closing brace in {∑ k}). Such mixed
+    // content is invalid OMML and can erase the operand during serialization.
+    // Keep that following text outside the operator, in an ordinary math run.
+    for (const nary of Array.from(omml.getElementsByTagName('m:nary'))) {
+      const operand = Array.from(nary.childNodes).find(n => n.nodeName === 'm:e');
+      const after = nary.nextSibling;
+      for (const child of Array.from(operand?.childNodes || [])) {
+        if (child.nodeType !== 3) continue;
+        const run = omml.createElementNS(m, 'm:r');
+        const text = omml.createElementNS(m, 'm:t');
+        text.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+        text.appendChild(child);
+        run.appendChild(text);
+        nary.parentNode!.insertBefore(run, after);
+      }
+    }
     // KaTeX places a structured integrand (e.g. x² or a fraction) next to the
     // operator. mathml2omml attaches plain identifiers but leaves these outside
     // an empty n-ary operand, which Word/LibreOffice displays as a placeholder.

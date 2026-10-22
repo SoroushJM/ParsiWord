@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { MathView, MermaidView } from './RichPreview';
 import { mathLanguage, RichContentError } from './rich-content';
+import defaultDocument from './default-document.md?raw';
 import { version as appVersion } from '../package.json';
 import {
   ArrowDownToLine, ArrowLeft, Bold, BookOpen, Check, CheckCheck,
@@ -53,8 +54,8 @@ function loadDraft() {
         };
       }
     }
-  } catch { /* Use a clean draft if browser storage is unavailable. */ }
-  return { markdown: '', settings: defaultSettings };
+  } catch { /* Use the starter document if no valid saved draft is available. */ }
+  return { markdown: defaultDocument, settings: defaultSettings };
 }
 
 function App() {

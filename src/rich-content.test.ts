@@ -30,6 +30,20 @@ describe('editable Word equations', () => {
     expect(operand.textContent).toBe('x2');
     expect((operand as unknown as Element).getElementsByTagName('m:sSup')).toHaveLength(1);
   });
+  it.each([
+    ['\\left\\{\\sum_{k=1}^{n} k\\right\\}=1', 'k', '}=1'],
+    ['\\left(\\sum_{i=1}^{n} x+1\\right)', 'x', '+1)'],
+    ['\\sum_{i=1}^{n} i=10', 'i', '=10'],
+  ])('preserves the operand and following punctuation for %s', async (source, body, tail) => {
+    const { doc } = await document(`$$\n${source}\n$$`);
+    const nary = doc.getElementsByTagName('m:nary')[0];
+    const operand = Array.from(nary.childNodes).find(n => n.nodeName === 'm:e')!;
+    expect(operand.textContent).toBe(body);
+    expect(Array.from(operand.childNodes).every(n => n.nodeType === 1)).toBe(true);
+    const following = [];
+    for (let next = nary.nextSibling; next; next = next.nextSibling) following.push(next.textContent);
+    expect(following.join('')).toBe(tail);
+  });
   it('names the embedded math font on native runs and in document settings', async () => {
     const { doc, xml } = await document('$x^2+1$');
     for (const run of Array.from(doc.getElementsByTagName('m:r'))) {

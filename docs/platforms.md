@@ -109,3 +109,15 @@ Android 0.4.1 is ARM64-only, version code 4001, signed with the same preview
 certificate. The signed 8,740,411-byte APK passed metadata, signature, ZIP,
 16 KiB ELF/alignment and latest-frontend/offline-font-asset checks. No new
 Android emulator was started, as requested. The new APK phone check is pending.
+
+## 0.4.2 Android follow-up
+
+The first-launch draft now contains a difficult mixed-direction Markdown sample,
+five equations and two Mermaid diagrams. Existing drafts, including empty ones,
+are retained. A n-ary equation conversion defect exposed by the sample was fixed.
+804 unit tests, six Chromium tests and two WebKit tests pass after that fix.
+The ARM64-only APK has version code 4002 and the same signing certificate; its
+signature, metadata, ZIP, latest frontend and 16 KiB alignment checks pass.
+Phone installation remains pending. Desktop binaries are still the 0.4.1 builds;
+their source receives the same sample and math correction on its next build.
+Downloads and details: [0.4.2](releases/0.4.2.md).
