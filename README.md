@@ -1,5 +1,13 @@
 # پارسی‌ورد · ParsiWord
 
+[**استفاده از نسخهٔ وب · Open web editor**](https://soroushjm.github.io/ParsiWord/) · [Source code](https://github.com/SoroushJM/ParsiWord) · [Pages deployment](https://github.com/SoroushJM/ParsiWord/actions/workflows/pages.yml)
+
+**Persian RTL Markdown editor and Markdown to Word (DOCX) / PDF converter.**
+ParsiWord supports mixed Persian and English text, editable previews, LaTeX
+equations, Mermaid diagrams, syntax highlighting and embedded document fonts.
+Document conversion runs on your device, without uploading your text to a server.
+The web app is free to use and runs directly in a modern browser.
+
 [نسخهٔ ۰.۴.۷ و دانلود APK](docs/releases/0.4.7.md) برای تبدیل Markdown به Word و PDF روی دستگاه، با رابط فارسی، جهت متن
 فارسی/انگلیسی، فرمول LaTeX و نمودار Mermaid. کنترل‌های نمونه و مقایسه از رابط
 حذف شده‌اند. شروع نخست با یک [متن ترکیبی سخت](src/default-document.md) شامل
