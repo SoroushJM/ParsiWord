@@ -1,4 +1,5 @@
-.language-switch { display: flex; align-items: center; gap: .25rem; }
+.app-header { column-gap: .75rem; }
+.language-switch { display: flex; align-items: center; gap: .25rem; flex-shrink: 0; }
 .language-switch a { min-height: 2.75rem; padding-inline: .75rem; }
 .intro .intro-description { max-width: 48rem; }
 .product-explanation { padding-block: 2rem; max-width: 48rem; }

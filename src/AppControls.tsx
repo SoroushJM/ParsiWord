@@ -1,6 +1,6 @@
 import { languagePath, useLocale } from './locale';
 import { memo } from 'react';
-import { ArrowDownToLine, Bold, BookOpen, Check, ChevronDown, Code2, FileCode2, FilePlus2, Files, FileText, FileType2, FolderOpen, Heading2, Italic, List, Settings2, Undo2 } from 'lucide-react';
+import { ArrowDownToLine, Bold, BookOpen, Check, ChevronDown, Code2, FileCode2, FilePlus2, Files, FileText, FileType2, FolderOpen, Heading2, Italic, Languages, List, Settings2, Undo2 } from 'lucide-react';
 import type { ExportSettings } from './converter';
 import { FontPicker } from './FontPicker';
 import { Button } from '@/components/ui/button';
@@ -17,16 +17,19 @@ type UpdateSettings = <K extends keyof ExportSettings>(key: K, value: ExportSett
 
 export const BrandHeader = memo(function BrandHeader() {
   const { t, locale, setLocale } = useLocale();
+  const nextLanguage = locale === 'fa' ? 'en' : 'fa';
   return (<header className="app-header">
         <a className="brand" href="#" onClick={e => e.preventDefault()} aria-label={t("پارسی‌ورد")}>
           <span className="brand-mark"><FileText size="1.4375rem" strokeWidth={1.8} /><span /></span>
           <span className="brand-name">{t("پارسی‌ورد")}<span>PARSIWORD</span></span>
         </a>
         <nav className="language-switch" aria-label={t('زبان رابط')}>
-          {(['fa', 'en'] as const).map(language => <Button key={language} asChild variant={locale === language ? 'secondary' : 'ghost'}>
-            <a href={languagePath(language)} hrefLang={language} lang={language} dir={language === 'fa' ? 'rtl' : 'ltr'} aria-current={locale === language ? 'page' : undefined}
-              onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) { event.preventDefault(); setLocale(language); } }}>{language === 'fa' ? 'فارسی' : 'English'}</a>
-          </Button>)}
+          <Button asChild variant="outline">
+            <a href={languagePath(nextLanguage)} hrefLang={nextLanguage} lang={nextLanguage} dir={nextLanguage === 'fa' ? 'rtl' : 'ltr'}
+              onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) { event.preventDefault(); setLocale(nextLanguage); } }}>
+              <Languages data-icon="inline-start" />{nextLanguage === 'fa' ? 'فارسی' : 'English'}
+            </a>
+          </Button>
         </nav>
       </header>);
 });
