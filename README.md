@@ -29,9 +29,9 @@ to a server. The web app is free to use in a modern browser.
 | اکستنشن VS Code | `apps/vscode` | اتصال به TextDocument، منبع و پیش‌نمایش بومی، diff گیت و Webview |
 | وب و اپ پارسی‌ورد | `apps/parsiword` | سایت دوزبانه، پیش‌نویس و پروژه‌های Tauri دسکتاپ/موبایل |
 
-`npm run dev`، `npm run build` و فرمان‌های ساخت اپ از ریشه اجرا می‌شوند.
-برای اکستنشن: `npm run package:vscode`؛ بسته در `artifacts/parsiword-vscode-0.1.0.vsix` قرار می‌گیرد.
-آزمون واقعی VS Code: `npm run test:vscode`، با پروفایل و مخزن آزمایشی مستقل.
+`pnpm run dev`، `pnpm run build` و فرمان‌های ساخت اپ از ریشه اجرا می‌شوند.
+برای اکستنشن: `pnpm run package:vscode`؛ بسته در `artifacts/parsiword-vscode-0.1.0.vsix` قرار می‌گیرد.
+آزمون واقعی VS Code: `pnpm run test:vscode`، با پروفایل و مخزن آزمایشی مستقل.
 [راهنمای اکستنشن](apps/vscode/README.md) · [طرح و معیارهای پذیرش](docs/vscode-plan.md) · [نتایج آزمون](docs/vscode-validation.md).
 
 اکستنشن، نمای پیش‌فرض Markdown است. دکمهٔ «منبع بومی VS Code» همان سند را کنار
@@ -143,22 +143,29 @@ React + TypeScript + Vite + Tailwind 4 + shadcn/ui، ویرایش قالب‌ب�
 Tiptap 3 و خواندن/نوشتن Markdown با remark، تبدیل با docx/remark و
 bidi-js، ریاضی با KaTeX/mathml2omml، نمودار با Mermaid و پوستهٔ Tauri 2.
 
-Node.js 22.12+ یا 24 و Rust stable لازم‌اند. اندروید به JDK 21، SDK Platform
+مدیریت وابستگی‌ها با **pnpm 10.17.0** است؛ نسخه در `packageManager` ثبت شده
+و هر سه پروژه از `pnpm-workspace.yaml` و یک `pnpm-lock.yaml` مشترک استفاده می‌کنند.
+اگر pnpm نصب نیست، یک‌بار `npm install --global pnpm@10.17.0` را اجرا کن.
+فرمان‌های زیر از ریشهٔ مخزن اجرا می‌شوند. آرگومان‌های اسکریپت در pnpm مستقیم
+پس از نام آن می‌آیند؛ مثلاً `pnpm run test:ui --project chromium`.
+
+Node.js 22.12+ یا 24 لازم است؛ ساخت اپ بومی به Rust stable هم نیاز دارد.
+اندروید به JDK 21، SDK Platform
 36، Build Tools 36 و NDK 28.2.13676358 نیاز دارد؛ مسیرهای JAVA_HOME،
 ANDROID_HOME و NDK_HOME را برای دستگاه خود تنظیم کن. پروژهٔ Android Studio
 در `apps/parsiword/src-tauri/gen/android` است. کلید امضا بیرون مخزن نگه داشته می‌شود.
 
 ```sh
-npm ci
-npm test
-npm run samples:check
-npm run build
-npx playwright install chromium
-npm run test:ui
-npm run android:apk
+pnpm install --frozen-lockfile
+pnpm test
+pnpm run samples:check
+pnpm run build
+pnpm exec playwright install chromium
+pnpm run test:ui
+pnpm run android:apk
 ```
 
-برای بررسی ظاهری کامپوننت‌ها با یک فرمان، از `npm run ui:capture` استفاده
+برای بررسی ظاهری کامپوننت‌ها با یک فرمان، از `pnpm run ui:capture` استفاده
 کن؛ [راهنمای عکس، موبایل و اسکرول](docs/ui-capture.md) شامل پیش‌نیازها و
 تابع داخل اپ است. راهنمای ورود عامل در [agent.md](agent.md) قرار دارد.
 
@@ -167,7 +174,7 @@ ARM32 ساخته نمی‌شود. برای ساخت APK آزمایشیِ امض�
 فرمان زیر استفاده کن:
 
 ```sh
-PARSIWORD_SIGNING_DIR=/path/outside-repository/signing npm run android:test-apk -- /path/output.apk
+PARSIWORD_SIGNING_DIR=/path/outside-repository/signing pnpm run android:test-apk /path/output.apk
 ```
 
 این ساخت با شناسهٔ `app.parsiword.mobile.preview` و نام **ParsiWord Preview**
@@ -175,7 +182,7 @@ PARSIWORD_SIGNING_DIR=/path/outside-repository/signing npm run android:test-apk 
 کلید آزمایشی جدا می‌سازد و خارج از مخزن نگه می‌دارد. برای آپدیت‌های بعدی
 Preview همان پوشهٔ کلید و رمز را حفظ کن. بدون `PARSIWORD_SIGNING_DIR`،
 مسیر پیش‌فرض `~/.local/share/parsiword/signing` است. دادهٔ دو نصب جداست.
-فرمان `npm run android:apk` شناسهٔ عادی `app.parsiword.mobile` را حفظ می‌کند؛
+فرمان `pnpm run android:apk` شناسهٔ عادی `app.parsiword.mobile` را حفظ می‌کند؛
 کلید اصلی توزیع در سورس قرار ندارد. این بستهٔ آزمایشی توزیع فروشگاهی نیست.
 بررسی امضا، ABI و هم‌ترازی ۱۶KB با `scripts/verify-android-apk.py` انجام می‌شود.
 APK تحویلی ۰.۴.۷ با Preview نسخهٔ ۰.۴.۶ گواهی امضای یکسان و کد نسخهٔ
@@ -196,15 +203,15 @@ APK تحویلی ۰.۴.۷ با Preview نسخهٔ ۰.۴.۶ گواهی امضای
 در این کار سایت زنده‌ای منتشر نشده است.
 [راهنمای کامل راه‌اندازی و مسیر پروژه](docs/github-pages.md).
 
-برای تست موتور WebKit نیز `npx playwright install --with-deps webkit` را
-اجرا کن؛ سپس با متغیر `PW_WEBKIT=1`، `npm run test:ui -- --project webkit` را
+برای تست موتور WebKit نیز `pnpm exec playwright install --with-deps webkit` را
+اجرا کن؛ سپس با متغیر `PW_WEBKIT=1`، `pnpm run test:ui --project webkit` را
 اجرا کن. تست‌های مرورگر، فایل Word واقعی را دانلود و داخل آن را بررسی می‌کنند.
 تست‌های واحد و مرورگر، حفظ جهت متن، ذخیرهٔ پیش‌نویس، تبدیل فرمول/نمودار و
 جاسازی فونت را بررسی می‌کنند؛ نتیجهٔ هر انتشار در یادداشت همان نسخه ثبت است.
 
 متن شروع از `packages/core/src/starter-document.md`، همان corpus تست RTL و نمونه‌های دارای
 مجوز در `packages/core/src/data/code-samples.json` ساخته می‌شود. بعد از تغییر آن‌ها،
-`npm run samples:build` را اجرا کن؛ `samples:check` همگام بودن خروجی را بررسی می‌کند.
+`pnpm run samples:build` را اجرا کن؛ `samples:check` همگام بودن خروجی را بررسی می‌کند.
 
 فرمان‌های `linux:build`، `windows:build`، `macos:build` و `ios:simulator` برای
 پلتفرم‌ها آماده‌اند؛ پیش‌نیاز و وضعیت واقعی ساخت/اجرا در

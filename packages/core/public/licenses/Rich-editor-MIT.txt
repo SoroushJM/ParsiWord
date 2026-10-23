@@ -1,7 +1,7 @@
 Third-party MIT licenses for ParsiWord rich-text editing
 
 Package versions and source repositories are from the installed npm releases.
-Exact dependency resolutions are recorded in package-lock.json.
+Exact dependency resolutions are recorded in pnpm-lock.yaml.
 Copyright and permission notices below are copied from the distributed licenses.
 
 ========================================================================

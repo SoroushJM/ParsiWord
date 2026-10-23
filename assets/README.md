@@ -4,7 +4,7 @@
 imagegen. `app-icon-foreground.png` is its transparent foreground, also produced
 with imagegen. Keep both originals when regenerating platform assets.
 
-After `npm ci`, run:
+After `pnpm install --frozen-lockfile`, run:
 
 ```sh
 node scripts/generate-icons.mjs

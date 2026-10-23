@@ -6,5 +6,5 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Pixel 7'] } },
     ...(process.env.PW_WEBKIT ? [{ name: 'webkit', use: { ...devices['iPhone 13'] } }] : []),
   ],
-  webServer: { command: 'npm run dev -- --host 0.0.0.0', url: 'http://127.0.0.1:1420', reuseExistingServer: !process.env.CI },
+  webServer: { command: 'pnpm run dev --host 0.0.0.0', url: 'http://127.0.0.1:1420', reuseExistingServer: !process.env.CI },
 });

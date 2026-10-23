@@ -3,29 +3,30 @@
   "private": true,
   "version": "0.4.7",
   "type": "module",
+  "packageManager": "pnpm@10.17.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "npm run tauri --workspace @parsiword/app --",
+    "tauri": "pnpm --filter @parsiword/app run tauri",
     "test": "vitest run",
     "test:ui": "playwright test",
-    "android:apk": "npm run tauri --workspace @parsiword/app -- android build --apk --target aarch64 --ci",
-    "android:preview": "npm run tauri --workspace @parsiword/app -- android build --debug --apk --target aarch64 --ci",
+    "android:apk": "pnpm run tauri android build --apk --target aarch64 --ci",
+    "android:preview": "pnpm run tauri android build --debug --apk --target aarch64 --ci",
     "android:test-apk": "node scripts/build-android-preview.mjs",
-    "desktop:build": "npm run tauri --workspace @parsiword/app -- build --ci",
-    "linux:build": "npm run tauri --workspace @parsiword/app -- build --bundles deb,appimage --ci",
-    "windows:build": "npm run tauri --workspace @parsiword/app -- build --bundles nsis --ci",
-    "ios:init": "npm run tauri --workspace @parsiword/app -- ios init --ci",
-    "ios:simulator": "npm run tauri --workspace @parsiword/app -- ios build --target aarch64-sim --no-sign --ci",
-    "ios:build": "npm run tauri --workspace @parsiword/app -- ios build --ci",
-    "macos:build": "npm run tauri --workspace @parsiword/app -- build --bundles dmg --ci",
+    "desktop:build": "pnpm run tauri build --ci",
+    "linux:build": "pnpm run tauri build --bundles deb,appimage --ci",
+    "windows:build": "pnpm run tauri build --bundles nsis --ci",
+    "ios:init": "pnpm run tauri ios init --ci",
+    "ios:simulator": "pnpm run tauri ios build --target aarch64-sim --no-sign --ci",
+    "ios:build": "pnpm run tauri ios build --ci",
+    "macos:build": "pnpm run tauri build --bundles dmg --ci",
     "samples:build": "node scripts/build-default-document.mjs",
     "samples:check": "node scripts/build-default-document.mjs --check",
     "ui:capture": "node scripts/capture-ui.mjs",
     "build:vscode": "tsc --noEmit && node apps/vscode/scripts/build.mjs",
-    "package:vscode": "npm run build:vscode && node apps/vscode/scripts/package.mjs",
-    "test:vscode": "npm run build:vscode && node apps/vscode/scripts/test.mjs"
+    "package:vscode": "pnpm run build:vscode && node apps/vscode/scripts/package.mjs",
+    "test:vscode": "pnpm run build:vscode && node apps/vscode/scripts/test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
@@ -37,7 +38,10 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^6.0.2",
+    "@xmldom/xmldom": "^0.9.12",
+    "docx": "^9.13.0",
     "fake-indexeddb": "^6.2.6",
+    "highlight.js": "11.12.0",
     "jszip": "^3.10.2",
     "pdfjs-dist": "^5.4.624",
     "typescript": "~6.0.3",
@@ -47,10 +51,5 @@
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.6.2",
     "esbuild": "^0.28.0"
-  },
-  "workspaces": [
-    "packages/core",
-    "apps/parsiword",
-    "apps/vscode"
-  ]
+  }
 }

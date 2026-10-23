@@ -1,0 +1,10 @@
+packages:
+  - packages/core
+  - apps/parsiword
+  - apps/vscode
+
+onlyBuiltDependencies:
+  - '@vscode/vsce-sign'
+  - esbuild
+  - fsevents
+  - keytar

@@ -7,11 +7,11 @@
 
 ## اجرای سریع
 
-از ریشهٔ پروژه، پس از `npm ci`، با Node.js 22.12+ یا 24 و یک Chrome/Chromium
+از ریشهٔ پروژه، پس از `pnpm install --frozen-lockfile`، با Node.js 22.12+ یا 24 و یک Chrome/Chromium
 نصب‌شده اجرا کن:
 
 ```sh
-npm run ui:capture -- --width 1100 --height 800 --output artifacts/ui-desktop.png
+pnpm run ui:capture --width 1100 --height 800 --output artifacts/ui-desktop.png
 ```
 
 ابزار در صورت نیاز Vite را روی `http://127.0.0.1:1420` اجرا می‌کند؛ اگر
@@ -23,9 +23,9 @@ npm run ui:capture -- --width 1100 --height 800 --output artifacts/ui-desktop.pn
 می‌شود و Playwright اجرا نمی‌شود. در محیط دیگر مسیر مرورگر را صریح بده:
 
 ```sh
-CHROME_BIN=/usr/bin/chromium npm run ui:capture -- --output artifacts/ui.png
+CHROME_BIN=/usr/bin/chromium pnpm run ui:capture --output artifacts/ui.png
 # یا
-npm run ui:capture -- --chrome /path/to/chrome --output artifacts/ui.png
+pnpm run ui:capture --chrome /path/to/chrome --output artifacts/ui.png
 ```
 
 ## متن مشخص، موبایل و اسکرول
@@ -35,20 +35,20 @@ npm run ui:capture -- --chrome /path/to/chrome --output artifacts/ui.png
 
 ```sh
 # دسکتاپ
-npm run ui:capture -- --width 1100 --height 800 --markdown /tmp/demo.md --output artifacts/desktop.png
+pnpm run ui:capture --width 1100 --height 800 --markdown /tmp/demo.md --output artifacts/desktop.png
 
 # رابط انگلیسی
-npm run ui:capture -- --language en --width 1100 --height 800 --output artifacts/desktop-en.png
+pnpm run ui:capture --language en --width 1100 --height 800 --output artifacts/desktop-en.png
 
 # ویرایش موبایل و پیش‌نمایش همان متن
-npm run ui:capture -- --width 393 --height 851 --view edit --markdown /tmp/demo.md --output artifacts/mobile-edit.png
-npm run ui:capture -- --width 393 --height 851 --view preview --markdown /tmp/demo.md --output artifacts/mobile-preview.png
+pnpm run ui:capture --width 393 --height 851 --view edit --markdown /tmp/demo.md --output artifacts/mobile-edit.png
+pnpm run ui:capture --width 393 --height 851 --view preview --markdown /tmp/demo.md --output artifacts/mobile-preview.png
 
 # پیش‌نمایش موبایل باریک
-npm run ui:capture -- --width 320 --height 780 --view preview --markdown /tmp/demo.md --output artifacts/mobile-small.png
+pnpm run ui:capture --width 320 --height 780 --view preview --markdown /tmp/demo.md --output artifacts/mobile-small.png
 
 # متن بلند، بعد از اسکرول صفحه؛ برای دیدن toolbar چسبان
-npm run ui:capture -- --width 393 --height 851 --view edit --markdown /tmp/long.md --scroll 1400 --output artifacts/mobile-scroll.png
+pnpm run ui:capture --width 393 --height 851 --view edit --markdown /tmp/long.md --scroll 1400 --output artifacts/mobile-scroll.png
 ```
 
 اندازه‌ها بر حسب CSS pixel هستند؛ کوچک‌ترین اندازهٔ پذیرفته‌شده ۳۲۰×۳۲۰
@@ -128,7 +128,7 @@ await window.parsiwordDev.screenshot({
 پس از تغییر حالت نیز منتظر آماده‌شدن پیش‌نمایش می‌ماند و دو فریم مرورگر
 پیش از درخواست عکس صبر می‌کند. انتظار آماده‌شدن پیش‌نمایش حداکثر
 ۳۰ ثانیه است. مسیر ذخیره، ابعاد و اتصال CDP را runner تعیین می‌کند؛ این
-تابع در یک تب معمولی که bridge ندارد، پیام اجرای `npm run ui:capture` می‌دهد.
+تابع در یک تب معمولی که bridge ندارد، پیام اجرای `pnpm run ui:capture` می‌دهد.
 
 پیاده‌سازی: [packages/core/src/dev-capture.ts](../packages/core/src/dev-capture.ts)، بارگذاری توسعه‌ای در
 [packages/core/src/App.tsx](../packages/core/src/App.tsx) و runner در
@@ -144,7 +144,7 @@ await window.parsiwordDev.screenshot({
 ## سنجش تایپ
 
 عکس‌گرفتن زمان پاسخ تایپ را اندازه نمی‌گیرد. برای مقایسهٔ کارایی، هر دو
-نسخه را با `npm run build` بساز و با Vite preview روی پورت‌های جدا اجرا
+نسخه را با `pnpm run build` بساز و با Vite preview روی پورت‌های جدا اجرا
 کن؛ سپس در ترمینال دیگر پروتکل ثابت را برای هر پورت اجرا کن:
 
 ```sh

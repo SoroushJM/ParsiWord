@@ -1,13 +1,13 @@
 # Android distribution
 
-For the current 0.4.7 test build, use `npm run android:test-apk -- /path/output.apk`.
+For the current 0.4.7 test build, use `pnpm run android:test-apk /path/output.apk`.
 It builds an optimized, nondebug ARM64 release with application ID
 `app.parsiword.mobile.preview` and label `ParsiWord Preview`, so it can coexist
 with the normal app. The prior signing key was absent from the source archive.
 The test-build script creates/reuses a separate key outside the repository in
 `PARSIWORD_SIGNING_DIR` (default `~/.local/share/parsiword/signing`); retain that
 directory and its password file for later Preview updates. Normal
-`npm run android:apk` keeps `app.parsiword.mobile`. The distribution signing key
+`pnpm run android:apk` keeps `app.parsiword.mobile`. The distribution signing key
 is not part of the source. Version 0.4.7 uses code 4007 and reuses the 0.4.6
 Preview key for updates. See [0.4.7](releases/0.4.7.md) for the current status
 and build instructions; previous deliveries remain documented in their release notes.

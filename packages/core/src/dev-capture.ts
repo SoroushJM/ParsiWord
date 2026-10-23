@@ -28,7 +28,7 @@ export function installCapture(setMarkdown: (markdown: string) => void) {
   };
   window.parsiwordDev = {
     async screenshot(options = {}) {
-      if (!window.__parsiwordCapture) throw new Error('Run npm run ui:capture to connect the screenshot bridge.');
+      if (!window.__parsiwordCapture) throw new Error('Run pnpm run ui:capture to connect the screenshot bridge.');
       if (options.view !== undefined && !['edit', 'preview'].includes(options.view)) throw new Error('Capture view must be edit or preview.');
       if (options.markdown !== undefined) setMarkdown(options.markdown);
       // Wait for React, the 200 ms preview debounce and local diagram rendering.

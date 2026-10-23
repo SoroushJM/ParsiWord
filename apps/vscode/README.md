@@ -10,6 +10,6 @@ Use **Reopen Editor With… → Text Editor** to return to the native source or 
 
 Choose Persian/English in the header. Export settings control RTL/LTR/automatic direction, font and size. Google Fonts requests contain font names only. Document text is processed locally. Existing ParsiWord export limitations also apply: Markdown images are not yet exported; Mermaid is an image in Word/PDF and LaTeX is editable in Word.
 
-Build from the repository root with `npm ci`, `npm run package:vscode`; install the generated VSIX using **Extensions → Install from VSIX…**. `npm run test:vscode` runs integration tests in an isolated VS Code profile.
+Build from the repository root with `pnpm install --frozen-lockfile`, `pnpm run package:vscode`; install the generated VSIX using **Extensions → Install from VSIX…**. `pnpm run test:vscode` runs integration tests in an isolated VS Code profile.
 
 [Source and issues](https://github.com/SoroushJM/ParsiWord) · [SoroushJM](https://github.com/SoroushJM)

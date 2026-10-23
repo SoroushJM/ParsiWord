@@ -1,2 +1,4 @@
 # The generated Markdown preserves hard line breaks and upstream code whitespace.
-src/default-document.md whitespace=-blank-at-eol
+# Keep generated samples stable across Windows and Unix checkouts.
+packages/core/src/default-document.md text eol=lf whitespace=-blank-at-eol
+packages/core/src/starter-document.md text eol=lf

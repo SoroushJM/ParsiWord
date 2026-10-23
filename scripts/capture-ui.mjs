@@ -1,5 +1,5 @@
 // One-call development screenshot, without Playwright or an end-to-end test run.
-// npm run ui:capture -- --width 393 --height 851 --output /tmp/mobile.png
+// pnpm run ui:capture --width 393 --height 851 --output /tmp/mobile.png
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, readdir, rm, mkdir, writeFile, access } from 'node:fs/promises';
 import { tmpdir, homedir } from 'node:os';

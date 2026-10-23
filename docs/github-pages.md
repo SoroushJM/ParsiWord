@@ -28,7 +28,7 @@ Actions رسمی Pages منتشر می‌کند. اگر شاخهٔ اصلی مخ
 `https://USER.github.io/REPOSITORY/` و سایت ریشهٔ دامنه پشتیبانی می‌شوند.
 JavaScript، CSS، آیکن، فرمول و فونت‌های همراه از مسیر درست همان سایت خوانده
 می‌شوند. پیش‌فرض build معمولی `./` است؛ برای هاست پوشه‌ای دیگر می‌توان
-`VITE_BASE_PATH=/REPOSITORY/` را هنگام `npm run build` تنظیم کرد.
+`VITE_BASE_PATH=/REPOSITORY/` را هنگام `pnpm run build` تنظیم کرد.
 
 ## اطلاعات جست‌وجو و اشتراک‌گذاری
 

@@ -8,18 +8,18 @@ bundle targets both Chrome 87 and Safari 16.4. iOS deployment is 16.4 or newer.
 
 ## Build commands
 
-- Android: `npm run android:apk`, ARM64 only. The user confirmed 0.2.4 installs
+- Android: `pnpm run android:apk`, ARM64 only. The user confirmed 0.2.4 installs
   and works on their phone. Emulator testing was stopped at their request.
 - Linux: install the Tauri 2 GTK/WebKitGTK 4.1 development dependencies, then
-  `npm run linux:build`. This produces Debian and AppImage packages. Runtime
+  `pnpm run linux:build`. This produces Debian and AppImage packages. Runtime
   dependencies and libc compatibility depend on the distribution used to build;
   the supplied CI uses Ubuntu 22.04 for a broader compatibility baseline.
-- Windows: install MSVC build tools and WebView2, then `npm run windows:build`.
+- Windows: install MSVC build tools and WebView2, then `pnpm run windows:build`.
   The NSIS installer runs per-user and can download WebView2 when it is missing.
-- iOS: on macOS with Xcode and its command-line tools, run `npm ci`,
-  `npm run ios:init`, then `npm run ios:simulator` for an unsigned Apple Silicon
+- iOS: on macOS with Xcode and its command-line tools, run `pnpm install --frozen-lockfile`,
+  `pnpm run ios:init`, then `pnpm run ios:simulator` for an unsigned Apple Silicon
   simulator build. An actual device/TestFlight build also needs an Apple
-  development team and signing provisioning; run `npm run ios:build` after
+  development team and signing provisioning; run `pnpm run ios:build` after
   configuring those outside the repository.
 
 The two manually triggered GitHub Actions workflows build Linux/Windows and the

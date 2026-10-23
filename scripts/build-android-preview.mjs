@@ -9,6 +9,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const pnpmCli = process.env.npm_execpath;
+if (!pnpmCli) throw new Error('Run this script with pnpm run android:test-apk.');
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
 const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
 if (!sdk) throw new Error('Set ANDROID_HOME to an Android SDK with build-tools 36.0.0.');
@@ -36,7 +38,7 @@ if (!existsSync(keystore)) {
 }
 if (!existsSync(password)) throw new Error('The preview keystore password file is missing. Restore it alongside the preview key.');
 
-run('npm', ['run', 'tauri', '--', 'android', 'build', '--apk', '--target', 'aarch64', '--ci'], {
+run(process.execPath, [pnpmCli, 'run', 'tauri', 'android', 'build', '--apk', '--target', 'aarch64', '--ci'], {
   ...process.env, ORG_GRADLE_PROJECT_parsiwordPreview: 'true',
 });
 function files(directory) {

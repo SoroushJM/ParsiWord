@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['apps/vscode/**', 'packages/core/**', 'package*.json', 'tsconfig*.json', '.github/workflows/vscode.yml']
+    paths: ['apps/vscode/**', 'packages/core/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig*.json', '.github/workflows/vscode.yml']
   pull_request:
-    paths: ['apps/vscode/**', 'packages/core/**', 'package*.json', 'tsconfig*.json', '.github/workflows/vscode.yml']
+    paths: ['apps/vscode/**', 'packages/core/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig*.json', '.github/workflows/vscode.yml']
 permissions:
   contents: read
 jobs:
@@ -13,14 +13,15 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run test:vscode
-      - run: npm run package:vscode
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm run test:vscode
+      - run: pnpm run package:vscode
       - uses: actions/upload-artifact@v4
         if: always()
         with:

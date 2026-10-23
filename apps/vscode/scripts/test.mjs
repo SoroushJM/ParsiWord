@@ -7,6 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:net';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
+// test-electron 2.x launches through cmd.exe on Windows, so paths with spaces
+// need quoting before that shell forwards them to Code.exe.
+const cliPath = path => process.platform === 'win32' ? `"${path}"` : path;
 const artifact = resolve(root, 'artifacts/vscode-test');
 const runDirectory = resolve(artifact, `run-${Date.now()}`);
 const fixture = resolve(runDirectory, 'workspace');
@@ -30,8 +33,8 @@ const server = createServer(); await new Promise(resolve => server.listen(0,'127
 const port = server.address().port; await new Promise(resolve => server.close(resolve));
 await runTests({
   vscodeExecutablePath: process.env.VSCODE_EXECUTABLE_PATH || (process.platform === 'win32' && await access('C:/Program Files/Microsoft VS Code/Code.exe').then(()=>true,()=>false) ? 'C:/Program Files/Microsoft VS Code/Code.exe' : undefined),
-  extensionDevelopmentPath: resolve(root,'apps/vscode'), extensionTestsPath: resolve(root,'apps/vscode/dist/test.cjs'),
-  launchArgs: [fixture, '--new-window', '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust', '--disable-updates', '--disable-extension=github.copilot-chat', '--disable-extension=github.copilot', `--user-data-dir=${resolve(runDirectory,'profile')}`, `--extensions-dir=${resolve(runDirectory,'extensions')}`, `--remote-debugging-port=${port}`],
+  extensionDevelopmentPath: cliPath(resolve(root,'apps/vscode')), extensionTestsPath: cliPath(resolve(root,'apps/vscode/dist/test.cjs')),
+  launchArgs: [cliPath(fixture), '--new-window', '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust', '--disable-updates', '--disable-extension=github.copilot-chat', '--disable-extension=github.copilot', `--user-data-dir=${cliPath(resolve(runDirectory,'profile'))}`, `--extensions-dir=${cliPath(resolve(runDirectory,'extensions'))}`, `--remote-debugging-port=${port}`],
   extensionTestsEnv: { PARSIWORD_TEST_CDP: String(port), PARSIWORD_TEST_ARTIFACT: artifact },
 });
 // Parse the actual exported PDF in Node, outside Electron's extension host,
