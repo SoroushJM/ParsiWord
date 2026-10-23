@@ -1,10 +1,10 @@
 import type { JSONContent } from '@tiptap/core';
 import { unified } from 'unified';
-import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import remarkStringify from 'remark-stringify';
 import type { Root } from 'mdast';
+import { markdownParser, flowingText, collectDefinitions } from './markdown';
 
 declare module 'mdast' {
   interface RawMarkdown extends Literal { type: 'rawMarkdown'; }
@@ -12,7 +12,7 @@ declare module 'mdast' {
   interface PhrasingContentMap { rawMarkdown: RawMarkdown; }
 }
 
-type MarkdownNode = {
+export type MarkdownNode = {
   type: string; value?: string; children?: MarkdownNode[]; depth?: number;
   ordered?: boolean; start?: number | null; checked?: boolean | null;
   lang?: string | null; meta?: string | null; url?: string; title?: string | null; alt?: string | null;
@@ -20,21 +20,33 @@ type MarkdownNode = {
   position?: { start: { offset?: number }; end: { offset?: number } };
 };
 export type SourcePosition = { start: number; end: number };
-const parser = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
 const writer = unified().use(remarkGfm).use(remarkMath).use(remarkStringify, {
   bullet: '-', fences: true, emphasis: '*', strong: '*', listItemIndent: 'one',
   handlers: { rawMarkdown: node => String((node as unknown as { value: string }).value) },
 });
+export function rawMarkdownLabel(source: string): string {
+  if (!/^!\[/.test(source)) return source;
+  const root = markdownParser.parse(source) as unknown as MarkdownNode;
+  const image = root.children?.[0]?.children?.[0];
+  return image?.type === 'image' ? `تصویر: ${image.alt || 'بدون عنوان'} (خروجی تصویر پشتیبانی نمی‌شود)` : source;
+}
 
-export function parseRichMarkdown(source: string) {
-  const root = parser.parse(source) as unknown as MarkdownNode;
-  const definitions = new Map((root.children || []).filter(n => n.type === 'definition').map(n => [n.identifier, n]));
+export function parseRichMarkdown(source: string, inherited?: ReadonlyMap<string, { url?: string; title?: string | null }>) {
+  // Isolated block mapping still needs the surrounding document's reference
+  // labels for CommonMark to recognize linkReference nodes. Definitions added
+  // for recognition are outside the source and never enter the rich document.
+  const recognition = inherited?.size ? '\n\n' + [...inherited.keys()].map(identifier => `[${identifier.replace(/[\\\[\]]/g, '\\$&')}]: https://parsiword.invalid/`).join('\n') : '';
+  const root = markdownParser.parse(source + recognition) as unknown as MarkdownNode;
+  if (recognition) root.children = root.children?.filter(node => (node.position?.start.offset || 0) < source.length);
+  // An isolated block inherits the already resolved document definitions;
+  // parsing it must never replace an earlier definition from that document.
+  const definitions = collectDefinitions(root, inherited);
   const raw = (node: MarkdownNode) => source.slice(node.position?.start.offset || 0, node.position?.end.offset || 0);
   const text = (value: string, marks: JSONContent['marks'] = []): JSONContent[] => value ? [{ type: 'text', text: value, ...(marks.length ? { marks } : {}) }] : [];
   function inline(nodes: MarkdownNode[] = [], marks: JSONContent['marks'] = []): JSONContent[] {
     return nodes.flatMap(node => {
       switch (node.type) {
-        case 'text': return text(node.value || '', marks);
+        case 'text': return text(flowingText(node.value || ''), marks);
         case 'strong': return inline(node.children, [...marks, { type: 'bold' }]);
         case 'emphasis': return inline(node.children, [...marks, { type: 'italic' }]);
         case 'delete': return inline(node.children, [...marks, { type: 'strike' }]);
@@ -44,8 +56,8 @@ export function parseRichMarkdown(source: string) {
         case 'html': return /^<br\s*\/?\s*>$/i.test(node.value || '') ? [{ type: 'hardBreak' }] : [{ type: 'rawInline', attrs: { source: raw(node), label: raw(node) }, marks }];
         case 'link': return inline(node.children, [...marks, { type: 'link', attrs: { href: node.url, title: node.title } }]);
         case 'linkReference': {
-          const definition = definitions.get(node.identifier);
-          return definition ? inline(node.children, [...marks, { type: 'link', attrs: { href: definition.url, title: definition.title } }]) : text(raw(node), marks);
+          const definition = definitions.get(node.identifier || '');
+          return definition ? inline(node.children, [...marks, { type: 'link', attrs: { href: definition.url, title: definition.title, reference: node.identifier } }]) : text(raw(node), marks);
         }
         case 'image': return [{ type: 'rawInline', attrs: { source: raw(node), label: `تصویر: ${node.alt || 'بدون عنوان'} (خروجی تصویر پشتیبانی نمی‌شود)` }, marks }];
         default: return [{ type: 'rawInline', attrs: { source: raw(node), label: raw(node) }, marks }];
@@ -60,7 +72,7 @@ export function parseRichMarkdown(source: string) {
       case 'blockquote': return { type: 'blockquote', content: children() };
       case 'list': return { type: node.ordered ? 'orderedList' : 'bulletList', attrs: node.ordered ? { start: node.start || 1 } : undefined, content: children() };
       case 'listItem': return { type: 'listItem', attrs: { checked: node.checked ?? null }, content: children().length ? children() : [{ type: 'paragraph' }] };
-      case 'code': return { type: 'codeBlock', attrs: { language: node.lang || null, meta: node.meta || null }, content: text(node.value || '') };
+      case 'code': return { type: 'codeBlock', attrs: { language: node.lang || null, meta: node.meta || null }, content: text((node.value || '').replace(/\r\n?/g, '\n')) };
       case 'math': return { type: 'mathBlock', attrs: { source: node.value || '' } };
       case 'thematicBreak': return { type: 'horizontalRule' };
       case 'table': return {
@@ -78,6 +90,8 @@ export function parseRichMarkdown(source: string) {
   return {
     document: { type: 'doc', content: blocks.length ? blocks.map(block) : [{ type: 'paragraph' }] } as JSONContent,
     positions: blocks.map(node => ({ start: node.position?.start.offset || 0, end: node.position?.end.offset || 0 })),
+    root,
+    definitions,
   };
 }
 
@@ -86,20 +100,34 @@ export function parseRichMarkdown(source: string) {
 // the generic rich-editor serializer would turn those into new syntax.
 export function serializeRichBlock(node: JSONContent): string {
   type Out = { type: string; [key: string]: unknown };
-  const inlines = (nodes: JSONContent[] = []): Out[] => nodes.flatMap(child => {
-    let result: Out;
-    if (child.type === 'hardBreak') result = { type: 'break' };
-    else if (child.type === 'mathInline') result = { type: 'inlineMath', value: child.attrs?.source || '' };
-    else if (child.type === 'rawInline') result = { type: 'rawMarkdown', value: child.attrs?.source || '' };
-    else if (child.type === 'text') {
-      result = { type: child.marks?.some(mark => mark.type === 'code') ? 'inlineCode' : 'text', value: child.text || '' };
-    } else return [];
-    for (const mark of [...(child.marks || [])].reverse()) {
-      const type = { bold: 'strong', italic: 'emphasis', strike: 'delete', link: 'link' }[mark.type];
-      if (type) result = { type, children: [result], ...(mark.type === 'link' ? { url: mark.attrs?.href || '', title: mark.attrs?.title || null } : {}) };
-    }
-    return [result];
-  });
+  const inlines = (nodes: JSONContent[] = []): Out[] => {
+    const priority: Record<string, number> = { link: 0, bold: 1, italic: 2, strike: 3 };
+    const items = nodes.flatMap(child => {
+      let node: Out;
+      // A Markdown line-ending break disappears at a paragraph edge. Inline
+      // HTML expresses the same explicit rich break at either edge as well.
+      if (child.type === 'hardBreak') node = { type: 'html', value: '<br>' };
+      else if (child.type === 'mathInline') node = { type: 'inlineMath', value: child.attrs?.source || '' };
+      else if (child.type === 'rawInline') node = { type: 'rawMarkdown', value: child.attrs?.source || '' };
+      else if (child.type === 'text') node = { type: child.marks?.some(mark => mark.type === 'code') ? 'inlineCode' : 'text', value: child.text || '' };
+      else return [];
+      return [{ node, marks: (child.marks || []).filter(mark => mark.type in priority).sort((a, b) => priority[a.type] - priority[b.type]) }];
+    });
+    const key = (mark: NonNullable<JSONContent['marks']>[number]) => JSON.stringify([mark.type, mark.type === 'link' ? mark.attrs?.href : null, mark.type === 'link' ? mark.attrs?.title || null : null]);
+    const group = (input: typeof items): Out[] => {
+      const output: Out[] = [];
+      for (let index = 0; index < input.length;) {
+        const mark = input[index].marks[0];
+        if (!mark) { output.push(input[index++].node); continue; }
+        let end = index + 1;
+        while (end < input.length && input[end].marks[0] && key(input[end].marks[0]) === key(mark)) end++;
+        output.push({ type: ({ bold: 'strong', italic: 'emphasis', strike: 'delete', link: 'link' } as Record<string, string>)[mark.type], children: group(input.slice(index, end).map(item => ({ ...item, marks: item.marks.slice(1) }))), ...(mark.type === 'link' ? { url: mark.attrs?.href || '', title: mark.attrs?.title || null } : {}) });
+        index = end;
+      }
+      return output;
+    };
+    return group(items);
+  };
   function block(item: JSONContent): Out {
     const children = () => (item.content || []).map(block);
     switch (item.type) {
@@ -121,5 +149,5 @@ export function serializeRichBlock(node: JSONContent): string {
       default: return { type: 'paragraph', children: inlines(item.content) };
     }
   }
-  return writer.stringify({ type: 'root', children: [block(node)] } as unknown as Root).trimEnd();
+  return writer.stringify({ type: 'root', children: [block(node)] } as unknown as Root).replace(/\n$/, '');
 }

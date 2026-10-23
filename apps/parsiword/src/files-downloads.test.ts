@@ -44,7 +44,7 @@ describe('native downloads of document formats', () => {
   it('reports native write failures to the caller instead of reporting a saved file', async () => {
     api.save.mockResolvedValue('/read-only/report.pdf');
     api.write.mockRejectedValueOnce(new Error('permission denied'));
-    await expect(savePdf(pdf, 'report.pdf')).rejects.toThrow('permission denied');
+    await expect(savePdf(pdf, 'report.pdf')).rejects.toMatchObject({ code: 'FILE_SAVE_FAILED', cause: expect.objectContaining({ message: 'permission denied' }) });
   });
 });
 

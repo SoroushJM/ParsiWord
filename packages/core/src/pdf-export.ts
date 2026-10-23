@@ -1,10 +1,11 @@
 import { Buffer } from 'buffer';
 import bidiFactory from 'bidi-js';
-import type { Definition, PhrasingContent, Root, RootContent, Table as MarkdownTable } from 'mdast';
-import type { ExportSettings } from './converter';
+import type { PhrasingContent, RootContent, Table as MarkdownTable } from 'mdast';
+import type { ExportSettings } from './document-model';
 import { documentLayout, documentFontSize, documentHeadingSize, twipsToPoints } from './document-layout';
 import { paragraphBaseDirection } from './word-direction';
-import { markdownParser } from './markdown';
+import { markdownContext, flowingText, type MarkdownContext } from './markdown';
+import { MAX_MARKDOWN_LENGTH } from './document-limits';
 import { documentFonts, type FontBundle } from './fonts';
 import { bundledFont, codeFont } from './font-assets';
 import { delimiterFont, delimiterFontParts } from './delimiter-font';
@@ -57,7 +58,7 @@ export function pdfVisualRuns<T extends { text: string }>(pieces: readonly T[], 
 }
 
 async function formulaPicture(source: string, display: boolean, fontSize: number): Promise<PdfPicture> {
-  if (typeof document === 'undefined') throw new RichContentError('برای ساخت PDF فرمول، سند را در برنامه یا مرورگر باز کن.');
+  if (typeof document === 'undefined') throw new RichContentError('MATH_PDF_UNAVAILABLE');
   const host = document.createElement('div');
   host.style.cssText = 'position:fixed;left:-20000px;top:0;width:max-content;pointer-events:none';
   const element = document.createElement('span');
@@ -73,7 +74,7 @@ async function formulaPicture(source: string, display: boolean, fontSize: number
     const { toBlob } = await import('html-to-image');
     const width = Math.max(1, element.scrollWidth), height = Math.max(1, element.scrollHeight);
     const blob = await toBlob(element, { pixelRatio: Math.min(2, 4096 / width, 4096 / height), backgroundColor: '#ffffff', style: { position: 'relative', left: '0', top: '0' }, preferredFontFormat: 'woff2' });
-    if (!blob) throw new Error('Formula image unavailable');
+    if (!blob) throw new RichContentError('PDF_FORMULA_IMAGE_FAILED');
     return { png: new Uint8Array(await blob.arrayBuffer()), width: width * 72 / 96, height: height * 72 / 96 };
   } finally { host.remove(); }
 }
@@ -81,10 +82,16 @@ async function formulaPicture(source: string, display: boolean, fontSize: number
 /** Local downloadable PDF. Text remains vector/searchable; only formulas and
  * diagrams use bounded local images, as described in docs/pdf-export.md. */
 export async function exportPdf(markdown: string, settings: ExportSettings, suppliedFonts?: FontBundle[], assets: PdfAssets = {}): Promise<Uint8Array> {
-  if (markdown.length > 500_000) throw new RichContentError('سند بیش از حد بزرگ است. حداکثر ۵۰۰ هزار نویسه پشتیبانی می‌شود.');
-  const fonts = suppliedFonts?.length ? suppliedFonts : await documentFonts(settings.fontFamily, markdown);
+  return exportPreparedPdf(markdownContext(markdown), settings, suppliedFonts, assets);
+}
+
+export async function exportPreparedPdf(context: MarkdownContext, settings: ExportSettings, suppliedFonts?: FontBundle[], assets: PdfAssets = {}): Promise<Uint8Array> {
+  settings = { ...settings };
+  const markdown = context.source;
+  if (markdown.length > MAX_MARKDOWN_LENGTH) throw new RichContentError('DOCUMENT_TOO_LARGE');
+  const fonts = suppliedFonts?.length ? suppliedFonts : await documentFonts(settings.fontFamily, context.root);
   const primary = fonts.find(font => font.family === settings.fontFamily) || fonts.find(font => font.family === bundledFont) || fonts[0];
-  if (!primary) throw new RichContentError('فونت خروجی آماده نیست. دوباره امتحان کن.');
+  if (!primary) throw new RichContentError('PDF_FONT_NOT_READY');
   const { default: PDFDocument } = await import('pdfkit');
   const doc = new PDFDocument({ autoFirstPage: false, font: null as never, compress: true, info: { Title: settings.title || 'یادداشت من', Author: 'ParsiWord', Creator: 'ParsiWord', Producer: 'ParsiWord / PDFKit' } });
   const chunks: Uint8Array[] = [];
@@ -102,21 +109,19 @@ export async function exportPdf(markdown: string, settings: ExportSettings, supp
   });
   doc.registerFont('Symbols', Buffer.from(delimiterFont.ttfBase64, 'base64'));
   const fallback = names.get(bundledFont) || names.get(primary.family)!;
-  const root = markdownParser.parse(markdown) as Root;
-  const definitions = new Map<string, Definition>();
-  for (const child of root.children) if (child.type === 'definition') definitions.set(child.identifier.toLowerCase(), child);
+  const { root, definitions } = context;
   const fontSize = documentFontSize(settings.fontSize);
   const pictures = new Map<string, Promise<PdfPicture>>();
   let formulaQueue: Promise<void> = Promise.resolve(), decodedPixels = 0, imageBytes = 0;
   const accountPicture = (image: PdfPicture) => {
-    if (!Number.isFinite(image.width) || !Number.isFinite(image.height) || image.width <= 0 || image.height <= 0) throw new RichContentError('اندازهٔ تصویر خروجی معتبر نیست.');
+    if (!Number.isFinite(image.width) || !Number.isFinite(image.height) || image.width <= 0 || image.height <= 0) throw new RichContentError('PDF_IMAGE_INVALID');
     if (image.png.length >= 24) {
       const view = new DataView(image.png.buffer, image.png.byteOffset, image.png.byteLength);
       const width = view.getUint32(16), height = view.getUint32(20);
       decodedPixels += width * height;
     }
     imageBytes += image.png.byteLength;
-    if (decodedPixels > 24_000_000 || imageBytes > 32 * 1024 * 1024) throw new RichContentError('فرمول‌ها و نمودارهای این سند برای حافظهٔ خروجی PDF بیش از حد بزرگ‌اند. سند را به چند بخش تقسیم کن.');
+    if (decodedPixels > 24_000_000 || imageBytes > 32 * 1024 * 1024) throw new RichContentError('PDF_IMAGE_BUDGET');
     return image;
   };
   const picture = (source: string, display: boolean) => {
@@ -183,7 +188,7 @@ export async function exportPdf(markdown: string, settings: ExportSettings, supp
         // raster-sliced across page edges. Chunk measurements stay bounded.
         let value = '';
         for (const character of word) {
-          if (measure(part, character) > width) throw new RichContentError('عرض یک ستون برای نمایش متن PDF کافی نیست. تعداد ستون‌ها یا اندازهٔ فونت را کمتر کن.');
+          if (measure(part, character) > width) throw new RichContentError('PDF_COLUMN_TOO_NARROW');
           const candidate = value + character;
           if (value && measure(part, candidate) > width - line.width) { append({ ...part, text: value, width: measure(part, value) }); flush(); value = character; }
           else value = candidate;
@@ -218,7 +223,7 @@ export async function exportPdf(markdown: string, settings: ExportSettings, supp
     const output: Inline[] = [];
     for (const node of nodes) {
       switch (node.type) {
-        case 'text': output.push({ ...style, text: node.value }); break;
+        case 'text': output.push({ ...style, text: flowingText(node.value) }); break;
         case 'strong': output.push(...await inlines(node.children, { ...style, bold: true })); break;
         case 'emphasis': output.push(...await inlines(node.children, { ...style, italic: true })); break;
         case 'delete': output.push(...await inlines(node.children, { ...style, strike: true })); break;
@@ -260,39 +265,43 @@ export async function exportPdf(markdown: string, settings: ExportSettings, supp
 
   async function table(node: MarkdownTable, indent: number) {
     const columns = Math.max(1, ...node.children.map(row => row.children.length));
-    if (columns > 50) throw new RichContentError('جدول بیش از حد ستون دارد. آن را به جدول‌های کوچک‌تر تقسیم کن.');
+    if (columns > 50) throw new RichContentError('PDF_TABLE_TOO_WIDE');
     const effectiveIndent = Math.min(indent, contentWidth / 2);
     const width = contentWidth - effectiveIndent, cellWidth = width / columns, padding = Math.min(6, cellWidth / 8);
     const prepareRow = async (rowIndex: number) => {
-      const cells: Line[][] = [];
-      for (const cell of node.children[rowIndex].children) cells.push(wrap(await inlines(cell.children, rowIndex ? {} : { bold: true }), cellWidth - padding * 2, fontSize));
+      const cells: { lines: Line[]; direction: 'ltr' | 'rtl' }[] = [];
+      for (const cell of node.children[rowIndex].children) {
+        const pieces = await inlines(cell.children, rowIndex ? {} : { bold: true });
+        cells.push({ lines: wrap(pieces, cellWidth - padding * 2, fontSize), direction: directionFor(pieces.map(piece => piece.text).join('')) });
+      }
       return cells;
     };
     const tableDirection = directionFor(node.children.flatMap(row => row.children.flatMap(cell => cell.children.map(child => 'value' in child ? child.value : ''))).join(' '));
     const x = pdfPage.left + (tableDirection === 'ltr' ? effectiveIndent : 0);
-    const rowHeight = (row: Line[][]) => Math.max(...row.map(lines => lines.reduce((sum, line) => sum + line.height, 0)), 17) + padding * 2;
-    const renderRow = (row: Line[][], header: boolean) => {
+    type PreparedRow = Awaited<ReturnType<typeof prepareRow>>;
+    const rowHeight = (row: PreparedRow) => Math.max(...row.map(cell => cell.lines.reduce((sum, line) => sum + line.height, 0)), 17) + padding * 2;
+    const renderRow = (row: PreparedRow, header: boolean) => {
       // Oversized rows continue at line boundaries with their cell borders.
       const cursors = row.map(() => 0);
-      while (row.some((lines, column) => cursors[column] < lines.length)) {
+      while (row.some((cell, column) => cursors[column] < cell.lines.length)) {
         ensure(Math.max(17, fontSize * 1.45) + padding * 2);
         const space = bottom - y - padding * 2;
-        const fragments = row.map((lines, column) => {
+        const fragments = row.map(({ lines, direction }, column) => {
           const result: Line[] = []; let height = 0;
           while (cursors[column] < lines.length && height + lines[cursors[column]].height <= space) { const line = lines[cursors[column]++]; result.push(line); height += line.height; }
-          return result;
+          return { lines: result, direction };
         });
-        if (!fragments.some(lines => lines.length)) throw new RichContentError('محتوای یک خانهٔ جدول از صفحه بزرگ‌تر است. فرمول یا تصویر را کوچک‌تر کن.');
+        if (!fragments.some(cell => cell.lines.length)) throw new RichContentError('PDF_CELL_TOO_LARGE');
         const height = rowHeight(fragments);
-        fragments.forEach((lines, column) => {
+        fragments.forEach(({ lines, direction }, column) => {
           const cellX = x + (tableDirection === 'rtl' ? columns - column - 1 : column) * cellWidth;
           if (header) doc.save().fillColor('#e7f1ee').rect(cellX, y, cellWidth, height).fill().restore();
           doc.save().lineWidth(0.5).strokeColor('#cadbd4').rect(cellX, y, cellWidth, height).stroke().restore();
           let top = y + padding;
-          for (const line of lines) { drawLine(line, cellX + padding, top, cellWidth - padding * 2, directionFor(line.text), node.align?.[column] || undefined); top += line.height; }
+          for (const line of lines) { drawLine(line, cellX + padding, top, cellWidth - padding * 2, direction, node.align?.[column] || undefined); top += line.height; }
         });
         y += height;
-        if (row.some((lines, column) => cursors[column] < lines.length)) page();
+        if (row.some((cell, column) => cursors[column] < cell.lines.length)) page();
       }
     };
     const header = node.children.length ? await prepareRow(0) : undefined;

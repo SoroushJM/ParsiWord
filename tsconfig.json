@@ -19,6 +19,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
+      "@parsiword/core/host": [
+        "./packages/core/src/host-api.ts"
+      ],
       "@/*": [
         "./packages/core/src/*"
       ],

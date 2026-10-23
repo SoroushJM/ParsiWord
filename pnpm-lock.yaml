@@ -187,6 +187,9 @@ importers:
       mathml2omml:
         specifier: ^0.5.0
         version: 0.5.0
+      mdast-util-gfm-autolink-literal:
+        specifier: ^2.0.1
+        version: 2.0.1
       mermaid:
         specifier: ^12.2.0
         version: 12.2.0

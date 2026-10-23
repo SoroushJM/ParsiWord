@@ -1,14 +1,480 @@
-body { padding: 0; }
-.app-shell[data-host="vscode"] { max-width: none; padding: 1rem; }
-[data-host="vscode"] .app-header { height: 3.75rem; }
-[data-host="vscode"] .intro { margin-block: .5rem; padding: .5rem; min-height: 0; grid-template-columns: 1fr; gap: 0; }
-.app-shell[data-host="vscode"] .intro h1 { font-size: 1.375rem; max-width: none; }
-.app-shell[data-host="vscode"] .intro h1 > span { display: inline; }
-[data-host="vscode"] .intro-controls { margin-block: .5rem; }
+body {
+  padding: 0;
+}
+.app-shell[data-host="vscode"] {
+  max-width: none;
+  padding: 1rem;
+}
+[data-host="vscode"] .app-header {
+  height: 3.75rem;
+}
+[data-host="vscode"] .intro {
+  margin-block: 0.5rem;
+  padding: 0.5rem;
+  min-height: 0;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+.app-shell[data-host="vscode"] .intro h1 {
+  font-size: 1.375rem;
+  max-width: none;
+}
+.app-shell[data-host="vscode"] .intro h1 > span {
+  display: inline;
+}
+[data-host="vscode"] .intro-controls {
+  margin-block: 0.5rem;
+}
 [data-host="vscode"] .intro-art,
 [data-host="vscode"] .product-explanation,
-[data-host="vscode"] .privacy-note { display: none; }
-.host-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .75rem; }
-/* The document remains a light paper surface; chrome follows the workbench. */
-body.vscode-dark .app-header { background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); }
-body.vscode-high-contrast .document-panel { outline: .125rem solid var(--vscode-contrastBorder); }
+[data-host="vscode"] .privacy-note {
+  display: none;
+}
+.host-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 0.75rem;
+}
+
+/* The extension is an editor surface inside VS Code. UI typography and density
+   follow the workbench; source/rich document typography stays user controlled. */
+body.vscode-shell {
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  font-weight: var(--vscode-font-weight, normal);
+  color: var(--vscode-foreground);
+  background: var(--vscode-editor-background);
+  --control-size: 26px;
+  --control-icon-size: 16px;
+  --radius: 2px;
+}
+
+.vscode-shell .app-shell[data-host="vscode"] {
+  padding: 0;
+  font: inherit;
+}
+
+.vscode-shell
+  .app-shell[data-host="vscode"]
+  :is(
+    .app-header,
+    .intro-copy,
+    .document-heading,
+    .pane-heading,
+    .editor-status,
+    .mobile-view-switch,
+    .format-toolbar,
+    .rich-toolbar-container,
+    .host-actions
+  ) {
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  letter-spacing: normal;
+}
+
+.vscode-shell .app-header {
+  height: auto;
+  min-height: 32px;
+  padding: 3px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, var(--border));
+}
+.vscode-shell .brand {
+  gap: 0;
+  color: var(--vscode-foreground);
+}
+.vscode-shell .brand-name {
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+.vscode-shell .brand-mark,
+.vscode-shell .brand-name > span,
+.vscode-shell .intro h1,
+.vscode-shell .intro-description,
+.vscode-shell .page-footer,
+.vscode-shell .document-name .text-muted-foreground {
+  display: none;
+}
+.vscode-shell .header-controls,
+.vscode-shell .language-switch {
+  gap: 4px;
+}
+.vscode-shell .language-switch a {
+  height: 26px;
+  min-height: 26px;
+  padding-inline: 6px;
+}
+.vscode-shell .host-actions {
+  gap: 2px;
+  margin: 0;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, var(--border));
+}
+.vscode-shell .intro {
+  margin: 0;
+  padding: 4px 12px;
+}
+.vscode-shell .intro-controls {
+  margin: 0;
+}
+.vscode-shell .intro-controls [data-slot="toggle-group"] {
+  width: fit-content;
+  max-width: 100%;
+  gap: 2px;
+}
+.vscode-shell .intro-controls [data-slot="toggle-group-item"] {
+  flex: 0 1 auto;
+  padding-inline: 8px;
+}
+.vscode-shell .document-panel {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.vscode-shell .document-heading {
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--vscode-editorWidget-background, var(--background));
+}
+.vscode-shell .document-name {
+  flex: 1 1 160px;
+  max-width: 340px;
+  gap: 6px;
+}
+.vscode-shell .file-icon {
+  width: 18px;
+  height: 26px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--vscode-textLink-foreground);
+}
+.vscode-shell .file-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.vscode-shell .document-name input {
+  max-width: 100%;
+}
+.vscode-shell .document-tools {
+  gap: 2px;
+  margin-inline-end: auto;
+}
+.vscode-shell .document-export {
+  flex: 0 1 auto;
+  gap: 4px;
+}
+.vscode-shell .document-export-button {
+  padding-inline: 8px;
+}
+.vscode-shell .live-workspace {
+  --pane-heading-height: 28px;
+  --view-switch-height: 34px;
+}
+.vscode-shell .pane-heading {
+  min-height: var(--pane-heading-height);
+  padding: 4px 12px;
+  background: var(--vscode-editorGroupHeader-tabsBackground, var(--muted));
+}
+.vscode-shell .pane-heading h2,
+.vscode-shell .pane-heading > span {
+  font-size: inherit;
+}
+.vscode-shell .pane-heading h2 {
+  gap: 6px;
+  font-weight: 400;
+}
+.vscode-shell .pane-heading h2 > svg {
+  width: 16px;
+  height: 16px;
+}
+.vscode-shell .format-toolbar,
+.vscode-shell .rich-toolbar-container {
+  padding: 3px 8px;
+  background: var(--vscode-editor-background);
+}
+.vscode-shell .preview-pane .preview-panel {
+  padding: 0 12px 12px;
+}
+.vscode-shell .rich-toolbar-container {
+  margin: 0 -12px 12px;
+}
+.vscode-shell .format-toolbar,
+.vscode-shell .rich-format-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+}
+.vscode-shell .rich-format-toolbar {
+  padding-bottom: 2px;
+  scroll-padding-inline: 2px;
+}
+.vscode-shell .rich-format-toolbar :is(button, [tabindex]) {
+  scroll-margin-inline: 2px;
+}
+.vscode-shell .rich-heading-field {
+  width: var(--control-size);
+}
+.vscode-shell .mobile-view-switch {
+  height: var(--view-switch-height);
+  padding: 4px 8px;
+  gap: 2px;
+}
+.vscode-shell .editor-status {
+  gap: 6px;
+  padding: 3px 12px;
+  font-size: 12px;
+  border-radius: 0;
+  background: var(--vscode-editor-background);
+}
+
+/* Portal content lives outside app-shell, so use the bootstrap body marker. */
+.vscode-shell
+  :is(
+    [data-slot="button"],
+    [data-slot="toggle"],
+    [data-slot="input"],
+    [data-slot="select-trigger"],
+    [data-slot="select-content"],
+    [data-slot="toggle-group-item"],
+    [data-slot="dialog-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-sonner-toast]
+  ) {
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  letter-spacing: normal;
+  border-radius: 2px;
+}
+.vscode-shell
+  :is(
+    [data-slot="button"],
+    [data-slot="toggle"],
+    [data-slot="toggle-group-item"]
+  ) {
+  height: 26px;
+  min-height: 26px;
+  box-shadow: none;
+}
+.vscode-shell .rich-icon-control {
+  width: var(--control-size);
+  height: var(--control-size);
+  min-width: var(--control-size);
+  padding-inline: 0;
+}
+.vscode-shell
+  :is(
+    [data-slot="field-label"],
+    [data-slot="field-description"],
+    [data-slot="dialog-description"],
+    [data-slot="select-item"],
+    [data-slot="dropdown-menu-item"],
+    [data-slot="dropdown-menu-radio-item"]
+  ) {
+  font-size: inherit;
+}
+.vscode-shell [data-slot="input"] {
+  height: 26px;
+  padding: 3px 6px;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border-color: var(--vscode-input-border, var(--border));
+  box-shadow: none;
+}
+.vscode-shell [data-slot="button"][data-variant="ghost"]:hover {
+  background: var(--vscode-toolbar-hoverBackground, var(--accent));
+}
+.vscode-shell [data-slot="button"][data-variant="default"]:hover {
+  background: var(--vscode-button-hoverBackground, var(--primary));
+}
+.vscode-shell [data-slot="button"][data-variant="outline"] {
+  background: var(--vscode-button-secondaryBackground, var(--background));
+  color: var(--vscode-button-secondaryForeground, var(--foreground));
+  border-color: var(--vscode-button-border, var(--border));
+}
+.vscode-shell [data-slot="button"][data-variant="outline"]:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--accent));
+}
+.vscode-shell [data-slot="toggle"][data-state="on"] {
+  background: var(--vscode-toolbar-activeBackground, var(--accent));
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+.vscode-shell
+  :is(
+    [data-slot="button"],
+    [data-slot="toggle"],
+    [data-slot="toggle-group-item"]
+  )
+  svg {
+  width: 16px;
+  height: 16px;
+}
+.vscode-shell :is(button, a, input, textarea):focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+.vscode-shell .markdown-source-editor:focus-within,
+.vscode-shell .preview-panel:focus-within {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+.vscode-shell [data-slot="dialog-content"],
+.vscode-shell [data-slot="dropdown-menu-content"],
+.vscode-shell [data-slot="select-content"] {
+  border-color: var(--vscode-editorWidget-border, var(--border));
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, #0003);
+}
+.vscode-shell [data-slot="dialog-content"] {
+  padding: 16px;
+  gap: 12px;
+}
+.vscode-shell [data-slot="dialog-title"] {
+  font-size: 16px;
+}
+.vscode-shell .rich-math-button,
+.vscode-shell .rich-raw-block > button,
+.vscode-shell .rich-raw-inline > button {
+  height: auto;
+}
+
+@media (max-width: 56.1875rem) {
+  .vscode-shell .document-heading {
+    align-items: center;
+  }
+  .vscode-shell .document-name {
+    flex-basis: calc(100% - 80px);
+    max-width: none;
+  }
+  .vscode-shell .document-export {
+    margin-inline-start: auto;
+  }
+}
+
+/* VS Code owns its theme classes and variables, including both contrast themes.
+   Define tokens on body so portalled controls and document surfaces inherit them. */
+body.vscode-light,
+body.vscode-dark,
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  --background: var(--vscode-editor-background, #ffffff);
+  --foreground: var(--vscode-editor-foreground, #173e35);
+  --card: var(--vscode-editor-background, #ffffff);
+  --card-foreground: var(--vscode-editor-foreground, #173e35);
+  --popover: var(--vscode-editorWidget-background, #ffffff);
+  --popover-foreground: var(
+    --vscode-editorWidget-foreground,
+    var(--vscode-editor-foreground, #173e35)
+  );
+  --primary: var(--vscode-button-background, #137763);
+  --primary-foreground: var(--vscode-button-foreground, #ffffff);
+  --secondary: var(--vscode-button-secondaryBackground, #e3eee7);
+  --secondary-foreground: var(--vscode-button-secondaryForeground, #225b48);
+  --muted: var(--vscode-editorWidget-background, #f3f7f4);
+  --muted-foreground: var(--vscode-descriptionForeground, #5d7468);
+  --accent: var(--vscode-list-hoverBackground, #e3eee7);
+  --accent-foreground: var(
+    --vscode-list-hoverForeground,
+    var(--vscode-editor-foreground, #173e35)
+  );
+  --border: var(--vscode-contrastBorder, var(--vscode-widget-border, #d5e2d9));
+  --input: var(--vscode-input-border, var(--vscode-widget-border, #c7d9cd));
+  --ring: var(--vscode-focusBorder, #6b9f87);
+  --destructive: var(--vscode-errorForeground, #b64035);
+  --document-foreground: var(--vscode-editor-foreground, #506458);
+  --document-heading: var(--vscode-editor-foreground, #254a3b);
+  --document-link: var(--vscode-textLink-foreground, #137763);
+  --document-caret: var(
+    --vscode-editorCursor-foreground,
+    var(--vscode-editor-foreground, #173e35)
+  );
+  --document-inline-code: var(
+    --vscode-textPreformat-foreground,
+    var(--vscode-editor-foreground, #26745a)
+  );
+  --document-code-background: var(
+    --vscode-textCodeBlock-background,
+    var(--vscode-editor-background, #f1f4f5)
+  );
+  --document-code-header: var(--vscode-editorWidget-background, #e7edeb);
+  --document-code-foreground: var(--vscode-editor-foreground, #24292f);
+  --source-syntax-heading: var(--vscode-textLink-foreground, #0550ae);
+  --source-syntax-emphasis: var(
+    --vscode-textPreformat-foreground,
+    var(--vscode-editor-foreground, #8250df)
+  );
+  --source-syntax-code: var(
+    --vscode-textPreformat-foreground,
+    var(--vscode-editor-foreground, #953800)
+  );
+  --source-syntax-list: var(--vscode-textLink-foreground, #cf222e);
+}
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  /* HC Light's preformat foreground is white for its own dark code surface.
+     Our source tokens and inline code use the editor surface instead. */
+  --source-syntax-emphasis: var(--vscode-editor-foreground);
+  --source-syntax-code: var(--vscode-editor-foreground);
+  --document-inline-code: var(--vscode-editor-foreground);
+  --syntax-keyword: var(--vscode-editor-foreground);
+  --syntax-literal: var(--vscode-editor-foreground);
+  --syntax-string: var(--vscode-editor-foreground);
+  --syntax-comment: var(--vscode-editor-foreground);
+  --syntax-title: var(--vscode-editor-foreground);
+  --syntax-name: var(--vscode-editor-foreground);
+  --syntax-type: var(--vscode-editor-foreground);
+  --syntax-deletion: var(--vscode-editor-foreground);
+}
+
+body.vscode-high-contrast .document-panel,
+body.vscode-high-contrast-light .document-panel {
+  outline: 0.125rem solid
+    var(--vscode-contrastBorder, var(--vscode-focusBorder));
+}
+
+/* Explicit VS Code modes use page scrolling. Hidden editors stay mounted so
+   changing a mode does not discard their selection or document state. */
+[data-host="vscode"]
+  .live-workspace:is([data-mode="source"], [data-mode="rendered"]) {
+  display: block;
+  --view-switch-height: 0rem;
+}
+
+[data-host="vscode"]
+  .live-workspace:is([data-mode="source"], [data-mode="rendered"])
+  .mobile-view-switch,
+[data-host="vscode"] .live-workspace[data-mode="source"] .preview-pane,
+[data-host="vscode"] .live-workspace[data-mode="rendered"] .editing-pane {
+  display: none;
+}
+
+[data-host="vscode"] .live-workspace[data-mode="source"] .editing-pane,
+[data-host="vscode"] .live-workspace[data-mode="rendered"] .preview-pane {
+  display: block;
+}
+
+[data-host="vscode"] .live-workspace[data-mode="rendered"] .preview-pane {
+  position: static;
+  border-inline-start: 0;
+}
+
+[data-host="vscode"] .live-workspace[data-mode="rendered"] .preview-panel {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+@media (max-width: 56.1875rem) {
+  [data-host="vscode"] .live-workspace[data-mode="source"] .format-toolbar,
+  [data-host="vscode"]
+    .live-workspace[data-mode="rendered"]
+    .rich-toolbar-container {
+    top: 0;
+  }
+}

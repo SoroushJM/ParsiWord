@@ -2,7 +2,9 @@ import { editorHost } from './host';
 import catalogue from './data/google-fonts.json';
 import { bundledFont, bundledFaces, codeFont, mathFont, isBundledFont } from './font-assets';
 import { documentFontUsage } from './markdown';
+import type { Root } from 'mdast';
 import { publicAsset } from './public-assets';
+import { ParsiWordError, errorMessage, errorMessages, isFontError } from './errors';
 export { bundledFont, isBundledFont, normalizeFontFamily } from './font-assets';
 
 export type GoogleFont = { family: string; arabic: boolean; weights: number[]; subsets?: string[] };
@@ -19,25 +21,31 @@ async function webFontCatalogue(refresh = false): Promise<WebFontCatalogue> {
   if (!webCatalogueRequest || refresh) {
     webCatalogueRequest = (async () => {
       const response = await fetch(publicAsset('font-catalogue.json'), { cache: refresh ? 'no-cache' : 'default' });
-      if (!response.ok) throw new Error('FONT_CATALOGUE');
+      if (!response.ok) throw new ParsiWordError('FONT_CATALOGUE');
       const data = await response.json() as WebFontCatalogue;
-      if (!Array.isArray(data.families) || !data.families.length) throw new Error('FONT_CATALOGUE');
+      if (!Array.isArray(data.families) || !data.families.length) throw new ParsiWordError('FONT_CATALOGUE');
       return data;
-    })();
+    })().catch(cause => {
+      if (isFontError(cause)) throw cause;
+      throw new ParsiWordError('FONT_CATALOGUE', { cause });
+    });
     webCatalogueRequest.catch(() => { webCatalogueRequest = undefined; });
   }
   return webCatalogueRequest;
 }
 
 async function database(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(databaseName, 1);
     request.onupgradeneeded = () => {
       request.result.createObjectStore('fonts', { keyPath: 'family' });
       request.result.createObjectStore('metadata');
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(new Error('FONT_STORAGE'));
+    request.onerror = () => reject(new ParsiWordError('FONT_STORAGE', { cause: request.error }));
+  }).catch(cause => {
+    if (isFontError(cause)) throw cause;
+    throw new ParsiWordError('FONT_STORAGE', { cause });
   });
 }
 
@@ -48,9 +56,12 @@ async function transaction<T>(store: 'fonts' | 'metadata', mode: IDBTransactionM
       const tx = db.transaction(store, mode);
       const request = operation(tx.objectStore(store));
       tx.oncomplete = () => resolve(request.result);
-      tx.onerror = () => reject(new Error('FONT_STORAGE'));
-      tx.onabort = () => reject(new Error('FONT_STORAGE'));
+      tx.onerror = () => reject(new ParsiWordError('FONT_STORAGE', { cause: tx.error }));
+      tx.onabort = () => reject(new ParsiWordError('FONT_STORAGE', { cause: tx.error }));
     });
+  } catch (cause) {
+    if (isFontError(cause)) throw cause;
+    throw new ParsiWordError('FONT_STORAGE', { cause });
   } finally { db.close(); }
 }
 
@@ -66,18 +77,23 @@ export async function removeFont(family: string): Promise<void> {
 
 // Only font names are sent. Never append the document as Google's text= subset.
 async function googleResource(url: string): Promise<Uint8Array> {
-  if (editorHost().fontResource) return editorHost().fontResource!(url);
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('FONT_NETWORK');
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.length > 32 * 1024 * 1024) throw new Error('FONT_TOO_LARGE');
-  return bytes;
+  try {
+    if (editorHost().fontResource) return await editorHost().fontResource!(url);
+    const response = await fetch(url);
+    if (!response.ok) throw new ParsiWordError('FONT_NETWORK');
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length > 32 * 1024 * 1024) throw new ParsiWordError('FONT_TOO_LARGE');
+    return bytes;
+  } catch (cause) {
+    if (isFontError(cause)) throw cause;
+    throw new ParsiWordError('FONT_NETWORK', { cause });
+  }
 }
 
 export function validateFont(bytes: Uint8Array): void {
   const tag = String.fromCharCode(...bytes.slice(0, 4));
   if (bytes.length < 32 || !((bytes[0] === 0 && bytes[1] === 1 && bytes[2] === 0 && bytes[3] === 0) || tag === 'OTTO' || tag === 'true')) {
-    throw new Error('FONT_FORMAT');
+    throw new ParsiWordError('FONT_FORMAT');
   }
 }
 
@@ -86,10 +102,10 @@ export async function downloadFace(family: string, weight: number): Promise<Uint
     // Browsers receive WOFF2 from Google's CSS API. The checked-in snapshot
     // contains its full static TTF URLs, fetched directly with gstatic CORS.
     const font = (await webFontCatalogue()).families.find(font => font.family === family);
-    if (!font) throw new Error('FONT_MISSING');
+    if (!font) throw new ParsiWordError('FONT_MISSING');
     const nearest = Object.keys(font.faces).map(Number).sort((a, b) => Math.abs(a - weight) - Math.abs(b - weight))[0];
     const url = font.faces[nearest];
-    if (!/^https:\/\/fonts\.gstatic\.com\/s\//.test(url || '')) throw new Error('FONT_FORMAT');
+    if (!/^https:\/\/fonts\.gstatic\.com\/s\//.test(url || '')) throw new ParsiWordError('FONT_FORMAT');
     const bytes = await googleResource(url);
     validateFont(bytes);
     return bytes;
@@ -100,7 +116,7 @@ export async function downloadFace(family: string, weight: number): Promise<Uint
   const urls = [...css.matchAll(/url\(\s*['"]?(https:\/\/fonts\.gstatic\.com\/[^\s)'";]+)['"]?\s*\)\s*format\(['"](?:truetype|opentype)['"]\)/g)].map(m => m[1]);
   // The native downloader identifies as a non-browser and receives a full TTF,
   // not browser-specific WOFF2 subsets, which cannot be embedded into DOCX.
-  if (urls.length !== 1) throw new Error('FONT_FORMAT');
+  if (urls.length !== 1) throw new ParsiWordError('FONT_FORMAT');
   const bytes = await googleResource(urls[0]);
   validateFont(bytes);
   return bytes;
@@ -113,7 +129,7 @@ export async function ensureFont(font: GoogleFont, transport = downloadFace): Pr
       const asset = bundledFaces[font.family];
       const read = async (name: string) => {
         const response = await fetch(publicAsset(`fonts/${name}.ttf`));
-        if (!response.ok) throw new Error('FONT_FORMAT');
+        if (!response.ok) throw new ParsiWordError('FONT_FORMAT');
         const bytes = new Uint8Array(await response.arrayBuffer()); validateFont(bytes); return bytes;
       };
       const [regular, bold] = await Promise.all([read(asset.regular), asset.bold ? read(asset.bold) : undefined]);
@@ -135,7 +151,11 @@ export async function ensureFont(font: GoogleFont, transport = downloadFace): Pr
     return bundle;
   })();
   pending.set(font.family, task);
-  try { return await task; } finally { pending.delete(font.family); }
+  try { return await task; }
+  catch (cause) {
+    if (isFontError(cause)) throw cause;
+    throw new ParsiWordError('FONT_NETWORK', { cause });
+  } finally { pending.delete(font.family); }
 }
 
 export async function activateFont(bundle: FontBundle): Promise<void> {
@@ -143,7 +163,8 @@ export async function activateFont(bundle: FontBundle): Promise<void> {
   const regular = new FontFace(bundle.family, bundle.regular.slice().buffer, { weight: '400' });
   const faces = [regular];
   if (bundle.bold) faces.push(new FontFace(bundle.family, bundle.bold.slice().buffer, { weight: '700' }));
-  await Promise.all(faces.map(face => face.load()));
+  try { await Promise.all(faces.map(face => face.load())); }
+  catch (cause) { throw new ParsiWordError('FONT_FORMAT', { cause }); }
   for (const face of faces) document.fonts.add(face);
   loaded.set(bundle.family, faces);
 }
@@ -154,27 +175,32 @@ export async function fontCatalogue(): Promise<GoogleFont[]> {
 }
 
 export async function refreshCatalogue(): Promise<GoogleFont[]> {
-  if (!editorHost().nativeFonts) {
-    // A static deployment supplies its latest public snapshot, with no CORS
-    // proxy or runtime API key. Native apps keep Google's live metadata API.
-    const list = (await webFontCatalogue(true)).families.map(({ faces: _faces, ...font }) => font);
+  try {
+    if (!editorHost().nativeFonts) {
+      // A static deployment supplies its latest public snapshot, with no CORS
+      // proxy or runtime API key. Native apps keep Google's live metadata API.
+      const list = (await webFontCatalogue(true)).families.map(({ faces: _faces, ...font }) => font);
+      await transaction('metadata', 'readwrite', store => store.put(list, 'catalogue'));
+      return list;
+    }
+    const text = new TextDecoder().decode(await googleResource('https://fonts.google.com/metadata/fonts'));
+    const data = JSON.parse(text.slice(text.indexOf('{')));
+    const list: GoogleFont[] = (data.familyMetadataList || data.familyMetadata || []).filter((f: { isOpenSource?: boolean }) => f.isOpenSource !== false).map((f: { family: string; subsets: string[]; fonts: Record<string, unknown> }) => ({
+      family: f.family, arabic: f.subsets.includes('arabic'), subsets: f.subsets.filter(s => s !== 'menu'), weights: Object.keys(f.fonts).filter(w => /^\d+$/.test(w)).map(Number),
+    })).filter((f: GoogleFont) => f.family && f.weights.length);
+    if (list.length < 100) throw new ParsiWordError('FONT_CATALOGUE');
     await transaction('metadata', 'readwrite', store => store.put(list, 'catalogue'));
     return list;
+  } catch (cause) {
+    if (isFontError(cause)) throw cause;
+    throw new ParsiWordError('FONT_CATALOGUE', { cause });
   }
-  const text = new TextDecoder().decode(await googleResource('https://fonts.google.com/metadata/fonts'));
-  const data = JSON.parse(text.slice(text.indexOf('{')));
-  const list: GoogleFont[] = (data.familyMetadataList || data.familyMetadata || []).filter((f: { isOpenSource?: boolean }) => f.isOpenSource !== false).map((f: { family: string; subsets: string[]; fonts: Record<string, unknown> }) => ({
-    family: f.family, arabic: f.subsets.includes('arabic'), subsets: f.subsets.filter(s => s !== 'menu'), weights: Object.keys(f.fonts).filter(w => /^\d+$/.test(w)).map(Number),
-  })).filter((f: GoogleFont) => f.family && f.weights.length);
-  if (list.length < 100) throw new Error('FONT_CATALOGUE');
-  await transaction('metadata', 'readwrite', store => store.put(list, 'catalogue'));
-  return list;
 }
 
-export async function documentFonts(family: string, markdown = ''): Promise<FontBundle[]> {
+export async function documentFonts(family: string, markdown: string | Root = ''): Promise<FontBundle[]> {
   const catalogue = await fontCatalogue();
   const font = catalogue.find(f => f.family === family);
-  if (!font) throw new Error('FONT_MISSING');
+  if (!font) throw new ParsiWordError('FONT_MISSING');
   const usage = documentFontUsage(markdown);
   const families = new Set([family]);
   if (!font.arabic || usage.code || usage.math) families.add(bundledFont);
@@ -184,10 +210,5 @@ export async function documentFonts(family: string, markdown = ''): Promise<Font
 }
 
 export function fontError(error: unknown): string {
-  const message = String(error);
-  if (message.includes('FONT_MISSING')) return 'این فونت در دسترس نیست. یک فونت دیگر انتخاب کن.';
-  if (message.includes('FONT_STORAGE')) return 'فضای نگهداری فونت در دسترس نیست. فضای خالی گوشی را بررسی کن.';
-  if (message.includes('FONT_TOO_LARGE')) return 'فایل این فونت برای این نسخه بیش از حد بزرگ است؛ فونت دیگری انتخاب کن.';
-  if (message.includes('FONT_FORMAT')) return 'نسخهٔ قابل استفاده در Word برای این فونت دریافت نشد. فونت دیگری انتخاب کن.';
-  return 'فونت دانلود نشد. اتصال اینترنت را بررسی کن و دوباره امتحان کن؛ فونت قبلی حفظ شده است.';
+  return isFontError(error) ? errorMessage(error) : errorMessages.FONT_NETWORK;
 }

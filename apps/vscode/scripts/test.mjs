@@ -35,10 +35,11 @@ await runTests({
   vscodeExecutablePath: process.env.VSCODE_EXECUTABLE_PATH || (process.platform === 'win32' && await access('C:/Program Files/Microsoft VS Code/Code.exe').then(()=>true,()=>false) ? 'C:/Program Files/Microsoft VS Code/Code.exe' : undefined),
   extensionDevelopmentPath: cliPath(resolve(root,'apps/vscode')), extensionTestsPath: cliPath(resolve(root,'apps/vscode/dist/test.cjs')),
   launchArgs: [cliPath(fixture), '--new-window', '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust', '--disable-updates', '--disable-extension=github.copilot-chat', '--disable-extension=github.copilot', `--user-data-dir=${cliPath(resolve(runDirectory,'profile'))}`, `--extensions-dir=${cliPath(resolve(runDirectory,'extensions'))}`, `--remote-debugging-port=${port}`],
-  extensionTestsEnv: { PARSIWORD_TEST_CDP: String(port), PARSIWORD_TEST_ARTIFACT: artifact },
+  extensionTestsEnv: { PARSIWORD_TEST_CDP: String(port), PARSIWORD_TEST_ARTIFACT: artifact, ...(process.env.PARSIWORD_TEST_THEME_WITNESS ? { PARSIWORD_TEST_THEME_WITNESS: process.env.PARSIWORD_TEST_THEME_WITNESS } : {}) },
 });
 // Parse the actual exported PDF in Node, outside Electron's extension host,
 // where PDF.js can load its optional canvas bindings normally.
+if (!process.env.PARSIWORD_TEST_THEME_WITNESS) {
 const reportPath=resolve(artifact,'results.json');
 const report=JSON.parse(await readFile(reportPath,'utf8'));
 const { getDocument }=await import('pdfjs-dist/legacy/build/pdf.mjs');
@@ -49,3 +50,4 @@ await pdf.destroy();
 report.results.push('Actual exported PDF parsed outside Electron: text remains searchable');
 await writeFile(reportPath,JSON.stringify(report,null,2));
 console.log('PASS Actual exported PDF contains searchable text');
+}

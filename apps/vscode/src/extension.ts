@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import { randomBytes } from 'node:crypto';
 import { basename, dirname, join } from 'node:path';
-import { minimalChange, rebaseText, type SyncSnapshot } from '../../../packages/core/src/document-sync';
+import { minimalChange, rebaseText, canApplyMarkdown, MAX_MARKDOWN_LENGTH, normalizeSettings, isRecord,
+  isClientMessage, PendingDocument, ParsiWordError, getErrorCode, type SyncSnapshot, type DocumentViewMode } from '@parsiword/core/host';
 
 const viewType = 'parsiword.markdown';
-type Session = { document: vscode.TextDocument; panel: vscode.WebviewPanel; ready: boolean; client: string };
+type Session = { document: vscode.TextDocument; panel: vscode.WebviewPanel; ready: boolean; client: string; journal: PendingDocument };
 type GitRepository = { rootUri: vscode.Uri; state: { indexChanges: { uri: vscode.Uri; originalUri?: vscode.Uri }[]; workingTreeChanges: { uri: vscode.Uri; originalUri?: vscode.Uri }[] } };
 type GitApi = { getRepository(uri: vscode.Uri): GitRepository | null; toGitUri(uri: vscode.Uri, ref: string): vscode.Uri };
 
@@ -30,6 +31,42 @@ export function activate(context: vscode.ExtensionContext) {
     queues.set(key, safe);
     void safe.finally(() => { if (queues.get(key) === safe) queues.delete(key); });
     return task;
+  };
+  const applyText = async (document: vscode.TextDocument, next: string) => {
+    if (!canApplyMarkdown(document.getText(), next) && next !== document.getText()) throw new ParsiWordError('FILE_TOO_LARGE');
+    const edit = minimalChange(document.getText(), next);
+    if (!edit) return;
+    const change = new vscode.WorkspaceEdit();
+    change.replace(document.uri, new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)), edit.text);
+    applying.add(document.uri.toString());
+    try { if (!await vscode.workspace.applyEdit(change)) throw Error('The document is read-only or could not be updated.'); }
+    finally { applying.delete(document.uri.toString()); }
+  };
+  const recover = async (text: string) => {
+    const recovered = await vscode.workspace.openTextDocument({ language: 'markdown', content: text });
+    await vscode.window.showTextDocument(recovered, vscode.ViewColumn.Beside);
+    void vscode.window.showWarningMessage('ParsiWord preserved your concurrent edit in this unsaved recovery document. Review it before merging.');
+  };
+  const preserve = async (session: Session, disposing = false) => {
+    await enqueue(session.document, async () => {
+      if (!session.journal.pending) return;
+      const text = session.journal.draft;
+      try {
+        const current = snapshot(session.document).text;
+        // Closing/reopening a dirty custom editor may first revert its native
+        // model. Replaying only the pending patch there would lose its applied
+        // predecessor, so recover the complete local draft instead.
+        if (disposing && current !== session.journal.baseline) throw new ParsiWordError('DOCUMENT_CONFLICT');
+        const next = session.journal.against(current).replace(/\r\n|\n/g, lineEnding(session.document));
+        await applyText(session.document, next);
+        session.journal.clear();
+        publish(session.document);
+      } catch { session.journal.clear(); await recover(text); }
+    });
+  };
+  const preserveAll = async (document: vscode.TextDocument) => {
+    for (const session of sessions) if (session.document === document) await preserve(session);
+    await queues.get(document.uri.toString());
   };
   const open = async (uri?: vscode.Uri) => {
     const resource = current(uri);
@@ -69,18 +106,19 @@ export function activate(context: vscode.ExtensionContext) {
     if (name === 'preview') return nativePreview(document.uri);
     if (name === 'diff' || name === 'stagedDiff') return gitDiff(name === 'stagedDiff', document.uri);
     if (name === 'new') { const next = await vscode.workspace.openTextDocument({ language: 'markdown', content: '' }); return open(next.uri); }
-    if (name === 'save') { await queues.get(document.uri.toString()); await document.save(); return; }
+    if (name === 'save') { await queues.get(document.uri.toString()); if (!await document.save()) throw new ParsiWordError('DOCUMENT_SAVE_CANCELLED'); return; }
     if (name === 'undo' || name === 'redo') { await queues.get(document.uri.toString()); await vscode.commands.executeCommand(name); }
   };
 
-  const provider: vscode.CustomTextEditorProvider = {
+  const provider = (viewMode: DocumentViewMode): vscode.CustomTextEditorProvider => ({
     async resolveCustomTextEditor(document, panel) {
-      if (document.getText().length > 500_000) {
+      await preserveAll(document);
+      if (document.getText().length > MAX_MARKDOWN_LENGTH) {
         void vscode.window.showInformationMessage('This document exceeds ParsiWord’s editing limit. Opening the native Markdown editor.');
         await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
         return;
       }
-      const session: Session = { document, panel, ready: false, client: randomBytes(12).toString('hex') };
+      const session: Session = { document, panel, ready: false, client: randomBytes(12).toString('hex'), journal: new PendingDocument() };
       sessions.add(session); active = session;
       panel.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'dist/webview')] };
       const assetRoot = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'dist/webview')).toString();
@@ -93,40 +131,55 @@ export function activate(context: vscode.ExtensionContext) {
       const disposables = [
         panel.onDidChangeViewState(() => { if (panel.active) active = session; }),
         panel.webview.onDidReceiveMessage(async message => {
-          if (!message || typeof message !== 'object') return;
+          if (!isClientMessage(message)) {
+            if (isRecord(message) && Number.isSafeInteger(message.id)) {
+              await panel.webview.postMessage({ type: 'response', id: message.id, errorCode: 'INVALID_HOST_REQUEST' });
+            } else if (isRecord(message) && (message.type === 'edit' || message.type === 'draft') && isRecord(message.edit) && Number.isSafeInteger(message.edit.id)) {
+              await panel.webview.postMessage({ type: 'document', snapshot: { ...snapshot(document), ack: message.edit.id, client: session.client, rejected: true } });
+            } else {
+              await panel.webview.postMessage({ type: 'document', snapshot: { ...snapshot(document), client: session.client, rejected: true } });
+            }
+            return;
+          }
           if (message.type === 'ready') {
             session.ready = true;
             const config = vscode.workspace.getConfiguration('parsiword', document.uri);
-            const settings = context.workspaceState.get(`settings:${document.uri.toString()}`) ?? {
+            const defaults = {
               title: basename(document.uri.path).replace(/\.(md|markdown|mdown|mkd)$/i, '').slice(0,90),
               direction: config.get('direction', 'auto'), fontSize: config.get('fontSize', 12),
               fontFamily: config.get('fontFamily', 'Vazirmatn'), alignmentOnly: false,
             };
+            const settings = normalizeSettings(context.workspaceState.get(`settings:${document.uri.toString()}`), normalizeSettings(defaults));
             await panel.webview.postMessage({ type: 'init', snapshot: snapshot(document), client: session.client, settings, assetRoot,
-              locale: context.globalState.get('locale', config.get('language', 'fa')), version: context.extension.packageJSON.version });
+              locale: context.globalState.get<string>('locale', config.get<string>('language', 'fa')) === 'en' ? 'en' : 'fa', version: context.extension.packageJSON.version, viewMode });
             return;
           }
-          if (message.type === 'edit') {
-            const { id, base, text } = message.edit ?? {};
-            if (!Number.isSafeInteger(id) || typeof base !== 'string' || typeof text !== 'string' || base.length > 500_000 || text.length > 500_000) return;
+          if (message.type === 'edit' || message.type === 'draft') {
+            const { id, base, text } = message.edit;
+            try { session.journal.record(message.edit); }
+            catch {
+              await panel.webview.postMessage({ type: 'document', snapshot: { ...snapshot(document), ack: id, client: session.client, rejected: true } });
+              return;
+            }
+            if (message.type === 'draft') return;
             void enqueue(document, async () => {
               try {
                 const canonical = (value: string) => value.replace(/\r\n|\n/g, lineEnding(document));
                 const next = rebaseText(canonical(base), canonical(text), document.getText());
-                if (next.length > 500_000) throw Error('FILE_TOO_LARGE');
-                const edit = minimalChange(document.getText(), next);
-                if (edit) {
-                  const change = new vscode.WorkspaceEdit();
-                  change.replace(document.uri, new vscode.Range(document.positionAt(edit.start), document.positionAt(edit.end)), edit.text);
-                  applying.add(document.uri.toString());
-                  try { if (!await vscode.workspace.applyEdit(change)) throw Error('The document is read-only or could not be updated.'); }
-                  finally { applying.delete(document.uri.toString()); }
-                }
+                await applyText(document, next);
+                session.journal.applied(message.edit);
                 publish(document, { ack: id, client: session.client });
               } catch {
                 await panel.webview.postMessage({ type: 'document', snapshot: { ...snapshot(document), ack: id, client: session.client, rejected: true } });
               }
             });
+            return;
+          }
+          if (message.type === 'pending') {
+            if (!session.journal.stage(message.pending)) {
+              session.journal.clear();
+              await panel.webview.postMessage({ type: 'document', snapshot: { ...snapshot(document), client: session.client, rejected: true } });
+            }
             return;
           }
           if (message.type === 'settings') { await context.workspaceState.update(`settings:${document.uri.toString()}`, message.settings); return; }
@@ -135,53 +188,49 @@ export function activate(context: vscode.ExtensionContext) {
           try {
             let result: unknown;
             const args = message.args ?? {};
-            if (message.method === 'command') await command(args.name, document);
+            if (message.method === 'command') await command(String(args.name), document);
             else if (message.method === 'open') {
               const files = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { Markdown: ['md','markdown','mdown','mkd','txt'] } });
               if (files?.[0]) await open(files[0]);
               result = null;
             } else if (message.method === 'saveBytes') {
-              if (!['md','docx','pdf'].includes(args.extension) || !Array.isArray(args.bytes) || args.bytes.length > 64 * 1024 * 1024 || !args.bytes.every((n: unknown) => Number.isInteger(n) && Number(n) >= 0 && Number(n) <= 255)) throw Error('Invalid export');
+              const format = String(args.extension);
+              if (!['md','docx','pdf'].includes(format) || !Array.isArray(args.bytes) || args.bytes.length > 64 * 1024 * 1024 || !args.bytes.every((n: unknown) => Number.isInteger(n) && Number(n) >= 0 && Number(n) <= 255)) throw new ParsiWordError('INVALID_HOST_REQUEST');
               const filename = basename(String(args.filename)).replace(/[<>:"/\\|?*]/g, '_');
               const defaultUri = document.uri.scheme === 'file' ? vscode.Uri.file(join(dirname(document.uri.fsPath), filename)) : undefined;
-              const target = await vscode.window.showSaveDialog({ defaultUri, filters: { [args.extension.toUpperCase()]: [args.extension] } });
-              if (target?.toString() === document.uri.toString() && args.extension === 'md') {
+              const target = await vscode.window.showSaveDialog({ defaultUri, filters: { [format.toUpperCase()]: [format] } });
+              if (target?.toString() === document.uri.toString() && format === 'md') {
                 await queues.get(document.uri.toString());
                 const text = new TextDecoder().decode(Uint8Array.from(args.bytes));
-                const delta = minimalChange(document.getText(), text);
-                if (delta) {
-                  const change = new vscode.WorkspaceEdit();
-                  change.replace(document.uri, new vscode.Range(document.positionAt(delta.start), document.positionAt(delta.end)), delta.text);
-                  if (!await vscode.workspace.applyEdit(change)) throw Error('Could not save the Markdown document.');
-                }
+                if (text !== document.getText()) throw new ParsiWordError('DOCUMENT_CHANGED_DURING_SAVE');
                 result = await document.save();
               } else if (target) await vscode.workspace.fs.writeFile(target, Uint8Array.from(args.bytes));
               else result = false;
               if (result === undefined) result = !!target;
             } else if (message.method === 'font') {
               const url = new URL(String(args.url));
-              if (url.protocol !== 'https:' || !['fonts.gstatic.com','fonts.googleapis.com','fonts.google.com'].includes(url.hostname) || url.username || url.password || url.port) throw Error('Invalid font URL');
+              if (url.protocol !== 'https:' || !['fonts.gstatic.com','fonts.googleapis.com','fonts.google.com'].includes(url.hostname) || url.username || url.password || url.port) throw new ParsiWordError('INVALID_HOST_REQUEST');
               const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(30_000), headers: { 'User-Agent': 'ParsiWord VSCode' } });
-              if (!response.ok || Number(response.headers.get('content-length') || 0) > 32 * 1024 * 1024) throw Error('FONT_NETWORK');
+              if (!response.ok || Number(response.headers.get('content-length') || 0) > 32 * 1024 * 1024) throw new ParsiWordError('FONT_NETWORK');
               const bytes = new Uint8Array(await response.arrayBuffer());
-              if (bytes.length > 32 * 1024 * 1024) throw Error('FONT_TOO_LARGE');
+              if (bytes.length > 32 * 1024 * 1024) throw new ParsiWordError('FONT_TOO_LARGE');
               result = Array.from(bytes);
-            } else if (message.method === 'recover' && typeof args.text === 'string' && args.text.length <= 500_000) {
-              const recovered = await vscode.workspace.openTextDocument({ language: 'markdown', content: args.text });
-              await vscode.window.showTextDocument(recovered, vscode.ViewColumn.Beside);
-              void vscode.window.showWarningMessage('ParsiWord preserved your concurrent edit in this unsaved recovery document. Review it before merging.');
-            } else throw Error('Unknown request');
+            } else if (message.method === 'recover' && typeof args.text === 'string') {
+              session.journal.clear();
+              await recover(args.text);
+            } else throw new ParsiWordError('INVALID_HOST_REQUEST');
             await panel.webview.postMessage({ type: 'response', id: message.id, result });
           } catch (error) {
-            await panel.webview.postMessage({ type: 'response', id: message.id, error: String(error) });
+            await panel.webview.postMessage({ type: 'response', id: message.id, errorCode: getErrorCode(error) ?? 'HOST_REQUEST_FAILED' });
           }
         }),
       ];
-      panel.onDidDispose(() => { disposables.forEach(item => item.dispose()); sessions.delete(session); if (active === session) active = undefined; });
+      panel.onDidDispose(() => { disposables.forEach(item => item.dispose()); void preserve(session, true); sessions.delete(session); if (active === session) active = undefined; });
     },
-  };
+  });
   context.subscriptions.push(
-    vscode.window.registerCustomEditorProvider(viewType, provider, { supportsMultipleEditorsPerDocument: true, webviewOptions: { retainContextWhenHidden: true } }),
+    ...(['combined', 'source', 'rendered'] as const).map(mode => vscode.window.registerCustomEditorProvider(mode === 'combined' ? viewType : `${viewType}.${mode}`, provider(mode), { supportsMultipleEditorsPerDocument: true, webviewOptions: { retainContextWhenHidden: true } })),
+    vscode.workspace.onWillSaveTextDocument(event => { event.waitUntil(preserveAll(event.document).then(() => [])); }),
     vscode.workspace.onDidChangeTextDocument(event => { if (!applying.has(event.document.uri.toString())) publish(event.document); }),
     vscode.workspace.onDidSaveTextDocument(document => publish(document)),
     vscode.commands.registerCommand('parsiword.open', open),

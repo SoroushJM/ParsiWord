@@ -14,14 +14,14 @@ import './rich-toolbar.css';
 function FormatToggle({ label, active, action, children }: {
   label: string; active: boolean; action: () => void; children: ReactNode;
 }) {
-  return <Toggle className="size-[2.75rem] shrink-0" title={label} aria-label={label} pressed={active}
+  return <Toggle className="rich-icon-control shrink-0" title={label} aria-label={label} pressed={active}
     onMouseDown={event => event.preventDefault()} onPressedChange={action}>{children}</Toggle>;
 }
 
 function FormatButton({ label, disabled = false, action, children }: {
   label: string; disabled?: boolean; action: () => void; children: ReactNode;
 }) {
-  return <Button type="button" variant="ghost" size="icon-lg" className="size-[2.75rem]" title={label} aria-label={label} disabled={disabled}
+  return <Button type="button" variant="ghost" size="icon-lg" className="rich-icon-control" title={label} aria-label={label} disabled={disabled}
     onMouseDown={event => event.preventDefault()} onClick={action}>{children}</Button>;
 }
 
@@ -52,14 +52,21 @@ export const RichToolbar = memo(function RichToolbar({ editor }: { editor: Edito
     const button = (event.target as HTMLElement).closest('button');
     if (button && ![t("واگرد"), t("انجام دوباره")].includes(button.getAttribute('aria-label') || '')) historyBoundary();
   }}>
-    <div className="rich-format-toolbar" role="toolbar" aria-label={t("ابزار ویرایش پیش‌نمایش")}>
+    <div className="rich-format-toolbar" role="toolbar" aria-label={t("ابزار ویرایش پیش‌نمایش")}
+      onFocusCapture={event => {
+        if (editorHost().kind === 'vscode') {
+          // Chromium can leave a partially visible Tab target clipped by this
+          // narrow horizontal scroller. Keep its control and focus ring visible.
+          (event.target as HTMLElement).scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        }
+      }}>
       <FieldGroup className="rich-heading-field gap-0"><Field>
         <FieldLabel className="sr-only" htmlFor="rich-heading">{t("سبک پاراگراف")}</FieldLabel>
         <Select dir={dir} value={state.heading} onValueChange={value => {
           historyBoundary();
           if (value === 'paragraph') editor.chain().focus().setParagraph().run();
           else editor.chain().focus().setHeading({ level: Number(value) as 1 | 2 | 3 | 4 | 5 | 6 }).run();
-        }}><SelectTrigger id="rich-heading" aria-label={t("سبک پاراگراف")} aria-describedby="rich-heading-value" title={`${t('سبک پاراگراف')}: ${headingLabel}`} className="size-[2.75rem] data-[size=default]:h-[2.75rem] justify-center px-0 [&>svg:last-child]:hidden"><Type aria-hidden="true" /><span className="sr-only"><SelectValue id="rich-heading-value" /></span></SelectTrigger>
+        }}><SelectTrigger id="rich-heading" aria-label={t("سبک پاراگراف")} aria-describedby="rich-heading-value" title={`${t('سبک پاراگراف')}: ${headingLabel}`} className="rich-icon-control justify-center px-0 [&>svg:last-child]:hidden"><Type aria-hidden="true" /><span className="sr-only"><SelectValue id="rich-heading-value" /></span></SelectTrigger>
           <SelectContent><SelectGroup><SelectItem value="paragraph">{t("متن عادی")}</SelectItem>{[1, 2, 3, 4, 5, 6].map(level => <SelectItem value={String(level)} key={level}>{t('تیتر')} {number(level)}</SelectItem>)}</SelectGroup></SelectContent>
         </Select>
       </Field></FieldGroup>
@@ -73,7 +80,7 @@ export const RichToolbar = memo(function RichToolbar({ editor }: { editor: Edito
       <FormatToggle label={t("نقل‌قول")} active={state.blockquote} action={() => editor.chain().focus().toggleBlockquote().run()}><Quote data-icon="inline-start" /></FormatToggle>
       <FormatToggle label={t("کد درون متن")} active={state.code} action={() => editor.chain().focus().toggleCode().run()}><Code2 data-icon="inline-start" /></FormatToggle>
       <FormatToggle label={t("بلوک کد")} active={state.codeBlock} action={() => editor.chain().focus().toggleCodeBlock().run()}><SquareCode data-icon="inline-start" /></FormatToggle>
-      <Button type="button" variant="ghost" size="icon-lg" className="size-[2.75rem]" title={t("درج یا ویرایش پیوند")} aria-label={t("درج یا ویرایش پیوند")} aria-expanded={linkOpen} aria-controls="rich-link-tools"
+      <Button type="button" variant="ghost" size="icon-lg" className="rich-icon-control" title={t("درج یا ویرایش پیوند")} aria-label={t("درج یا ویرایش پیوند")} aria-expanded={linkOpen} aria-controls="rich-link-tools"
         onMouseDown={event => event.preventDefault()} onClick={() => { setUrl(editor.getAttributes('link').href || ''); setLinkOpen(value => !value); }}><Link2 data-icon="inline-start" /></Button>
       <FormatButton label={t("درج جدول")} action={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 data-icon="inline-start" /></FormatButton>
       <FormatButton label={t("درج فرمول")} action={() => editor.chain().focus().insertContent({ type: 'mathInline', attrs: { source: 'x^2' } }).run()}><Sigma data-icon="inline-start" /></FormatButton>

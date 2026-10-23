@@ -1,11 +1,13 @@
-import { markdownParser as parser, documentFontUsage } from './markdown';
+import { markdownContext, documentFontUsage, flowingText, type MarkdownContext } from './markdown';
 import { bundledFont, codeRunFont, mathFont } from './font-assets';
 import { wordMath } from './math';
 import { mathLanguage, RichContentError } from './rich-content';
 import { renderMermaid, type Diagram, type DiagramRenderer } from './diagrams';
 import { Buffer } from 'buffer';
 import type { FontBundle } from './fonts';
-import { paragraphBaseDirection, wordDirectionSpans } from './word-direction';
+import { wordDirectionSpans } from './word-direction';
+import { paragraphDirection, type ExportSettings } from './document-model';
+export { paragraphDirection, defaultSettings, type Direction, type ExportSettings } from './document-model';
 import { delimiterFont, delimiterFontParts } from './delimiter-font';
 import { highlightCode } from './code-highlight';
 import { documentFontSize, documentHeadingSize, documentLayout } from './document-layout';
@@ -16,45 +18,29 @@ import {
   type IParagraphOptions, type IRunOptions, type NumberingDefinition,
   type ParagraphChild,
 } from 'docx';
-import type { Root, RootContent, PhrasingContent, List, Table as MdTable } from 'mdast';
-
-export type Direction = 'rtl' | 'auto' | 'ltr';
-export type ExportSettings = {
-  title: string;
-  direction: Direction;
-  fontSize: number;
-  alignmentOnly: boolean;
-  fontFamily: string;
-};
-export const defaultSettings: ExportSettings = {
-  title: 'یادداشت من', direction: 'auto', fontSize: 12, alignmentOnly: false, fontFamily: 'Vazirmatn',
-};
-
-
-// Preserve logical Unicode text. Let OOXML and the reader perform visual ordering.
-export function paragraphDirection(text: string, mode: Direction): 'rtl' | 'ltr' {
-  if (mode !== 'auto') return mode;
-  return paragraphBaseDirection(text);
-}
+import type { RootContent, PhrasingContent, List, Table as MdTable } from 'mdast';
 
 type Leaf = { text: string; style: IRunOptions; href?: string; math?: ParagraphChild; code?: boolean; break?: boolean };
-function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href?: string): Leaf[] {
+function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href?: string, context?: MarkdownContext): Leaf[] {
   return nodes.flatMap((n): Leaf[] => {
     switch (n.type) {
       case 'inlineMath': return [{ text: '\ufffc', style, href, math: wordMath(n.value) }];
-      case 'text': return [{ text: n.value, style, href }];
-      case 'strong': return leaves(n.children, { ...style, bold: true, boldComplexScript: true }, href);
-      case 'emphasis': return leaves(n.children, { ...style, italics: true, italicsComplexScript: true }, href);
-      case 'delete': return leaves(n.children, { ...style, strike: true }, href);
+      case 'text': return [{ text: flowingText(n.value), style, href }];
+      case 'strong': return leaves(n.children, { ...style, bold: true, boldComplexScript: true }, href, context);
+      case 'emphasis': return leaves(n.children, { ...style, italics: true, italicsComplexScript: true }, href, context);
+      case 'delete': return leaves(n.children, { ...style, strike: true }, href, context);
       case 'inlineCode': return [{ text: n.value, style: { ...style, font: codeRunFont, color: '145A53', shading: { fill: 'EDF5F3', type: ShadingType.CLEAR } }, code: true }];
-      case 'link': return leaves(n.children, style, /^(https?:|mailto:)/i.test(n.url) ? n.url : undefined);
+      case 'link': return leaves(n.children, style, /^(https?:|mailto:)/i.test(n.url) ? n.url : undefined, context);
       case 'break': return [{ text: '\n', style, break: true }];
       case 'image': return [{ text: `[تصویر: ${n.alt || 'بدون عنوان'}]`, style }];
       case 'html': return /^<br\s*\/?\s*>$/i.test(n.value)
         ? [{ text: '\n', style, href, break: true }]
         : [{ text: n.value, style }];
       case 'footnoteReference': return [{ text: `[${n.label || n.identifier}]`, style }];
-      case 'linkReference': return leaves(n.children, style);
+      case 'linkReference': {
+        const url = context?.definitions.get(n.identifier.toLowerCase())?.url;
+        return leaves(n.children, style, url && /^(https?:|mailto:)/i.test(url) ? url : undefined, context);
+      }
       case 'imageReference': return [{ text: `[تصویر: ${n.alt || n.identifier}]`, style }];
       default: return [];
     }
@@ -62,7 +48,10 @@ function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href
 }
 
 export function createWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], diagrams: ReadonlyMap<string, Diagram> = new Map()): Document {
-  const root = parser.parse(markdown) as Root;
+  return createPreparedWord(markdownContext(markdown), settings, fonts, diagrams);
+}
+function createPreparedWord(context: MarkdownContext, settings: ExportSettings, fonts: FontBundle[], diagrams: ReadonlyMap<string, Diagram>): Document {
+  const { root } = context;
   const numbering: NumberingDefinition[] = [];
   let listId = 0;
   let usesDelimiterFont = false;
@@ -79,7 +68,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
   }
 
   function para(nodes: readonly PhrasingContent[], extra: IParagraphOptions = {}) {
-    const pieces = fallbackPieces(leaves(nodes));
+    const pieces = fallbackPieces(leaves(nodes, {}, undefined, context));
     const text = pieces.map(p => p.text).join('');
     const dir = paragraphDirection(text, settings.direction);
     const rtl = dir === 'rtl';
@@ -147,7 +136,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
 
   function list(node: List, depth = 0): (Paragraph | Table)[] {
     const reference = `list-${++listId}`;
-    const flat = node.children.map(item => item.children.map(n => 'children' in n ? leaves(n.children as PhrasingContent[]).map(l => l.text).join('') : '').join('')).join(' ');
+    const flat = node.children.map(item => item.children.map(n => 'children' in n ? leaves(n.children as PhrasingContent[], {}, undefined, context).map(l => l.text).join('') : '').join('')).join(' ');
     const rtl = !settings.alignmentOnly && paragraphDirection(flat, settings.direction) === 'rtl';
     numbering.push({ reference, levels: Array.from({ length: 9 }, (_, level) => ({
       level,
@@ -173,7 +162,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
   }
 
   function table(node: MdTable) {
-    const content = node.children.flatMap(r => r.children.flatMap(c => leaves(c.children).map(l => l.text))).join(' ');
+    const content = node.children.flatMap(r => r.children.flatMap(c => leaves(c.children, {}, undefined, context).map(l => l.text))).join(' ');
     const rtl = !settings.alignmentOnly && paragraphDirection(content, settings.direction) === 'rtl';
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -205,7 +194,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
         if (mathLanguage(node.lang)) return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER })];
         if (node.lang?.toLowerCase() === 'mermaid') {
           const diagram = diagrams.get(node.value);
-          if (!diagram) throw new RichContentError('نمودار هنوز برای خروجی آماده نشده است. دوباره امتحان کن.');
+          if (!diagram) throw new RichContentError('DIAGRAM_NOT_READY');
           const scale = Math.min(1, 620 / diagram.width, 760 / diagram.height);
           return [new Paragraph({ bidirectional: false, alignment: AlignmentType.CENTER, children: [new ImageRun({
             type: 'png', data: diagram.png, transformation: { width: Math.max(1, Math.round(diagram.width * scale)), height: Math.max(1, Math.round(diagram.height * scale)) },
@@ -258,7 +247,7 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
     fonts: embeddedFonts,
     sections: [{ properties: { page: { size: { width: documentLayout.width, height: documentLayout.height }, margin: { ...documentLayout.margins } } }, children }],
   });
-  if (documentFontUsage(markdown).math) document.Settings.addChildElement(new BuilderElement({
+  if (documentFontUsage(root).math) document.Settings.addChildElement(new BuilderElement({
     name: 'm:mathPr', attributes: { xmlns: { key: 'xmlns:m', value: 'http://schemas.openxmlformats.org/officeDocument/2006/math' } },
     children: [new BuilderElement({ name: 'm:mathFont', attributes: { val: { key: 'm:val', value: mathFont } } })],
   }));
@@ -266,6 +255,12 @@ export function createWord(markdown: string, settings: ExportSettings, fonts: Fo
 }
 
 export async function exportWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid): Promise<Uint8Array> {
+  return exportPreparedWord(markdownContext(markdown), settings, fonts, renderer);
+}
+
+/** One operation owns its source, parsed tree and font/diagram inputs. */
+export async function exportPreparedWord(context: MarkdownContext, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid): Promise<Uint8Array> {
+  settings = { ...settings };
   const diagrams = new Map<string, Diagram>();
   async function prepare(node: { type: string; lang?: string | null; value?: string; children?: readonly unknown[] }): Promise<void> {
     if (node.type === 'code' && node.lang?.toLowerCase() === 'mermaid' && node.value !== undefined && !diagrams.has(node.value)) {
@@ -273,8 +268,8 @@ export async function exportWord(markdown: string, settings: ExportSettings, fon
     }
     if (node.children) for (const child of node.children) await prepare(child as Parameters<typeof prepare>[0]);
   }
-  await prepare(parser.parse(markdown));
-  return new Uint8Array(await Packer.toArrayBuffer(createWord(markdown, settings, fonts, diagrams)));
+  await prepare(context.root);
+  return new Uint8Array(await Packer.toArrayBuffer(createPreparedWord(context, settings, fonts, diagrams)));
 }
 
 export function safeFilename(title: string): string {

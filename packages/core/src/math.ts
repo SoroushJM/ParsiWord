@@ -8,9 +8,9 @@ import { bundledFont, mathFont } from './font-assets';
 const supported = new Set('math menclose mfrac mglyph mi mmultiscripts mn mo mover mroot mrow ms mspace msqrt mstyle msub msubsup msup mtable mtd mtext mtr munder munderover semantics'.split(' '));
 const options = { trust: false, throwOnError: true, maxExpand: 1000, maxSize: 20 } as const;
 export function renderMath(source: string, displayMode = false, output: 'htmlAndMathml' | 'mathml' = 'htmlAndMathml'): string {
-  if (source.length > 20_000) throw new RichContentError('فرمول بیش از حد طولانی است. آن را کوتاه‌تر کن.');
+  if (source.length > 20_000) throw new RichContentError('MATH_TOO_LARGE');
   try { return katex.renderToString(source, { ...options, displayMode, output }); }
-  catch { throw new RichContentError('فرمول LaTeX معتبر نیست یا پشتیبانی نمی‌شود. متن فرمول را بررسی کن.'); }
+  catch (cause) { throw new RichContentError('MATH_INVALID', { cause }); }
 }
 
 // Extend docx's public XML builder. Text is serialized and escaped by docx.
@@ -80,6 +80,6 @@ export function wordMath(source: string, display = false): ParagraphChild {
     return new MathElement(element) as ParagraphChild;
   } catch (error) {
     if (error instanceof RichContentError) throw error;
-    throw new RichContentError('این ساختار فرمول هنوز به Word تبدیل نمی‌شود. فرمول را ساده‌تر کن.');
+    throw new RichContentError('MATH_WORD_UNSUPPORTED', { cause: error });
   }
 }

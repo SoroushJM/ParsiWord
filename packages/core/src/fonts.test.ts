@@ -30,12 +30,14 @@ describe('font downloads are stored for offline Word exports', () => {
   it('does not mark a partially downloaded family as cached', async () => {
     const bytes = new Uint8Array(await readFile('packages/core/public/fonts/Vazirmatn-Regular.ttf'));
     const download = vi.fn().mockResolvedValueOnce(bytes).mockRejectedValueOnce(new Error('network'));
-    await expect(ensureFont({ family: 'Partial Test', arabic: false, weights: [400, 700] }, download)).rejects.toThrow('network');
+    await expect(ensureFont({ family: 'Partial Test', arabic: false, weights: [400, 700] }, download)).rejects.toMatchObject({ code: 'FONT_NETWORK', cause: expect.objectContaining({ message: 'network' }) });
     expect(await cachedFonts()).toHaveLength(0);
   });
   it('rejects WOFF2 or an HTML error page instead of embedding it as a TrueType font', () => {
-    expect(() => validateFont(new TextEncoder().encode('wOF2' + 'x'.repeat(50)))).toThrow('FONT_FORMAT');
-    expect(() => validateFont(new TextEncoder().encode('<html>server error</html>'))).toThrow('FONT_FORMAT');
+    for (const text of ['wOF2' + 'x'.repeat(50), '<html>server error</html>']) {
+      try { validateFont(new TextEncoder().encode(text)); throw new Error('Expected invalid font'); }
+      catch (error) { expect(error).toMatchObject({ code: 'FONT_FORMAT' }); }
+    }
   });
 });
 
@@ -99,4 +101,22 @@ it('ships static TTF URLs for every searchable family with distinct regular/bold
     expect(faces['700']).toBeTruthy();
     expect(faces['400']).not.toBe(faces['700']);
   }
+});
+
+it('classifies unavailable catalogue, network and storage services by code, preserving the cause', async () => {
+  vi.resetModules();
+  const { refreshCatalogue, downloadFace, cachedFonts, fontError } = await import('./fonts');
+  const unavailable = new TypeError('FONT_TOO_LARGE is provider text, not an IPC code');
+  const fetch = vi.fn().mockRejectedValueOnce(unavailable);
+  vi.stubGlobal('fetch', fetch);
+  try {
+    await expect(refreshCatalogue()).rejects.toMatchObject({ code: 'FONT_CATALOGUE', cause: unavailable });
+    fetch.mockResolvedValueOnce(Response.json({ families: [{ family: 'Network Test', weights: [400], faces: { '400': 'https://fonts.gstatic.com/s/test/font.ttf' } }] }));
+    fetch.mockRejectedValueOnce(unavailable);
+    await expect(downloadFace('Network Test', 400)).rejects.toMatchObject({ code: 'FONT_NETWORK', cause: unavailable });
+    vi.stubGlobal('indexedDB', { open: () => { throw unavailable; } });
+    await expect(cachedFonts()).rejects.toMatchObject({ code: 'FONT_STORAGE', cause: unavailable });
+    expect(fontError({ code: 'FONT_TOO_LARGE' })).toContain('بیش از حد بزرگ');
+    expect(fontError(new Error('FONT_TOO_LARGE'))).toContain('اتصال اینترنت');
+  } finally { vi.unstubAllGlobals(); }
 });

@@ -1,0 +1,109 @@
+{
+  "revision": "f38dde8",
+  "recordedDate": "2026-10-23",
+  "unitTests": {
+    "command": "pnpm test",
+    "testsPassed": 911,
+    "filesPassed": 15
+  },
+  "productionBuild": {
+    "command": "pnpm run build",
+    "passed": true,
+    "warning": "Existing chunks exceed 500 kB; no performance conclusion inferred from warning alone."
+  },
+  "source": {
+    "schemaVersion": 1,
+    "label": "before-refactor-f38dde8",
+    "recordedAt": "2026-10-23T11:23:09.252Z",
+    "environment": {
+      "browserVersion": "156.0.8078.4",
+      "nodeVersion": "v24.8.0",
+      "platform": "win32",
+      "architecture": "x64"
+    },
+    "protocol": {
+      "editor": "source",
+      "fixture": "packages/core/src/default-document.md",
+      "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+      "repeat": 1,
+      "characters": 28147,
+      "viewport": {
+        "width": 393,
+        "height": 851
+      },
+      "cpuThrottleRate": 4,
+      "input": " typing responsiveness benchmark",
+      "keyDelayMs": 35,
+      "settleBeforeMs": 800,
+      "settleAfterMs": 1200,
+      "cpuProfiler": true,
+      "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+    },
+    "measurements": {
+      "keys": 32,
+      "elapsedMs": 3549,
+      "latencyMedianMs": 25,
+      "latencyP95Ms": 63,
+      "longTaskCount": 4,
+      "longTaskTotalMs": 556,
+      "maxLongTaskMs": 258
+    },
+    "sourceRendering": {
+      "overlayAvailable": true,
+      "highlighted": true,
+      "initialLineCount": 1263,
+      "mutatedLineIndexes": [
+        2
+      ],
+      "originalLineNodesStillConnected": 1263,
+      "finalLineCount": 1263,
+      "sourceMatchesExpected": true,
+      "overlayMatchesNativeValue": true,
+      "coloredInputFrames": 32,
+      "staleHighlightFrames": 0
+    }
+  },
+  "rich": {
+    "schemaVersion": 1,
+    "label": "before-refactor-f38dde8",
+    "recordedAt": "2026-10-23T11:24:42.439Z",
+    "environment": {
+      "browserVersion": "156.0.8078.4",
+      "nodeVersion": "v24.8.0",
+      "platform": "win32",
+      "architecture": "x64"
+    },
+    "protocol": {
+      "editor": "preview",
+      "fixture": "packages/core/src/default-document.md",
+      "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+      "repeat": 1,
+      "characters": 28147,
+      "viewport": {
+        "width": 393,
+        "height": 851
+      },
+      "cpuThrottleRate": 4,
+      "input": " typing responsiveness benchmark",
+      "keyDelayMs": 35,
+      "settleBeforeMs": 800,
+      "settleAfterMs": 1200,
+      "cpuProfiler": true,
+      "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+    },
+    "measurements": {
+      "keys": 32,
+      "elapsedMs": 4234,
+      "latencyMedianMs": 47,
+      "latencyP95Ms": 63,
+      "longTaskCount": 8,
+      "longTaskTotalMs": 586,
+      "maxLongTaskMs": 155
+    }
+  },
+  "baselineBuildDirectory": "artifacts/architecture-baseline-f38dde8",
+  "limits": [
+    "Single run per input mode; not native Android/iOS latency.",
+    "Default fixture baseline only; pathological document cases remain to be profiled."
+  ]
+}

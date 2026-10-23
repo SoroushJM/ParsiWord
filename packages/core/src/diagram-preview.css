@@ -6,6 +6,9 @@
 
 .mermaid-diagram .mermaid-canvas {
   margin-inline: auto;
+  /* Mermaid's cached SVG has its own light palette and is reused by exports. */
+  background: #fff;
+  border-radius: 0.25rem;
 }
 
 .mermaid-diagram .mermaid-canvas > svg {
@@ -17,13 +20,13 @@
 }
 
 .mermaid-diagram:focus-visible {
-  outline: 2px solid #167d69;
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
 .mermaid-scroll-hint {
-  margin: -.5em 0 1em;
-  color: #6a8174;
+  margin: -0.5em 0 1em;
+  color: var(--muted-foreground);
   font-size: 11px;
   text-align: center;
 }

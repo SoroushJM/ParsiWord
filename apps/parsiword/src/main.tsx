@@ -1,14 +1,11 @@
 import './host';
-import '@parsiword/core/globals.css';
-import '@parsiword/core/App.css';
+import '@parsiword/core/styles.css';
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "@parsiword/core/App";
-import { LocaleProvider } from '@parsiword/core/locale';
-import '@parsiword/core/locale.css';
+import { EditorApp, LocaleProvider } from '@parsiword/core/ui';
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <LocaleProvider><App /></LocaleProvider>
+    <LocaleProvider><EditorApp /></LocaleProvider>
   </React.StrictMode>,
 );

@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import type { DocumentViewMode } from './host';
 
 type View = 'edit' | 'preview';
 type Point = { source: number; top: number; start?: boolean };
@@ -70,8 +71,9 @@ export function usePreviewScroll(
   preview: RefObject<HTMLDivElement | null>,
   markdown: string,
   previewMarkdown: string,
+  mode: DocumentViewMode = 'combined',
 ) {
-  const [mobileView, setMobileView] = useState<View>('edit');
+  const [mobileView, setMobileView] = useState<View>(mode === 'rendered' ? 'preview' : 'edit');
   const [mobile, setMobile] = useState(() => matchMedia(mobileQuery).matches);
   const editorMap = useRef<Point[]>([]);
   const previewMap = useRef<Point[]>([]);
@@ -161,22 +163,25 @@ export function usePreviewScroll(
   }, [editor, preview, readingTop]);
 
   const selectView = useCallback((view: View) => {
+    if (mode !== 'combined') return;
     if (view === mobileView) return;
     measure();
     read(matchMedia(mobileQuery).matches ? mobileView : driver.current);
     restore.current = true;
     driver.current = view;
     setMobileView(view);
-  }, [mobileView, measure, read]);
+  }, [mobileView, measure, read, mode]);
 
   const activateView = useCallback((view: View) => {
+    if (mode !== 'combined') { driver.current = view; return; }
     if (driver.current === view) return;
     driver.current = view;
     measure();
     read(view);
-  }, [measure, read]);
+  }, [measure, read, mode]);
 
   useLayoutEffect(() => {
+    if (mode !== 'combined') return;
     const media = matchMedia(mobileQuery);
     const onChange = () => {
       // The last logical source position survives a responsive layout change.
@@ -185,7 +190,7 @@ export function usePreviewScroll(
     };
     media.addEventListener('change', onChange);
     return () => media.removeEventListener('change', onChange);
-  }, []);
+  }, [mode]);
 
   useLayoutEffect(() => {
     // Source text remains current immediately. Expensive DOM maps are needed
@@ -195,6 +200,7 @@ export function usePreviewScroll(
   }, [markdown, previewMarkdown]);
 
   useLayoutEffect(() => {
+    if (mode !== 'combined') return;
     const input = editor.current, panel = preview.current;
     if (!input || !panel) return;
     let frame = 0;
@@ -309,7 +315,7 @@ export function usePreviewScroll(
       document.fonts.removeEventListener('loadingdone', onFontsLoaded);
       panel.removeEventListener('scroll', onPreviewScroll);
     };
-  }, [mobile, mobileView, editor, preview, measure, read, write, layoutSize]);
+  }, [mobile, mobileView, editor, preview, measure, read, write, layoutSize, mode]);
 
-  return { mobileView, selectView, activateView };
+  return { mobileView: mode === 'rendered' ? 'preview' as const : mode === 'source' ? 'edit' as const : mobileView, selectView, activateView };
 }

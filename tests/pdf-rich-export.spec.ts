@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import tauri from '../apps/parsiword/src-tauri/tauri.conf.json' with { type: 'json' };
+import JSZip from 'jszip';
 
 test('offline PDF contains visible local formula and Mermaid images alongside searchable text', async ({ page }) => {
   test.setTimeout(90_000);
@@ -36,4 +37,50 @@ test('offline PDF contains visible local formula and Mermaid images alongside se
       expect(dark).toBeGreaterThan(30);
     }
   } finally { await pdf.destroy(); }
+});
+
+test('fresh light and dark contexts export the same real local math, Mermaid, styles and fonts', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const markdown = '# خروجی مستقل از ظاهر\n\nمتن فارسی THEMEEXPORT با $\\frac{x^2+1}{2}$ و **پررنگ**.\n\n```typescript\nconst value = 42; // ثابت\n```\n\n```mermaid\nflowchart LR\n A[شروع فارسی] --> B[React 19]\n```';
+  const outputs = [];
+  for (const theme of ['light', 'dark']) {
+    // Separate realms isolate renderer/module/font caches: a light render
+    // cannot hide a dark-theme dependency in the second export.
+    const context = await browser.newContext({ viewport: { width: 1366, height: 900 }, colorScheme: theme as 'light' | 'dark' });
+    try {
+      const page = await context.newPage();
+      await page.addInitScript(({ markdown, theme }) => {
+        localStorage.setItem('parsiword-display-theme-v1', theme);
+        localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown, settings: { title: 'Theme export', direction: 'auto' } }));
+      }, { markdown, theme });
+      await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort());
+      await page.goto('/');
+      await expect(page.locator('html')).toHaveAttribute('data-display-theme', theme);
+      await expect(page.locator('.rich-document .katex')).toHaveCount(1);
+      await expect(page.locator('.mermaid-diagram svg')).toHaveCount(1, { timeout: 30_000 });
+      await page.evaluate(() => document.fonts.ready);
+      let pending = page.waitForEvent('download');
+      await page.getByRole('button', { name: /ذخیرهٔ فایل Word/ }).click();
+      const zip = await JSZip.loadAsync(await readFile((await (await pending).path())!));
+      const documentXml = (await zip.file('word/document.xml')!.async('string')).replace(/r:embed="[^"]+"/g, 'r:embed="IMAGE"').replace(/<wp:docPr id="\d+"/g, '<wp:docPr id="IMAGE"');
+      const styles = await zip.file('word/styles.xml')!.async('string');
+      const media = await Promise.all(zip.file(/^word\/media\/.*\.png$/).map(file => file.async('base64')));
+      const embeddedFonts = zip.file(/^word\/fonts\/.*\.odttf$/);
+      expect(documentXml).toContain('<m:oMath '); expect(media).toHaveLength(1); expect(embeddedFonts.length).toBeGreaterThan(0);
+      await page.getByRole('button', { name: 'قالب‌های دیگر خروجی', exact: true }).click();
+      pending = page.waitForEvent('download');
+      await page.getByRole('menuitem', { name: 'ذخیرهٔ فایل PDF', exact: true }).click();
+      const bytes = await readFile((await (await pending).path())!);
+      expect(bytes.toString('latin1')).toContain('/FontFile2');
+      const pdf = await getDocument({ data: new Uint8Array(bytes), useSystemFonts: false, disableFontFace: true, isEvalSupported: false }).promise;
+      try {
+        const first = await pdf.getPage(1), operators = await first.getOperatorList();
+        const text = (await first.getTextContent()).items.filter(item => 'str' in item).map(item => item.str).join(' ');
+        const images = [...bytes.toString('latin1').matchAll(/\d+ \d+ obj([\s\S]*?)endobj/g)].filter(match => /\/Subtype\s*\/Image/.test(match[1])).map(match => match[1]);
+        expect(text).toContain('THEMEEXPORT'); expect(images.length).toBeGreaterThanOrEqual(2);
+        outputs.push({ documentXml, styles, media, fontCount: embeddedFonts.length, text, functions: operators.fnArray, arguments: JSON.stringify(operators.argsArray).replace(/g_d\d+_f/g, 'g_DOCUMENT_f'), images });
+      } finally { await pdf.destroy(); }
+    } finally { await context.close(); }
+  }
+  expect(outputs[0]).toEqual(outputs[1]);
 });

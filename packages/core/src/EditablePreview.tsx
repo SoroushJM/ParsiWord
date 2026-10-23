@@ -3,10 +3,11 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TableKit } from '@tiptap/extension-table';
-import type { Direction } from './converter';
-import { parseRichMarkdown, serializeRichBlock, type SourcePosition } from './rich-editor-markdown';
+import type { Direction } from './document-model';
+import { parseRichMarkdown, type SourcePosition } from './rich-editor-markdown';
+import { RichSourceDocument, replaceRichSourceState } from './rich-source';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { MathBlock, MathInline, MarkdownLengthLimit, RawBlock, RawInline, RichCodeBlock, RichListItem, sourceAnnotations } from './rich-editor-extensions';
+import { MathBlock, MathInline, MarkdownLengthLimit, RawBlock, RawInline, ReferenceMetadata, RichCodeBlock, RichListItem, sourceAnnotations } from './rich-editor-extensions';
 import { RichToolbar } from './RichToolbar';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
@@ -15,9 +16,12 @@ import './editable-preview.css';
 type Props = {
   markdown: string; direction: Direction; fontFamily: string; fontSize: number;
   onChange: (markdown: string) => void; onStartWriting: () => void;
+  onCompositionChange?: (composing: boolean) => void;
+  onRejected?: (code: 'FILE_TOO_LARGE') => void;
+  readOnly?: boolean;
 };
 
-export const EditablePreview = memo(function EditablePreview({ markdown, direction, fontFamily, fontSize, onChange, onStartWriting }: Props) {
+export const EditablePreview = memo(function EditablePreview({ markdown, direction, fontFamily, fontSize, onChange, onStartWriting, onCompositionChange, onRejected, readOnly = false }: Props) {
   const { t } = useLocale();
   const onChangeRef = useRef(onChange);
   const applied = useRef(markdown);
@@ -26,57 +30,21 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
   const latestMarkdown = useRef(markdown);
   const externalSyncVersion = useRef(0);
   const annotationFrame = useRef(0);
-  const preservedBlocks = useRef(new Map<string, string[]>());
-  const blockSnapshots = useRef(new WeakMap<ProseMirrorNode, { text: string; fingerprint: string }>());
+  const ledger = useRef(new RichSourceDocument());
+  const compositionChange = useRef(onCompositionChange);
+  const rejected = useRef(onRejected);
   const cachedEditor = useRef<Editor | null>(null);
-  const serialization = useRef<{ doc: ProseMirrorNode | null; text: string; positions: SourcePosition[] }>({ doc: null, text: '', positions: [] });
   const externalPositions = useRef<SourcePosition[] | null>(null);
   const [initial] = useState(() => parseRichMarkdown(markdown));
   onChangeRef.current = onChange;
+  compositionChange.current = onCompositionChange;
+  rejected.current = onRejected;
   directionRef.current = direction;
   latestMarkdown.current = markdown;
-  const documentSnapshot = useCallback((doc: ProseMirrorNode) => {
-    if (serialization.current.doc === doc) return serialization.current;
-    const blocks: string[] = [];
-    const positions: SourcePosition[] = [];
-    const occurrences = new Map<string, number>();
-    let offset = 0;
-    doc.forEach(node => {
-      let block = blockSnapshots.current.get(node);
-      if (!block) {
-        const json = node.toJSON();
-        const fingerprint = JSON.stringify(json);
-        const occurrence = occurrences.get(fingerprint) || 0;
-        block = { fingerprint, text: preservedBlocks.current.get(fingerprint)?.[occurrence] ?? serializeRichBlock(json) };
-        blockSnapshots.current.set(node, block);
-      }
-      occurrences.set(block.fingerprint, (occurrences.get(block.fingerprint) || 0) + 1);
-      blocks.push(block.text);
-      positions.push({ start: offset, end: offset + block.text.length });
-      offset += block.text.length + 2;
-    });
-    const text = blocks.join('\n\n');
-    serialization.current = { doc, text, positions };
-    return serialization.current;
-  }, []);
-  const serializeDocument = useCallback((doc: ProseMirrorNode) => documentSnapshot(doc).text, [documentSnapshot]);
-  const sourcePositions = useCallback((doc: ProseMirrorNode) => externalPositions.current || documentSnapshot(doc).positions, [documentSnapshot]);
-  const preserveSources = useCallback((editor: Editor, value: string, positions: SourcePosition[]) => {
-    preservedBlocks.current = new Map();
-    blockSnapshots.current = new WeakMap();
-    let index = 0;
-    editor.state.doc.forEach(node => {
-      const span = positions[index++];
-      if (span) {
-        const fingerprint = JSON.stringify(node.toJSON());
-        const variants = preservedBlocks.current.get(fingerprint) || [];
-        const text = value.slice(span.start, span.end);
-        variants.push(text);
-        preservedBlocks.current.set(fingerprint, variants);
-        blockSnapshots.current.set(node, { text, fingerprint });
-      }
-    });
-    serialization.current = { doc: editor.state.doc, text: value, positions };
+  const documentSnapshot = useCallback((doc: ProseMirrorNode) => ledger.current.snapshot(doc), []);
+  const sourcePositions = useCallback((doc: ProseMirrorNode) => externalPositions.current || (cachedEditor.current ? documentSnapshot(doc).positions : initial.positions), [documentSnapshot, initial.positions]);
+  const preserveSources = useCallback((editor: Editor, value: string, parsed: ReturnType<typeof parseRichMarkdown>) => {
+    ledger.current.reset(editor.state.doc, value, parsed.positions, parsed.definitions);
   }, []);
   const annotate = useCallback((editor: Editor) => {
     if (editor.isDestroyed) return;
@@ -91,20 +59,29 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
       StarterKit.configure({ codeBlock: false, listItem: false, underline: false, trailingNode: false,
         link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'preview-link' } } }),
       RichCodeBlock, RichListItem, TableKit.configure({ table: { resizable: false, renderWrapper: true } }),
-      MathInline, MathBlock, RawInline, RawBlock, MarkdownLengthLimit.configure({ serialize: serializeDocument }),
+      MathInline, MathBlock, RawInline, RawBlock, ReferenceMetadata.configure({ refresh: state => ledger.current.refreshReferences(state) }),
+      MarkdownLengthLimit.configure({ snapshot: (transaction, state) => {
+        if (cachedEditor.current === null) ledger.current.reset(transaction.before, source.current, initial.positions, initial.definitions);
+        return { previous: ledger.current.snapshot(transaction.before).text, next: ledger.current.prepare(transaction, state).text };
+      }, onRejected: code => rejected.current?.(code) }),
       sourceAnnotations(sourcePositions, () => directionRef.current),
-    ], [serializeDocument, sourcePositions]);
+    ], [sourcePositions, initial]);
   const editor = useEditor({
     extensions,
     shouldRerenderOnTransaction: false,
+    editable: !readOnly,
     content: initial.document,
     editorProps: {
       attributes: { class: 'prose rich-document', role: 'textbox', 'aria-label': t("ویرایش پیش‌نمایش"), 'aria-multiline': 'true', spellcheck: 'false' },
+      handleDOMEvents: {
+        compositionstart: () => { compositionChange.current?.(true); return false; },
+        compositionend: () => { compositionChange.current?.(false); return false; },
+      },
     },
     onCreate: ({ editor }) => scheduleAnnotation(editor),
     onUpdate: ({ editor }) => {
       externalSyncVersion.current++;
-      const next = serializeDocument(editor.state.doc);
+      const next = ledger.current.commit(editor.state.doc, editor.state).text;
       applied.current = next;
       source.current = next;
       onChangeRef.current(next);
@@ -113,10 +90,10 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
 
   useLayoutEffect(() => {
     if (editor && cachedEditor.current !== editor) {
-      preserveSources(editor, source.current, initial.positions);
+      preserveSources(editor, source.current, initial);
       cachedEditor.current = editor;
     }
-  }, [editor, initial.positions, preserveSources]);
+  }, [editor, initial, preserveSources]);
 
   useLayoutEffect(() => {
     const version = ++externalSyncVersion.current;
@@ -133,8 +110,8 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
       const parsed = parseRichMarkdown(markdown);
       externalPositions.current = parsed.positions;
       try {
-        editor.commands.setContent(parsed.document, { emitUpdate: false });
-        preserveSources(editor, markdown, parsed.positions);
+        editor.view.updateState(replaceRichSourceState(editor.state, parsed.document));
+        preserveSources(editor, markdown, parsed);
       } finally { externalPositions.current = null; }
       scheduleAnnotation(editor);
     });
@@ -148,15 +125,16 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
     scheduleAnnotation(editor);
   }, [editor, direction, fontFamily, fontSize, scheduleAnnotation]);
   useEffect(() => {
-    if (editor) editor.view.dom.setAttribute('aria-label', t('ویرایش پیش‌نمایش'));
-  }, [editor, t]);
+    if (editor) editor.view.dom.setAttribute('aria-label', t(readOnly ? 'پیش‌نمایش' : 'ویرایش پیش‌نمایش'));
+  }, [editor, t, readOnly]);
+  useEffect(() => { editor?.setEditable(!readOnly, false); editor?.view.dom.setAttribute('aria-readonly', String(readOnly)); }, [editor, readOnly]);
   useEffect(() => () => cancelAnimationFrame(annotationFrame.current), []);
 
   return <>
-    {editor && <RichToolbar editor={editor} />}
+    {editor && !readOnly && <RichToolbar editor={editor} />}
     <article className="editable-preview-content" data-empty={!markdown.trim()}><EditorContent editor={editor} />
-      {!markdown.trim() && <Empty className="rich-empty"><EmptyHeader><EmptyTitle>{t("هنوز چیزی ننوشته‌ای.")}</EmptyTitle><EmptyDescription>{t("اینجا بنویس یا از ویرایش Markdown شروع کن.")}</EmptyDescription></EmptyHeader><EmptyContent><Button type="button" variant="outline" onClick={onStartWriting}>{t("شروع نوشتن")}</Button></EmptyContent></Empty>}
+      {!markdown.trim() && <Empty className="rich-empty"><EmptyHeader><EmptyTitle>{t("هنوز چیزی ننوشته‌ای.")}</EmptyTitle><EmptyDescription>{t(readOnly ? 'برای نوشتن، ویرایش Markdown را باز کن.' : 'اینجا بنویس یا از ویرایش Markdown شروع کن.')}</EmptyDescription></EmptyHeader><EmptyContent><Button type="button" variant="outline" onClick={onStartWriting}>{t("شروع نوشتن")}</Button></EmptyContent></Empty>}
     </article>
-    <p className="preview-disclaimer">{t("اینجا مستقیماً ویرایش کن؛ تغییرات در Markdown ذخیره می‌شوند. صفحه‌بندی نهایی را در Word بررسی کن.")}</p>
+    <p className="preview-disclaimer">{t(readOnly ? 'پیش‌نمایش متن است؛ صفحه‌بندی و نمایش نهایی را در Word بررسی کن.' : 'اینجا مستقیماً ویرایش کن؛ تغییرات در Markdown ذخیره می‌شوند. صفحه‌بندی نهایی را در Word بررسی کن.')}</p>
   </>;
 });

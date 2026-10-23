@@ -35,6 +35,12 @@ describe('native file operations across desktop and mobile', () => {
   });
   it('rejects oversized drafts without importing them', async () => {
     api.open.mockResolvedValue('/sample.md'); api.read.mockResolvedValue('x'.repeat(500001));
-    await expect(openMarkdown()).rejects.toThrow('FILE_TOO_LARGE');
+    await expect(openMarkdown()).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
+  });
+  it('classifies failed native reads and writes without matching error messages', async () => {
+    api.open.mockResolvedValue('/sample.md'); api.read.mockRejectedValue(new Error('FILE_TOO_LARGE is just provider text'));
+    await expect(openMarkdown()).rejects.toMatchObject({ code: 'FILE_OPEN_FAILED' });
+    api.save.mockResolvedValue('/sample.docx'); api.write.mockRejectedValue(new Error('permission denied'));
+    await expect(saveDocx(new Uint8Array([1]), 'sample.docx')).rejects.toMatchObject({ code: 'FILE_SAVE_FAILED' });
   });
 });

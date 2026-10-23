@@ -17,7 +17,7 @@ function fontSizeKeys(config: unknown): string[] {
 }
 
 async function render(source: string): Promise<Diagram> {
-  if (source.length > 50_000) throw new RichContentError('نمودار بیش از حد بزرگ است. آن را به چند نمودار تقسیم کن.');
+  if (source.length > 50_000) throw new RichContentError('DIAGRAM_TOO_LARGE');
   const { default: mermaid } = await import('mermaid');
   mermaid.initialize({
     startOnLoad: false, securityLevel: 'strict', theme: 'default',
@@ -68,7 +68,11 @@ async function render(source: string): Promise<Diagram> {
 export function renderMermaid(source: string): Promise<Diagram> {
   const existing = cache.get(source);
   if (existing) return existing;
-  const result = queue.then(() => render(source)).catch(() => { cache.delete(source); throw new RichContentError('نمودار Mermaid رسم نشد. دستورهای نمودار را بررسی کن.'); });
+  const result = queue.then(() => render(source)).catch(cause => {
+    cache.delete(source);
+    if (cause instanceof RichContentError) throw cause;
+    throw new RichContentError('DIAGRAM_RENDER_FAILED', { cause });
+  });
   queue = result.then(() => undefined, () => undefined);
   cache.set(source, result);
   if (cache.size > 8) cache.delete(cache.keys().next().value!);

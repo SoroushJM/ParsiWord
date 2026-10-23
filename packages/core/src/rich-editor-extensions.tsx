@@ -4,21 +4,22 @@ import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { CodeBlock } from '@tiptap/extension-code-block';
 import { ListItem } from '@tiptap/extension-list';
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Plugin, PluginKey, type Transaction, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { MathView, MermaidView } from './RichPreview';
 import { highlightCode } from './code-highlight';
 import { mathLanguage } from './rich-content';
-import { paragraphDirection, type Direction } from './converter';
-import type { SourcePosition } from './rich-editor-markdown';
+import { paragraphDirection, type Direction } from './document-model';
+import { canApplyMarkdown } from './document-limits';
+import { rawMarkdownLabel, type SourcePosition } from './rich-editor-markdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-function CodeBlockView({ node }: NodeViewProps) {
+function CodeBlockView({ node, editor }: NodeViewProps) {
   const { t } = useLocale();
   const language = String(node.attrs.language || '');
   const diagram = language.toLowerCase() === 'mermaid';
@@ -28,7 +29,7 @@ function CodeBlockView({ node }: NodeViewProps) {
   return <NodeViewWrapper className={diagram || math ? 'rich-source-block' : 'code-block'} dir="ltr" data-language={code.language || ''}>
     {diagram || math ? <>
       <div contentEditable={false}>{diagram ? <MermaidView source={node.textContent} /> : <MathView source={node.textContent} display />}</div>
-      <details className="rich-source-details"><summary contentEditable={false}>{diagram ? t("ویرایش نمودار") : t("ویرایش فرمول")}</summary><pre><NodeViewContent<'code'> as="code" /></pre></details>
+      {editor.isEditable && <details className="rich-source-details"><summary contentEditable={false}>{diagram ? t("ویرایش نمودار") : t("ویرایش فرمول")}</summary><pre><NodeViewContent<'code'> as="code" /></pre></details>}
     </> : <><figcaption contentEditable={false}>{code.label}</figcaption><pre><NodeViewContent<'code'> as="code" /></pre></>}
   </NodeViewWrapper>;
 }
@@ -47,7 +48,7 @@ export const RichCodeBlock = CodeBlock.extend({
         for (const token of line) {
           if (token.scope && token.text.length) decorations.push(Decoration.inline(offset, offset + token.text.length, {
             'data-scope': token.scope,
-            style: `color:#${token.color};${token.bold ? 'font-weight:700;' : ''}${token.italic ? 'font-style:italic;' : ''}`,
+            style: `${token.bold ? 'font-weight:700;' : ''}${token.italic ? 'font-style:italic;' : ''}`,
           }));
           offset += token.text.length;
         }
@@ -60,7 +61,7 @@ export const RichCodeBlock = CodeBlock.extend({
         init: (_config, state) => {
           const decorations: Decoration[] = [];
           state.doc.descendants((node, pos) => {
-            if (node.type.name === 'codeBlock') { decorations.push(...syntax(node, pos)); return false; }
+            if (node.type.name === 'codeBlock') { for (const decoration of syntax(node, pos)) decorations.push(decoration); return false; }
           });
           return DecorationSet.create(state.doc, decorations);
         },
@@ -96,12 +97,13 @@ export const RichCodeBlock = CodeBlock.extend({
   },
 });
 
-function MathNodeView({ node, updateAttributes }: NodeViewProps) {
+function MathNodeView({ node, updateAttributes, editor }: NodeViewProps) {
   const { t, dir } = useLocale();
   const [editing, setEditing] = useState(false);
   const sourceId = useId();
   const display = node.type.name === 'mathBlock';
   const Tag = display ? 'div' : 'span';
+  if (!editor.isEditable) return <NodeViewWrapper as={Tag} contentEditable={false}><MathView source={String(node.attrs.source)} display={display} /></NodeViewWrapper>;
   return <NodeViewWrapper as={Tag} className={display ? 'rich-math-block' : 'rich-math-inline'} contentEditable={false}>
     {display && <MathView source={String(node.attrs.source)} display />}
     <Dialog open={editing} onOpenChange={setEditing}>
@@ -134,14 +136,16 @@ export const MathBlock = Node.create({
   addNodeView() { return ReactNodeViewRenderer(MathNodeView); },
 });
 
-function RawNodeView({ node, updateAttributes }: NodeViewProps) {
+function RawNodeView({ node, updateAttributes, editor }: NodeViewProps) {
   const { t, dir } = useLocale();
   const [editing, setEditing] = useState(false);
   const sourceId = useId();
   const inline = node.type.name === 'rawInline';
+  const label = useMemo(() => rawMarkdownLabel(String(node.attrs.source || '')), [node.attrs.source]);
+  if (!editor.isEditable) return <NodeViewWrapper as={inline ? 'span' : 'div'} contentEditable={false}>{label}</NodeViewWrapper>;
   return <NodeViewWrapper as={inline ? 'span' : 'div'} className={inline ? 'rich-raw-inline' : 'rich-raw-block'} contentEditable={false}>
     <Dialog open={editing} onOpenChange={setEditing}>
-      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="h-auto max-w-full whitespace-normal" aria-label={t("ویرایش نشانه‌گذاری")}>{node.attrs.label || node.attrs.source}</Button></DialogTrigger>
+      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="h-auto max-w-full whitespace-normal" aria-label={t("ویرایش نشانه‌گذاری")}>{label}</Button></DialogTrigger>
       <DialogContent dir={dir}>
         <DialogHeader><DialogTitle>{t("ویرایش نشانه‌گذاری")}</DialogTitle><DialogDescription>{t("نشانه‌گذاری این بخش در Markdown حفظ می‌شود.")}</DialogDescription></DialogHeader>
         <FieldGroup>
@@ -171,14 +175,21 @@ export const RichListItem = ListItem.extend({
   addAttributes() { return { ...this.parent?.(), checked: { default: null, renderHTML: attrs => attrs.checked === null ? {} : { 'data-checked': String(attrs.checked) } } }; },
 });
 
-export const MarkdownLengthLimit = Extension.create<{ serialize: (doc: ProseMirrorNode) => string }>({
+export const ReferenceMetadata = Extension.create<{ refresh: (state: EditorState) => Transaction | null }>({
+  name: 'referenceMetadata',
+  addOptions: () => ({ refresh: () => null }),
+  addGlobalAttributes: () => [{ types: ['link'], attributes: { reference: { default: null, rendered: false } } }],
+  addProseMirrorPlugins() { return [new Plugin({ appendTransaction: (transactions, _old, state) => transactions.some(transaction => transaction.docChanged) && !transactions.some(transaction => transaction.getMeta('richSourceDerived')) ? this.options.refresh(state) : null })]; },
+});
+
+export const MarkdownLengthLimit = Extension.create<{ snapshot: (transaction: Transaction, state: EditorState) => { previous: string; next: string }; onRejected: (code: 'FILE_TOO_LARGE') => void }>({
   name: 'markdownLengthLimit',
-  addOptions: () => ({ serialize: doc => doc.textContent }),
+  addOptions: () => ({ snapshot: transaction => ({ previous: transaction.before.textContent, next: transaction.doc.textContent }), onRejected: () => {} }),
   addProseMirrorPlugins() {
-    return [new Plugin({ filterTransaction: transaction => !transaction.docChanged
+    return [new Plugin({ filterTransaction: (transaction, state) => !transaction.docChanged
       // External Markdown has already passed the raw-character limit.
       || transaction.getMeta('preventUpdate') === true
-      || this.options.serialize(transaction.doc).length <= 500_000 })];
+      || (() => { const { previous, next } = this.options.snapshot(transaction, state); const allowed = canApplyMarkdown(previous, next); if (!allowed) this.options.onRejected('FILE_TOO_LARGE'); return allowed; })() })];
   },
 });
 

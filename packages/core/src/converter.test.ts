@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { DOMParser } from '@xmldom/xmldom';
-import { defaultSettings, exportWord, paragraphDirection, safeFilename, type ExportSettings } from './converter';
+import { defaultSettings, exportWord, exportPreparedWord, paragraphDirection, safeFilename, type ExportSettings } from './converter';
+import { markdownContext, markdownParser, documentFontUsage } from './markdown';
 import { samples } from './samples';
 import { readFile } from 'node:fs/promises';
 
@@ -14,6 +15,57 @@ async function readDocument(markdown: string, options: Partial<ExportSettings> =
 const elements = (el: ReturnType<DOMParser['parseFromString']>, tag: string) => Array.from(el.getElementsByTagName(tag));
 
 describe('Word export preserves the document, with independent alignment and reading direction', () => {
+  it('flows ordinary softlines and retains explicit hard breaks and code lines in actual OOXML', async () => {
+    const { document } = await readDocument('one\r\ntwo   three\n\nfirst  \r\nsecond\\\nthird\n\n```txt\na\nb\n```');
+    const paragraphs = elements(document, 'w:p');
+    expect(paragraphs[0].textContent).toBe('one two   three');
+    expect(paragraphs[0].getElementsByTagName('w:br')).toHaveLength(0);
+    expect(paragraphs[1].textContent).toBe('firstsecondthird');
+    expect(paragraphs[1].getElementsByTagName('w:br')).toHaveLength(2);
+    expect(paragraphs.slice(-2).map(paragraph => paragraph.textContent)).toEqual(['a', 'b']);
+  });
+  it('exports a first nested reference definition as a real permitted hyperlink', async () => {
+    const { document, zip } = await readDocument('> [REF]: https://first.example "first"\n\n[ref]: https://second.example\n\n[x][ReF] and [bad][unsafe]\n\n[unsafe]: javascript:alert');
+    expect(elements(document, 'w:hyperlink')).toHaveLength(1);
+    expect(elements(document, 'w:t').map(node => node.textContent).join('')).toBe('x and bad');
+    const relationships = await zip.file('word/_rels/document.xml.rels')!.async('string');
+    expect(relationships).toContain('https://first.example'); expect(relationships).not.toContain('https://second.example'); expect(relationships).not.toContain('javascript:');
+  });
+  it('shares one prepared parse across font discovery, diagrams and Word output', async () => {
+    const parse = vi.spyOn(markdownParser, 'parse');
+    try {
+      const context = markdownContext('code `literal` and [x](https://example.com)');
+      expect(documentFontUsage(context.root)).toEqual({ code: true, math: false });
+      await exportPreparedWord(context, defaultSettings);
+      expect(parse).toHaveBeenCalledTimes(1);
+    } finally { parse.mockRestore(); }
+  });
+  it('captures output settings before asynchronous diagram work', async () => {
+    const settings = { ...defaultSettings, title: 'Original title', direction: 'ltr' as const, fontSize: 12 };
+    let release!: () => void;
+    const ready = new Promise<void>(resolve => { release = resolve; });
+    const png = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=', 'base64'));
+    const pending = exportWord('```mermaid\ngraph LR; A-->B\n```\n\nEnglish', settings, [], async () => { await ready; return { png, width: 10, height: 10, svg: '<svg/>' }; });
+    settings.title = 'Mutated title'; settings.fontSize = 24; release();
+    const zip = await JSZip.loadAsync(await pending);
+    expect(await zip.file('docProps/core.xml')!.async('string')).toContain('Original title');
+    expect(await zip.file('word/styles.xml')!.async('string')).toContain('w:sz w:val="24"');
+    expect(await zip.file('word/styles.xml')!.async('string')).not.toContain('w:sz w:val="48"');
+  });
+  it('keeps actual Word text, styles, math and image assets independent of display theme', async () => {
+    const source = '**Text** $x^2$\n\n```js\nconst value = 42;\n```\n\n```mermaid\ngraph LR; A-->B\n```';
+    const png = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1cAAAAASUVORK5CYII=', 'base64'));
+    const outputs = [];
+    try {
+      for (const theme of ['light', 'dark']) {
+        vi.stubGlobal('document', { documentElement: { dataset: { theme } } });
+        const zip = await JSZip.loadAsync(await exportWord(source, defaultSettings, [], async () => ({ png, width: 30, height: 20, svg: '<svg/>' })));
+        outputs.push({ document: (await zip.file('word/document.xml')!.async('string')).replace(/r:embed="[^"]+"/g, 'r:embed="IMAGE"').replace(/<wp:docPr id="\d+"/g, '<wp:docPr id="IMAGE"'), styles: await zip.file('word/styles.xml')!.async('string'), images: await Promise.all(zip.file(/^word\/media\/.*\.png$/).map(file => file.async('base64'))) });
+      }
+    } finally { vi.unstubAllGlobals(); }
+    expect(outputs[0]).toEqual(outputs[1]);
+    expect(outputs[0].document).toContain('<m:oMath '); expect(outputs[0].images).toHaveLength(1);
+  });
   it.each([
     'کتابخانهٔ React (version 19) را نصب کنید.',
     'قیمت محصول (250 USD) ثبت شد.',

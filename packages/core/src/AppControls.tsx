@@ -1,7 +1,8 @@
 import { languagePath, useLocale } from './locale';
 import { memo } from 'react';
-import { ArrowDownToLine, Bold, BookOpen, Check, ChevronDown, Code2, FileCode2, FilePlus2, Files, FileText, FileType2, FolderOpen, Heading2, Italic, Languages, List, Settings2, Undo2 } from 'lucide-react';
-import type { ExportSettings } from './converter';
+import { ArrowDownToLine, Bold, BookOpen, Check, ChevronDown, Code2, FileCode2, FilePlus2, Files, FileText, FileType2, FolderOpen, Heading2, Italic, Languages, List, Monitor, Moon, Settings2, Sun, Undo2 } from 'lucide-react';
+import { isThemePreference, type DisplayThemeControls } from './display-theme';
+import type { ExportSettings } from './document-model';
 import { FontPicker } from './FontPicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,19 +11,33 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type Sheet = 'settings' | 'fonts' | null;
 type UpdateSettings = <K extends keyof ExportSettings>(key: K, value: ExportSettings[K]) => void;
 
-export const BrandHeader = memo(function BrandHeader() {
-  const { t, locale, setLocale } = useLocale();
+export const BrandHeader = memo(function BrandHeader({ theme }: { theme: DisplayThemeControls }) {
+  const { t, dir, locale, setLocale } = useLocale();
   const nextLanguage = locale === 'fa' ? 'en' : 'fa';
+  const ThemeIcon = theme.preference === 'system' ? Monitor : theme.preference === 'dark' ? Moon : Sun;
   return (<header className="app-header">
         <a className="brand" href="#" onClick={e => e.preventDefault()} aria-label={t("پارسی‌ورد")}>
           <span className="brand-mark"><FileText size="1.4375rem" strokeWidth={1.8} /><span /></span>
           <span className="brand-name">{t("پارسی‌ورد")}<span>PARSIWORD</span></span>
         </a>
+        <div className="header-controls">
+        {!theme.isHostControlled && <DropdownMenu dir={dir}>
+          <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="theme-trigger" aria-label={t('ظاهر برنامه')} title={t('ظاهر برنامه')}><ThemeIcon data-icon="inline-start" /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="theme-menu">
+            <DropdownMenuGroup><DropdownMenuLabel>{t('ظاهر برنامه')}</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={theme.preference} onValueChange={value => { if (isThemePreference(value)) theme.setPreference(value); }}>
+                <DropdownMenuRadioItem value="system"><Monitor aria-hidden="true" />{t('همگام با سیستم')}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="light"><Sun aria-hidden="true" />{t('روشن')}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark"><Moon aria-hidden="true" />{t('تیره')}</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>}
         <nav className="language-switch" aria-label={t('زبان رابط')}>
           <Button asChild variant="outline">
             <a href={languagePath(nextLanguage)} hrefLang={nextLanguage} lang={nextLanguage} dir={nextLanguage === 'fa' ? 'rtl' : 'ltr'}
@@ -31,6 +46,7 @@ export const BrandHeader = memo(function BrandHeader() {
             </a>
           </Button>
         </nav>
+        </div>
       </header>);
 });
 
@@ -63,19 +79,19 @@ export const DocumentHeading = memo(function DocumentHeading({ title, busy, canE
   return (<div className="document-heading">
               <div className="document-name"><span className="file-icon"><FileText size="1.1875rem" /></span><FieldGroup className="gap-1"><Field className="gap-1"><FieldLabel htmlFor="document-title" className="sr-only">{t("نام سند")}</FieldLabel><Input id="document-title" value={title} onChange={e => onTitleChange(e.target.value)} maxLength={90} placeholder={t("نام سند")} /><span className="text-muted-foreground text-xs">{t("پیش‌نویس شخصی")}</span></Field></FieldGroup></div>
               <div className="document-tools">
-                <div className="document-actions"><Button variant="ghost" size="icon-lg" className="size-[2.75rem]" title={t("باز کردن فایل")} aria-label={t("باز کردن فایل")} onClick={onOpen}><FolderOpen data-icon="inline-start" /></Button></div>
-                <Button variant="ghost" size="icon-lg" className="size-[2.75rem]" title={t("یادداشت تازه")} aria-label={t("یادداشت تازه")} onClick={onNew}><FilePlus2 data-icon="inline-start" /></Button>
+                <div className="document-actions"><Button variant="ghost" size="icon-lg" className="document-icon-control" title={t("باز کردن فایل")} aria-label={t("باز کردن فایل")} onClick={onOpen}><FolderOpen data-icon="inline-start" /></Button></div>
+                <Button variant="ghost" size="icon-lg" className="document-icon-control" title={t("یادداشت تازه")} aria-label={t("یادداشت تازه")} onClick={onNew}><FilePlus2 data-icon="inline-start" /></Button>
               </div>
               <div className="document-export">
-                <Button variant="outline" size="icon" className="size-[2.75rem]" aria-label={t("تنظیمات خروجی")} onClick={onSettings}><Settings2 data-icon="inline-start" /></Button>
-                <Button size="lg" className="h-[2.75rem] min-w-0 flex-1" onClick={onExport} disabled={busy || !canExport}>{busy ? <Spinner aria-label={t("در حال ساخت سند")} data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? t("در حال ساخت سند…") : t("ذخیرهٔ فایل Word")}</span></Button>
+                <Button variant="outline" size="icon" className="document-icon-control" aria-label={t("تنظیمات خروجی")} onClick={onSettings}><Settings2 data-icon="inline-start" /></Button>
+                <Button size="lg" className="document-export-button min-w-0 flex-1" onClick={onExport} disabled={busy || !canExport}>{busy ? <Spinner aria-label={t("در حال ساخت سند")} data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? t("در حال ساخت سند…") : t("ذخیرهٔ فایل Word")}</span></Button>
                 <DropdownMenu dir={dir}>
-                  <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="size-[2.75rem]" aria-label={t("قالب‌های دیگر خروجی")} title={t("قالب‌های دیگر خروجی")} disabled={busy}><Files data-icon="inline-start" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="document-icon-control" aria-label={t("قالب‌های دیگر خروجی")} title={t("قالب‌های دیگر خروجی")} disabled={busy}><Files data-icon="inline-start" /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end" sideOffset={0} className="min-w-48">
                     <DropdownMenuGroup>
                       <DropdownMenuLabel>{t("ذخیره در قالب")}</DropdownMenuLabel>
-                      <DropdownMenuItem className="min-h-[2.75rem]" onSelect={onExportPdf} disabled={busy || !canExport}><FileType2 aria-hidden="true" />{t("ذخیرهٔ فایل PDF")}</DropdownMenuItem>
-                      <DropdownMenuItem className="min-h-[2.75rem]" onSelect={onExportMarkdown} disabled={busy}><FileCode2 aria-hidden="true" />{t("ذخیرهٔ فایل Markdown")}</DropdownMenuItem>
+                      <DropdownMenuItem className="export-menu-item" onSelect={onExportPdf} disabled={busy || !canExport}><FileType2 aria-hidden="true" />{t("ذخیرهٔ فایل PDF")}</DropdownMenuItem>
+                      <DropdownMenuItem className="export-menu-item" onSelect={onExportMarkdown} disabled={busy}><FileCode2 aria-hidden="true" />{t("ذخیرهٔ فایل Markdown")}</DropdownMenuItem>
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>

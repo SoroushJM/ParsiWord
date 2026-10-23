@@ -15,6 +15,7 @@ const output = resolve(args.output || 'artifacts/ui-preview.png');
 if (!(width >= 320 && height >= 320)) throw new Error('Width and height must be at least 320.');
 if (args.view !== undefined && !['edit', 'preview'].includes(args.view)) throw new Error('View must be edit or preview.');
 if (args.language !== undefined && !['fa', 'en'].includes(args.language)) throw new Error('Language must be fa or en.');
+if (args.theme !== undefined && !['system', 'light', 'dark'].includes(args.theme)) throw new Error('Theme must be system, light or dark.');
 let chrome = args.chrome || process.env.CHROME_BIN;
 if (!chrome) {
   const cache = join(homedir(), '.cache/ms-playwright');
@@ -77,6 +78,9 @@ try {
   await send('Runtime.enable');
   await send('Runtime.addBinding', { name: '__parsiwordCapture' });
   await send('Page.enable');
+  if (args.theme !== undefined) {
+    await send('Page.addScriptToEvaluateOnNewDocument', { source: `localStorage.setItem('parsiword-display-theme-v1', ${JSON.stringify(args.theme)});` });
+  }
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 900 });
   await send('Page.navigate', { url: args.language === 'en' ? `${url}/en/` : url });
   let ready = false;
@@ -102,6 +106,9 @@ try {
     const editorVisible = visible(editor), previewVisible = visible(preview);
     return {
       width: innerWidth, height: innerHeight,
+      resolvedTheme: document.documentElement.dataset.displayTheme,
+      themePreference: document.documentElement.dataset.themePreference,
+      storedThemePreference: localStorage.getItem('parsiword-display-theme-v1'),
       view: editorVisible && previewVisible ? 'both' : previewVisible ? 'preview' : 'edit',
       overflow: document.documentElement.scrollWidth > innerWidth,
       editorVisible, previewVisible,

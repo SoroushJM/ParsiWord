@@ -45,11 +45,12 @@ test('invalid diagrams and formulas are visible and block a misleading export', 
   await page.locator('[data-mobile-view="preview"]').click();
   await expect(page.getByRole('alert')).toContainText('نمودار Mermaid رسم نشد', { timeout: 30000 });
   await page.getByRole('button', { name: /ذخیرهٔ فایل Word/ }).click();
-  await expect(page.locator('[data-sonner-toast]')).toContainText('نمودار Mermaid رسم نشد');
+  await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'نمودار Mermaid رسم نشد' })).toBeVisible();
   await page.locator('[data-mobile-view="edit"]').click();
   await page.getByRole('textbox', { name: 'متن Markdown' }).fill('$\\notARealCommand{x}$');
   await page.locator('[data-mobile-view="preview"]').click();
   await expect(page.getByRole('alert')).toContainText('فرمول LaTeX معتبر نیست');
   await page.getByRole('button', { name: /ذخیرهٔ فایل Word/ }).click();
-  await expect(page.locator('[data-sonner-toast]').last()).toContainText('فرمول LaTeX معتبر نیست');
+  // Sonner prepends new notifications; select the actual error, not its DOM index.
+  await expect(page.locator('[data-sonner-toast]').filter({ hasText: 'فرمول LaTeX معتبر نیست' })).toBeVisible();
 });

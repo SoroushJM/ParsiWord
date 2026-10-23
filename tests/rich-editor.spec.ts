@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import JSZip from 'jszip';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 async function openPreview(page: Page, source: string) {
   await page.addInitScript(({ source }) => { if (!localStorage.getItem('parsiword-draft-v1')) localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown: source, settings: { direction: 'auto' } })); }, { source });
@@ -126,4 +127,46 @@ test('multiline display formulas remain multiline when edited in preview', async
   await source.fill('x % comment\n+ y + z');
   await page.getByRole('button', { name: 'تأیید', exact: true }).click();
   await expect(page.locator('textarea.markdown-editor')).toHaveValue('$$\nx % comment\n+ y + z\n$$');
+});
+
+test('raw source dialogs stay mounted through partial image and multi-block definition edits', async ({ page }) => {
+  const rich = await openPreview(page, '> [ref]: https://first.example\n>\n> [x][ref]\n\nbefore ![old](url) &amp; after');
+  await page.getByRole('button', { name: 'ویرایش نشانه‌گذاری', exact: true }).first().click();
+  const raw = page.getByRole('textbox', { name: 'نشانه‌گذاری Markdown', exact: true });
+  await raw.fill('temporary\n\nextra');
+  await expect(raw).toHaveValue('temporary\n\nextra');
+  await expect(page.locator('.rich-document blockquote p')).toHaveText('[x][ref]');
+  await raw.fill('[ref]: https://last.example');
+  await expect(page.locator('.rich-document blockquote a')).toHaveAttribute('href', 'https://last.example');
+  await page.getByRole('button', { name: 'تأیید', exact: true }).click();
+  await page.getByRole('button', { name: 'ویرایش نشانه‌گذاری', exact: true }).last().click();
+  await raw.fill('![new](url'); await expect(raw).toHaveValue('![new](url');
+  await raw.fill('temporary'); await expect(raw).toHaveValue('temporary');
+  await page.getByRole('button', { name: 'تأیید', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'ویرایش نشانه‌گذاری', exact: true }).last()).toHaveText('temporary');
+  await expect(page.locator('textarea.markdown-editor')).toHaveValue(/before temporary &amp; after/);
+});
+
+test('legacy read-only preview exposes no raw, math or diagram editing controls and keeps its empty action', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(async previewPath => {
+    const resources = performance.getEntriesByType('resource').map(entry => entry.name);
+    const reactPath = resources.find(url => /\/react\.js\?/.test(url))!, domPath = resources.find(url => /\/react-dom_client\.js\?/.test(url))!;
+    const reactModule = await import(/* @vite-ignore */ reactPath), domModule = await import(/* @vite-ignore */ domPath), { DocumentPreview } = await import(/* @vite-ignore */ previewPath);
+    const React = reactModule.default || reactModule, { createRoot } = domModule.default || domModule;
+    const container = document.createElement('aside'); container.id = 'readonly-compatibility'; document.body.append(container);
+    const root = createRoot(container);
+    const taskWindow = window as unknown as { renderReadonly: (markdown: string) => void; readonlyStarts: number };
+    taskWindow.readonlyStarts = 0;
+    taskWindow.renderReadonly = markdown => root.render(React.createElement(DocumentPreview, { markdown, direction: 'auto', fontFamily: 'Vazirmatn', fontSize: 12, onStartWriting: () => { taskWindow.readonlyStarts++; } }));
+    taskWindow.renderReadonly('![old](url) $x^2$\n\n$$\nx+y\n$$\n\n```mermaid\ngraph LR; A-->B\n```\n\n```math\nx+y\n```');
+  }, '/@fs/' + fileURLToPath(new URL('../packages/core/src/DocumentPreview.tsx', import.meta.url)).replaceAll('\\', '/'));
+  const panel = page.locator('#readonly-compatibility'), rich = panel.getByRole('textbox', { name: 'پیش‌نمایش', exact: true });
+  await expect(rich).toHaveAttribute('aria-readonly', 'true'); await expect(rich).not.toBeEditable();
+  await expect(panel.locator('.katex')).toHaveCount(3);
+  await expect(panel.locator('button, textarea, input, summary, [contenteditable="true"]')).toHaveCount(0);
+  await page.evaluate(() => (window as unknown as { renderReadonly: (markdown: string) => void }).renderReadonly(''));
+  await expect(panel).toContainText('برای نوشتن، ویرایش Markdown را باز کن.');
+  await panel.getByRole('button', { name: 'شروع نوشتن', exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { readonlyStarts: number }).readonlyStarts)).toBe(1);
 });

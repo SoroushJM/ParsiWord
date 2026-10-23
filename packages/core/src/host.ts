@@ -1,8 +1,9 @@
-import type { ExportSettings } from './converter';
+import type { ExportSettings } from './document-model';
 
 export type DocumentSnapshot = { markdown: string; dirty: boolean };
 export type SaveFormat = { label: string; extension: string; mime: string };
 export type HostCommand = 'source' | 'preview' | 'diff' | 'stagedDiff' | 'save' | 'undo' | 'redo' | 'new';
+export type DocumentViewMode = 'combined' | 'source' | 'rendered';
 
 /** Environment services. The shared workspace never imports a host SDK. */
 export interface EditorHost {
@@ -13,8 +14,9 @@ export interface EditorHost {
   fontResource?: (url: string) => Promise<Uint8Array>;
   saveBytes?: (bytes: Uint8Array, filename: string, format: SaveFormat) => Promise<boolean>;
   openMarkdown?: () => Promise<{ name: string; text: string } | null>;
-  initial?: { markdown: string; settings: ExportSettings; dirty: boolean };
+  initial?: { markdown: string; settings: ExportSettings; dirty: boolean; viewMode?: DocumentViewMode; recovery?: 'oversize' };
   documentChanged?: (markdown: string) => void;
+  compositionChanged?: (composing: boolean) => void;
   subscribeDocument?: (listener: (snapshot: DocumentSnapshot) => void) => () => void;
   settingsChanged?: (settings: ExportSettings) => void;
   persistDraft?: (draft: { markdown: string; settings: ExportSettings }) => void;

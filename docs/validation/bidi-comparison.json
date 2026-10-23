@@ -1,0 +1,232 @@
+{
+  "baseline": "f38dde8",
+  "browser": "156.0.8078.4",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "source": "# راهنمای کوتاه عامل\n\nاین پروژه **ParsiWord** است: تبدیل Markdown به Word با React/TypeScript و\nTauri 2، رابط فارسی، متن دوجهته، LaTeX، Mermaid و رنگ‌آمیزی ۳۶ زبان کد.\n",
+  "description": "Controlled variation on frozen production baseline: source softline versus space, and paragraph unicode-bidi plaintext versus normal. Screenshots are real browser paragraph crops.",
+  "results": [
+    {
+      "name": "original",
+      "flow": false,
+      "normal": false,
+      "sourcePreserved": true,
+      "screenshot": "artifacts/bidi-review/original.png",
+      "text": "این پروژه ParsiWord است: تبدیل Markdown به Word با React/TypeScript و\nTauri 2، رابط فارسی، متن دوجهته، LaTeX، Mermaid و رنگ‌آمیزی ۳۶ زبان کد.",
+      "direction": "rtl",
+      "unicodeBidi": "plaintext",
+      "whiteSpace": "break-spaces",
+      "chars": [
+        {
+          "text": "T",
+          "x": 136,
+          "y": 752.203125,
+          "width": 7.59375
+        },
+        {
+          "text": "a",
+          "x": 143.578125,
+          "y": 752.203125,
+          "width": 7.625
+        },
+        {
+          "text": "u",
+          "x": 151.1875,
+          "y": 752.203125,
+          "width": 7.734375
+        },
+        {
+          "text": "r",
+          "x": 158.90625,
+          "y": 752.203125,
+          "width": 4.765625
+        },
+        {
+          "text": "i",
+          "x": 163.65625,
+          "y": 752.203125,
+          "width": 3.40625
+        },
+        {
+          "text": " ",
+          "x": 167.0625,
+          "y": 752.203125,
+          "width": 3.765625
+        },
+        {
+          "text": "2",
+          "x": 170.8125,
+          "y": 752.203125,
+          "width": 7.890625
+        }
+      ]
+    },
+    {
+      "name": "bidi-normal",
+      "flow": false,
+      "normal": true,
+      "sourcePreserved": true,
+      "screenshot": "artifacts/bidi-review/bidi-normal.png",
+      "text": "این پروژه ParsiWord است: تبدیل Markdown به Word با React/TypeScript و\nTauri 2، رابط فارسی، متن دوجهته، LaTeX، Mermaid و رنگ‌آمیزی ۳۶ زبان کد.",
+      "direction": "rtl",
+      "unicodeBidi": "normal",
+      "whiteSpace": "break-spaces",
+      "chars": [
+        {
+          "text": "T",
+          "x": 615.296875,
+          "y": 752.203125,
+          "width": 7.59375
+        },
+        {
+          "text": "a",
+          "x": 622.875,
+          "y": 752.203125,
+          "width": 7.625
+        },
+        {
+          "text": "u",
+          "x": 630.484375,
+          "y": 752.203125,
+          "width": 7.734375
+        },
+        {
+          "text": "r",
+          "x": 638.203125,
+          "y": 752.203125,
+          "width": 4.765625
+        },
+        {
+          "text": "i",
+          "x": 642.953125,
+          "y": 752.203125,
+          "width": 3.40625
+        },
+        {
+          "text": " ",
+          "x": 646.359375,
+          "y": 752.203125,
+          "width": 3.765625
+        },
+        {
+          "text": "2",
+          "x": 650.109375,
+          "y": 752.203125,
+          "width": 7.890625
+        }
+      ]
+    },
+    {
+      "name": "flowing-only",
+      "flow": true,
+      "normal": false,
+      "sourcePreserved": true,
+      "screenshot": "artifacts/bidi-review/flowing-only.png",
+      "text": "این پروژه ParsiWord است: تبدیل Markdown به Word با React/TypeScript و Tauri 2، رابط فارسی، متن دوجهته، LaTeX، Mermaid و رنگ‌آمیزی ۳۶ زبان کد.",
+      "direction": "rtl",
+      "unicodeBidi": "plaintext",
+      "whiteSpace": "break-spaces",
+      "chars": [
+        {
+          "text": "T",
+          "x": 172.25,
+          "y": 722.8125,
+          "width": 7.59375
+        },
+        {
+          "text": "a",
+          "x": 179.828125,
+          "y": 722.8125,
+          "width": 7.625
+        },
+        {
+          "text": "u",
+          "x": 187.4375,
+          "y": 722.8125,
+          "width": 7.734375
+        },
+        {
+          "text": "r",
+          "x": 195.15625,
+          "y": 722.8125,
+          "width": 4.765625
+        },
+        {
+          "text": "i",
+          "x": 199.90625,
+          "y": 722.8125,
+          "width": 3.40625
+        },
+        {
+          "text": " ",
+          "x": 203.3125,
+          "y": 722.8125,
+          "width": 3.765625
+        },
+        {
+          "text": "2",
+          "x": 207.0625,
+          "y": 722.8125,
+          "width": 7.890625
+        }
+      ]
+    },
+    {
+      "name": "flowing-normal",
+      "flow": true,
+      "normal": true,
+      "sourcePreserved": true,
+      "screenshot": "artifacts/bidi-review/flowing-normal.png",
+      "text": "این پروژه ParsiWord است: تبدیل Markdown به Word با React/TypeScript و Tauri 2، رابط فارسی، متن دوجهته، LaTeX، Mermaid و رنگ‌آمیزی ۳۶ زبان کد.",
+      "direction": "rtl",
+      "unicodeBidi": "normal",
+      "whiteSpace": "break-spaces",
+      "chars": [
+        {
+          "text": "T",
+          "x": 172.25,
+          "y": 722.8125,
+          "width": 7.59375
+        },
+        {
+          "text": "a",
+          "x": 179.828125,
+          "y": 722.8125,
+          "width": 7.625
+        },
+        {
+          "text": "u",
+          "x": 187.4375,
+          "y": 722.8125,
+          "width": 7.734375
+        },
+        {
+          "text": "r",
+          "x": 195.15625,
+          "y": 722.8125,
+          "width": 4.765625
+        },
+        {
+          "text": "i",
+          "x": 199.90625,
+          "y": 722.8125,
+          "width": 3.40625
+        },
+        {
+          "text": " ",
+          "x": 203.3125,
+          "y": 722.8125,
+          "width": 3.765625
+        },
+        {
+          "text": "2",
+          "x": 207.0625,
+          "y": 722.8125,
+          "width": 7.890625
+        }
+      ]
+    }
+  ]
+}

@@ -40,6 +40,10 @@ pnpm run ui:capture --width 1100 --height 800 --markdown /tmp/demo.md --output a
 # رابط انگلیسی
 pnpm run ui:capture --language en --width 1100 --height 800 --output artifacts/desktop-en.png
 
+# تم نمایش؛ انتخاب فقط در پروفایل موقت همین عکس ذخیره می‌شود
+pnpm run ui:capture --theme dark --width 1366 --height 900 --output artifacts/desktop-dark.png
+pnpm run ui:capture --theme light --width 393 --height 851 --view preview --output artifacts/mobile-light.png
+
 # ویرایش موبایل و پیش‌نمایش همان متن
 pnpm run ui:capture --width 393 --height 851 --view edit --markdown /tmp/demo.md --output artifacts/mobile-edit.png
 pnpm run ui:capture --width 393 --height 851 --view preview --markdown /tmp/demo.md --output artifacts/mobile-preview.png
@@ -50,6 +54,12 @@ pnpm run ui:capture --width 320 --height 780 --view preview --markdown /tmp/demo
 # متن بلند، بعد از اسکرول صفحه؛ برای دیدن toolbar چسبان
 pnpm run ui:capture --width 393 --height 851 --view edit --markdown /tmp/long.md --scroll 1400 --output artifacts/mobile-scroll.png
 ```
+
+گزینهٔ `--theme` مقدارهای `system`، `light` و `dark` را می‌پذیرد. بدون این
+گزینه، انتخاب پیش‌فرض سیستم است. `system` از تنظیم مرورگر اجراکننده پیروی
+می‌کند؛ برای عکس تکرارپذیر روشن/تیره، مقدار صریح بده. JSON خروجی،
+`resolvedTheme`، `themePreference` و `storedThemePreference` را هم ثبت می‌کند.
+این انتخاب متن یا تنظیمات خروجی سند و پروفایل مرورگر شخصی را تغییر نمی‌دهد.
 
 اندازه‌ها بر حسب CSS pixel هستند؛ کوچک‌ترین اندازهٔ پذیرفته‌شده ۳۲۰×۳۲۰
 است. خروجی PNG فقط viewport است تا سندهای بلند تصویر چندده‌هزارپیکسلی

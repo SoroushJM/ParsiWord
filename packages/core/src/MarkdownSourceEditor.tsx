@@ -2,6 +2,7 @@ import { useLocale } from './locale';
 import { memo, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { MarkdownSourceHighlighter, type MarkdownSourceLine } from './markdown-source-highlight';
+import { MAX_MARKDOWN_LENGTH } from './document-limits';
 import './markdown-source-editor.css';
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
   direction: 'auto' | 'ltr';
   onChange: (value: string) => void;
   onFocus: () => void;
+  onCompositionChange?: (composing: boolean) => void;
 };
 
 const SourceLine = memo(function SourceLine({ line, index }: { line: MarkdownSourceLine; index: number }) {
@@ -20,7 +22,7 @@ const SourceLine = memo(function SourceLine({ line, index }: { line: MarkdownSou
 
 // The native textarea remains the input, selection and sizing surface. Color
 // spans are decorative: they never change font metrics or execute source HTML.
-export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorRef, value, direction, onChange, onFocus }: Props) {
+export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorRef, value, direction, onChange, onFocus, onCompositionChange }: Props) {
   const { t } = useLocale();
   const paint = useRef<HTMLDivElement>(null);
   const surface = useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorR
     </div>
     <Textarea id="markdown-source" ref={editorRef} className="markdown-editor rounded-none" aria-label={t("متن Markdown")} dir={direction}
       value={value} onFocus={onFocus} onChange={event => onChange(event.target.value)}
-      onCompositionStart={() => { if (surface.current) surface.current.dataset.highlighted = 'false'; setComposing(true); }}
-      onCompositionEnd={() => setComposing(false)} placeholder={t("از اینجا شروع کن…")} spellCheck={false} maxLength={500_000} />
+      onCompositionStart={() => { if (surface.current) surface.current.dataset.highlighted = 'false'; setComposing(true); onCompositionChange?.(true); }}
+      onCompositionEnd={() => { setComposing(false); onCompositionChange?.(false); }} placeholder={t("از اینجا شروع کن…")} spellCheck={false} maxLength={value.length > MAX_MARKDOWN_LENGTH ? undefined : MAX_MARKDOWN_LENGTH} />
   </div>;
 });

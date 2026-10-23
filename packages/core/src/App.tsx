@@ -1,18 +1,23 @@
 import { useLocale } from './locale';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { editorHost } from './host';
+import { useDisplayTheme } from './display-theme';
+import { DocumentSession, type MutationOrigin } from './document-session';
+import { MAX_MARKDOWN_LENGTH } from './document-limits';
 import { Button } from '@/components/ui/button';
 import { EditablePreview } from './EditablePreview';
 import { MarkdownSourceEditor } from './MarkdownSourceEditor';
 import { BrandHeader, DocumentHeading, ExportSettingsDialog, IntroControls, MobileViewSwitch, SourceToolbar } from './AppControls';
 import { usePreviewScroll } from './use-preview-scroll';
-import { RichContentError } from './rich-content';
+import { errorMessage, errorMessages } from './errors';
 import defaultDocument from './default-document.md?raw';
 
 import { BookOpen, CheckCheck, Code2, ShieldCheck } from 'lucide-react';
-import { defaultSettings, exportWord, safeFilename, type ExportSettings } from './converter';
-import { openMarkdown, saveDocx, saveMarkdown, savePdf } from './files';
-import { activateFont, documentFonts, fontError } from './fonts';
+import { exportPreparedWord, safeFilename } from './adapters/word';
+import { markdownContext } from './markdown';
+import { defaultSettings, type ExportSettings } from './document-model';
+import { openMarkdown, saveDocx, saveMarkdown, savePdf } from './adapters/files';
+import { activateFont, documentFonts, fontError } from './adapters/fonts';
 import { Badge } from '@/components/ui/badge';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Toaster } from '@/components/ui/sonner';
@@ -26,20 +31,27 @@ import '@fontsource-variable/geist';
 function App() {
   const { t, dir, number, locale } = useLocale();
   const platform = editorHost();
+  const displayTheme = useDisplayTheme(platform.kind);
   const [initial] = useState(() => platform.initial ?? { markdown: defaultDocument, settings: { ...defaultSettings, title: locale === 'en' ? 'My note' : defaultSettings.title } });
-  const [markdown, setMarkdownState] = useState(initial.markdown);
-  const [settings, setSettings] = useState(initial.settings);
-  const markdownRef = useRef(markdown);
-  const settingsRef = useRef(settings);
-  const setMarkdown = useCallback((next: string | ((previous: string) => string)) => {
-    const value = typeof next === 'function' ? next(markdownRef.current) : next;
-    markdownRef.current = value;
-    setMarkdownState(value);
-    platform.documentChanged?.(value);
-  }, [platform]);
-  markdownRef.current = markdown;
-  settingsRef.current = settings;
-  const [editingView, setEditingView] = useState<'edit' | 'preview'>('edit');
+  const [session] = useState(() => new DocumentSession(initial.markdown, initial.settings));
+  const { markdown, settings } = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const oversized = markdown.length > MAX_MARKDOWN_LENGTH;
+  const viewMode = oversized ? 'source' : platform.kind === 'vscode' ? platform.initial?.viewMode ?? 'combined' : 'combined';
+  const setMarkdown = useCallback((next: string | ((previous: string) => string), origin: Exclude<MutationOrigin, 'host'> = 'source') => {
+    const previous = session.getSnapshot().markdown;
+    const value = typeof next === 'function' ? next(previous) : next;
+    if (!session.change(value, origin)) {
+      setNotice({ text: locale === 'en' ? 'Markdown exceeds the 500,000-character editing limit. Shorten the text before adding more.' : 'متن Markdown از حد ۵۰۰ هزار نویسه بیشتر می‌شود. پیش از افزودن متن، بخشی از آن را کوتاه کن.', error: true });
+      return false;
+    }
+    if (value !== previous) { setSaved(false); platform.documentChanged?.(value); }
+    return true;
+  }, [platform, session, locale]);
+  const onCompositionChange = useCallback((composing: boolean) => {
+    session.composition(composing);
+    platform.compositionChanged?.(composing);
+  }, [platform, session]);
+  const [editingView, setEditingView] = useState<'edit' | 'preview'>(viewMode === 'rendered' ? 'preview' : 'edit');
   const editingViewRef = useRef(editingView);
   const [inactiveSource, setInactiveSource] = useState(initial.markdown);
   const [previewMarkdown, setPreviewMarkdown] = useState(initial.markdown);
@@ -53,7 +65,7 @@ function App() {
   const editor = useRef<HTMLTextAreaElement>(null);
   const preview = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const { mobileView, selectView, activateView } = usePreviewScroll(editor, preview, markdown, previewMarkdown);
+  const { mobileView, selectView, activateView } = usePreviewScroll(editor, preview, markdown, previewMarkdown, viewMode);
   // Markdown state, export and persistence are current in the input task.
   // Only the secondary textarea's DOM value waits for a short pause. Replacing
   // its entire value on every rich keystroke makes WebView reshape all source.
@@ -67,22 +79,41 @@ function App() {
   const activateEditingView = useCallback((view: 'edit' | 'preview') => {
     if (editingViewRef.current !== view) {
       editingViewRef.current = view;
-      setInactiveSource(markdownRef.current);
+      const current = session.getSnapshot().markdown;
+      setInactiveSource(current);
+      setPreviewMarkdown(current);
       setEditingView(view);
     }
     activateView(view);
-  }, [activateView]);
+  }, [activateView, session]);
+  const selectEditingView = useCallback((view: 'edit' | 'preview') => {
+    // Display debounces apply only while an editor remains active. A newly
+    // selected pane must receive the authoritative source before its next
+    // native input task, including switches that do not focus its editor.
+    const current = session.getSnapshot().markdown;
+    setInactiveSource(current);
+    setPreviewMarkdown(current);
+    activateEditingView(view);
+    selectView(view);
+  }, [activateEditingView, selectView, session]);
   const onSourceFocus = useCallback(() => activateEditingView('edit'), [activateEditingView]);
   const onPreviewFocus = useCallback(() => activateEditingView('preview'), [activateEditingView]);
   const updateFromPreview = useCallback((value: string) => {
     activateEditingView('preview');
-    setMarkdown(value);
+    if (!setMarkdown(value, 'rich')) return;
     setPreviewMarkdown(value);
-  }, [activateEditingView]);
+  }, [activateEditingView, setMarkdown]);
+  const onRichRejected = useCallback((code: 'FILE_TOO_LARGE') => {
+    setNotice({ text: t(errorMessages[code]), error: true });
+  }, [t]);
   const focusEditor = useCallback(() => {
-    selectView('edit');
+    if (viewMode === 'rendered') {
+      requestAnimationFrame(() => preview.current?.querySelector<HTMLElement>('[contenteditable="true"]')?.focus());
+      return;
+    }
+    selectEditingView('edit');
     requestAnimationFrame(() => editor.current?.focus());
-  }, [selectView]);
+  }, [selectEditingView, viewMode]);
   const resizeEditor = useCallback(() => {
     const element = editor.current;
     if (!element?.clientWidth) return;
@@ -99,14 +130,14 @@ function App() {
     // The hidden Markdown pane does not need layout while typing in preview.
     // On desktop, resize the secondary pane after an input burst rather than
     // forcing textarea layout before each rich-editor paint.
-    if (mobileView === 'preview' && matchMedia('(max-width: 56.1875rem)').matches) return;
+    if (viewMode === 'rendered' || (viewMode === 'combined' && mobileView === 'preview' && matchMedia('(max-width: 56.1875rem)').matches)) return;
     const active = document.activeElement;
     if (active?.matches('input, textarea, [contenteditable="true"]') && !active.matches('.markdown-editor')) {
       const timer = setTimeout(resizeEditor, 160);
       return () => clearTimeout(timer);
     }
     resizeEditor();
-  }, [markdown, mobileView, resizeEditor]);
+  }, [markdown, mobileView, resizeEditor, viewMode]);
   useEffect(() => {
     const element = editor.current;
     if (!element) return;
@@ -150,12 +181,11 @@ function App() {
   }, [markdown, settings, platform]);
   useEffect(() => { platform.settingsChanged?.(settings); }, [settings, platform]);
   useEffect(() => platform.subscribeDocument?.(snapshot => {
-    markdownRef.current = snapshot.markdown;
-    setMarkdownState(snapshot.markdown);
+    session.replace(snapshot.markdown);
     setInactiveSource(snapshot.markdown);
     setPreviewMarkdown(snapshot.markdown);
     setSaved(!snapshot.dirty);
-  }), [platform]);
+  }), [platform, session]);
 
   useEffect(() => {
     if (!notice) return;
@@ -172,22 +202,21 @@ function App() {
   }, [settings.fontFamily, t]);
 
   const update = useCallback(<K extends keyof ExportSettings,>(key: K, value: ExportSettings[K]) => {
-    setSettings(s => ({ ...s, [key]: value }));
-  }, []);
+    session.update(key, value);
+  }, [session]);
 
   const wrap = useCallback((before: string, after = '') => {
     const el = editor.current;
     if (!el) return;
-    const markdown = markdownRef.current;
+    const markdown = session.getSnapshot().markdown;
     const start = el.selectionStart; const end = el.selectionEnd;
     const selected = markdown.slice(start, end);
-    setMarkdown(markdown.slice(0, start) + before + selected + after + markdown.slice(end));
+    if (!setMarkdown(markdown.slice(0, start) + before + selected + after + markdown.slice(end), 'toolbar')) return;
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + before.length, end + before.length); });
-  }, []);
+  }, [session, setMarkdown]);
 
   const convert = useCallback(async (format: 'docx' | 'pdf' | 'md') => {
-    const markdown = markdownRef.current;
-    const settings = settingsRef.current;
+    const { markdown, settings } = session.snapshot();
     if ((!markdown.trim() && format !== 'md') || exporting.current) return;
     exporting.current = true;
     setBusy(true);
@@ -196,11 +225,12 @@ function App() {
       let saved: boolean;
       if (format === 'md') saved = await saveMarkdown(markdown, filename);
       else {
-        const fonts = await documentFonts(settings.fontFamily, markdown);
+        const context = markdownContext(markdown);
+        const fonts = await documentFonts(settings.fontFamily, context.root);
         if (format === 'pdf') {
-          const { exportPdf } = await import('./pdf-export');
-          saved = await savePdf(await exportPdf(markdown, settings, fonts), filename);
-        } else saved = await saveDocx(await exportWord(markdown, settings, fonts), filename);
+          const { exportPreparedPdf } = await import('./adapters/pdf');
+          saved = await savePdf(await exportPreparedPdf(context, settings, fonts), filename);
+        } else saved = await saveDocx(await exportPreparedWord(context, settings, fonts), filename);
       }
       if (saved) {
         const label = format === 'docx' ? 'Word' : format === 'md' ? 'Markdown' : 'PDF';
@@ -208,33 +238,33 @@ function App() {
       }
     } catch (error) {
       console.error(`${format.toUpperCase()} export failed`, error);
-      setNotice({ text: error instanceof RichContentError ? t(error.message) : String(error).includes('FONT_') ? t(fontError(error)) : t("ذخیرهٔ فایل انجام نشد. فضای خالی و محل ذخیره را بررسی کن و دوباره امتحان کن."), error: true });
+      setNotice({ text: t(errorMessage(error, "ذخیرهٔ فایل انجام نشد. فضای خالی و محل ذخیره را بررسی کن و دوباره امتحان کن.")), error: true });
     } finally { exporting.current = false; setBusy(false); }
-  }, [t, locale]);
+  }, [t, locale, session]);
 
   const importFile = useCallback(async () => {
     if (platform.kind === 'web') { input.current?.click(); return; }
     try {
       const file = await openMarkdown();
-      if (file) { setPrevious(markdownRef.current); setMarkdown(file.text); update('title', file.name); }
+      if (file) { setPrevious(session.getSnapshot().markdown); if (setMarkdown(file.text, 'import')) update('title', file.name); }
     } catch (error) {
-      setNotice({ text: String(error).includes('FILE_TOO_LARGE') ? t("برای این نسخه، متن باید کمتر از ۵۰۰ هزار نویسه باشد.") : t("باز کردن فایل انجام نشد. یک فایل متنی یا Markdown انتخاب کن."), error: true });
+      setNotice({ text: t(errorMessage(error, "باز کردن فایل انجام نشد. یک فایل متنی یا Markdown انتخاب کن.")), error: true });
     }
-  }, [update, t]);
+  }, [update, t, session, setMarkdown]);
 
   const onDirectionChange = useCallback((direction: ExportSettings['direction']) => update('direction', direction), [update]);
   const onTitleChange = useCallback((title: string) => update('title', title), [update]);
   const onSettings = useCallback(() => setSheet('settings'), []);
   const onNew = useCallback(() => {
     if (platform.kind === 'vscode') { platform.command?.('new'); return; }
-    setPrevious(markdownRef.current);
+    setPrevious(session.getSnapshot().markdown);
     setMarkdown('');
     update('title', t("یادداشت تازه"));
     focusEditor();
-  }, [update, focusEditor, t]);
+  }, [update, focusEditor, t, session, setMarkdown]);
   const onRestore = useCallback(() => {
-    if (previous !== null) { setMarkdown(previous); setPrevious(null); }
-  }, [previous]);
+    if (previous !== null && setMarkdown(previous, 'restore')) setPrevious(null);
+  }, [previous, setMarkdown]);
   const onOpen = importFile;
   const onExport = useCallback(() => { void convert('docx'); }, [convert]);
   const onExportPdf = useCallback(() => { void convert('pdf'); }, [convert]);
@@ -250,11 +280,11 @@ function App() {
       const command = key === 's' ? 'save' : key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
       if (command) { event.preventDefault(); event.stopPropagation(); platform.command?.(command); }
     }}>
-      <BrandHeader />
+      <BrandHeader theme={displayTheme} />
 
       <main>
         {platform.kind === 'vscode' && <nav className="host-actions" aria-label="VS Code">
-          <Button variant="outline" onClick={() => { selectView('preview'); platform.command?.('source'); }}>{locale === 'fa' ? 'منبع بومی VS Code' : 'VS Code source'}</Button>
+          <Button variant="outline" onClick={() => { selectEditingView('preview'); platform.command?.('source'); }}>{locale === 'fa' ? 'منبع بومی VS Code' : 'VS Code source'}</Button>
           <Button variant="outline" onClick={() => platform.command?.('preview')}>{locale === 'fa' ? 'پیش‌نمایش VS Code' : 'VS Code preview'}</Button>
           <Button variant="outline" onClick={() => platform.command?.('diff')}>Git diff</Button>
           <Button variant="outline" onClick={() => platform.command?.('stagedDiff')}>Staged diff</Button>
@@ -268,18 +298,19 @@ function App() {
           <section className="document-panel" aria-label={t("ویرایش سند")}>
             <DocumentHeading title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} onExportPdf={onExportPdf} onExportMarkdown={onExportMarkdown} />
 
-            <div className="live-workspace" data-view={mobileView}>
-            <MobileViewSwitch view={mobileView} onSelect={selectView} />
-            <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading">
+            {oversized && <div role="alert" className="p-4 text-sm">{locale === 'en' ? 'The complete recovered document exceeds the editing limit. It is preserved here: save a Markdown copy or delete text to return below 500,000 characters. Rich preview is paused.' : 'متن بازیابی‌شده کامل حفظ شده و از حد ویرایش بیشتر است. یک نسخهٔ Markdown ذخیره کن یا با حذف متن آن را به زیر ۵۰۰ هزار نویسه برسان. پیش‌نمایش موقتاً متوقف است.'}</div>}
+            <div className="live-workspace" data-view={mobileView} data-mode={viewMode}>
+            <MobileViewSwitch view={mobileView} onSelect={selectEditingView} />
+            <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading" onPointerDownCapture={onSourceFocus}>
               <div className="pane-heading"><h2 id="edit-heading"><Code2 size="1.0625rem" /> {t("ویرایش متن")}</h2><span>Markdown</span></div>
               <SourceToolbar canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
-              <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} /></Field></FieldGroup>
+              <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} /></Field></FieldGroup>
             </section>
 
             <section id="preview-pane" className="preview-pane" aria-labelledby="preview-heading">
               <div className="pane-heading"><h2 id="preview-heading"><BookOpen size="1.0625rem" /> {t("پیش‌نمایش")}</h2></div>
-              <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus}>
-                <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} />
+              <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus} onPointerDownCapture={onPreviewFocus}>
+                {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} />}
               </div>
             </section>
             </div>
@@ -308,12 +339,12 @@ function App() {
         const file = e.target.files?.[0];
         if (file) {
           if (file.size > 2_000_000) { setNotice({ text: t("حجم فایل برای این نسخه بیش از حد بزرگ است."), error: true }); }
-          else { const text = await file.text(); if (text.length <= 500_000) { setPrevious(markdown); setMarkdown(text); update('title', file.name.replace(/\.(md|markdown|txt)$/i, '')); } else setNotice({ text: t("متن باید کمتر از ۵۰۰ هزار نویسه باشد."), error: true }); }
+          else { const text = await file.text(); if (setMarkdown(text, 'import')) { setPrevious(markdown); update('title', file.name.replace(/\.(md|markdown|txt)$/i, '')); } }
         }
         e.target.value = '';
       }} />
 
-      <Toaster dir={dir} position="bottom-center" theme="light" closeButton
+      <Toaster dir={dir} position="bottom-center" theme={displayTheme.resolvedTheme} closeButton
         offset={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0rem))', left: '1.5rem', right: '1.5rem' }}
         mobileOffset={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0rem))', left: '1rem', right: '1rem' }} />
       <ExportSettingsDialog settings={settings} sheet={sheet} onSheetChange={setSheet} onUpdate={update} />

@@ -1,15 +1,75 @@
-name: Build and test VS Code extension
+name: Validate editor and VS Code extension
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['apps/vscode/**', 'packages/core/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig*.json', '.github/workflows/vscode.yml']
+    paths:
+      [
+        'apps/vscode/**',
+        'apps/parsiword/src/**',
+        'apps/parsiword/package.json',
+        'apps/parsiword/vite.config.ts',
+        'apps/parsiword/index.html',
+        'apps/parsiword/en/**',
+        'packages/core/**',
+        'tests/**',
+        'scripts/**',
+        'package.json',
+        'pnpm-lock.yaml',
+        'pnpm-workspace.yaml',
+        'tsconfig*.json',
+        '*vite*.ts',
+        'playwright.config.ts',
+        '.github/workflows/vscode.yml',
+      ]
   pull_request:
-    paths: ['apps/vscode/**', 'packages/core/**', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig*.json', '.github/workflows/vscode.yml']
+    paths:
+      [
+        'apps/vscode/**',
+        'apps/parsiword/src/**',
+        'apps/parsiword/package.json',
+        'apps/parsiword/vite.config.ts',
+        'apps/parsiword/index.html',
+        'apps/parsiword/en/**',
+        'packages/core/**',
+        'tests/**',
+        'scripts/**',
+        'package.json',
+        'pnpm-lock.yaml',
+        'pnpm-workspace.yaml',
+        'tsconfig*.json',
+        '*vite*.ts',
+        'playwright.config.ts',
+        '.github/workflows/vscode.yml',
+      ]
 permissions:
   contents: read
 jobs:
+  editor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run check:architecture
+      - run: pnpm test
+      - run: pnpm run build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run test:ui --project chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: Editor-browser-failures
+          path: |
+            test-results/**
+            playwright-report/**
+          if-no-files-found: ignore
   extension:
+    needs: editor
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +79,6 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
       - run: pnpm run test:vscode
       - run: pnpm run package:vscode
       - uses: actions/upload-artifact@v4

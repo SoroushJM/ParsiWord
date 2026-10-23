@@ -1,23 +1,16 @@
 import defaultDocument from '@parsiword/core/default-document.md?raw';
-import { defaultSettings, type ExportSettings } from '@parsiword/core/converter';
-import { normalizeFontFamily } from '@parsiword/core/fonts';
+import { defaultSettings, normalizeSettings, MAX_MARKDOWN_LENGTH, type ExportSettings } from '@parsiword/core/document';
 const storageKey = 'parsiword-draft-v1';
 export function loadDraft(locale: 'fa' | 'en') {
   try {
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const data = JSON.parse(raw);
-      if (typeof data.markdown === 'string' && data.markdown.length <= 500_000) {
-        const s = data.settings || {};
+      if (typeof data.markdown === 'string') {
         return {
           markdown: data.markdown,
-          settings: {
-            title: typeof s.title === 'string' ? s.title.slice(0, 90) : defaultSettings.title,
-            direction: ['rtl', 'ltr', 'auto'].includes(s.direction) ? s.direction : 'rtl',
-            fontSize: [10, 11, 12, 14, 16, 18].includes(s.fontSize) ? s.fontSize : 12,
-            alignmentOnly: false,
-            fontFamily: typeof s.fontFamily === 'string' ? normalizeFontFamily(s.fontFamily.slice(0, 100)) : defaultSettings.fontFamily,
-          } as ExportSettings,
+          settings: normalizeSettings(data.settings),
+          ...(data.markdown.length > MAX_MARKDOWN_LENGTH ? { recovery: 'oversize' as const } : {}),
         };
       }
     }

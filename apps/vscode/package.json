@@ -35,6 +35,8 @@
   },
   "activationEvents": [
     "onCustomEditor:parsiword.markdown",
+    "onCustomEditor:parsiword.markdown.source",
+    "onCustomEditor:parsiword.markdown.rendered",
     "onLanguage:markdown"
   ],
   "extensionDependencies": [
@@ -44,13 +46,25 @@
     "customEditors": [
       {
         "viewType": "parsiword.markdown",
-        "displayName": "ParsiWord RTL Markdown",
+        "displayName": "ParsiWord Source + Result",
         "selector": [
           {
             "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}"
           }
         ],
         "priority": "default"
+      },
+      {
+        "viewType": "parsiword.markdown.source",
+        "displayName": "ParsiWord Markdown Source",
+        "selector": [{ "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}" }],
+        "priority": "option"
+      },
+      {
+        "viewType": "parsiword.markdown.rendered",
+        "displayName": "ParsiWord Rendered Result",
+        "selector": [{ "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}" }],
+        "priority": "option"
       }
     ],
     "commands": [

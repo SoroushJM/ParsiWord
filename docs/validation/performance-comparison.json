@@ -1,0 +1,698 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T12:55:22.711Z",
+  "baselineRevision": "f38dde8",
+  "afterBuild": {
+    "description": "Final green production dist copied after core/host/theme freeze and legacy migration repair; uncommitted feature work",
+    "mainBundle": "main-B72Ki8-z.js",
+    "sha256": "20142930c06d93c6ab7f4e0ca657004af3612419b7a74a8e14d8d08bd0fbf5cd",
+    "url": "http://127.0.0.1:1422",
+    "previewClosed": true
+  },
+  "scope": "Exactly three final runs as requested: normal source, normal rich, existing long-block rich. One sample each. No optimization or optional rerun.",
+  "interpretation": [
+    "Event-to-first-rAF scheduling latency is not full-render completion or native-device latency.",
+    "Long-task observation begins before clipboard/profiler setup and ends at final read, so its total has a different window from elapsedMs.",
+    "Both normal scenarios exceed the pre-agreed long-task-total review trigger. These measured residual costs are retained and deferred, not hidden or optimized in this task.",
+    "The existing long rich scenario preserves entire source and complete paragraph, including its final source newline; the old baseline removed that newline.",
+    "Newly inserted Markdown escaping or space entities may legitimately represent input. Separate rich editor regressions check rendered text and unrelated source preservation.",
+    "Six other heavy AFTER scenarios were not run at the user request; their final performance is unmeasured. Heavy BEFORE costs remain backlog evidence."
+  ],
+  "summary": [
+    {
+      "scenario": "normal-source",
+      "changes": {
+        "elapsedMs": {
+          "before": 3549,
+          "after": 3631,
+          "delta": 82,
+          "percent": 2.3
+        },
+        "latencyMedianMs": {
+          "before": 25,
+          "after": 24,
+          "delta": -1,
+          "percent": -4
+        },
+        "latencyP95Ms": {
+          "before": 63,
+          "after": 70,
+          "delta": 7,
+          "percent": 11.1
+        },
+        "longTaskTotalMs": {
+          "before": 556,
+          "after": 826,
+          "delta": 270,
+          "percent": 48.6
+        },
+        "maxLongTaskMs": {
+          "before": 258,
+          "after": 323,
+          "delta": 65,
+          "percent": 25.2
+        }
+      },
+      "reviewTriggers": {
+        "p95": false,
+        "longTaskTotal": true
+      },
+      "correctness": {
+        "events": 32,
+        "exactSource": true,
+        "exactOverlay": true,
+        "staleHighlightFrames": 0
+      }
+    },
+    {
+      "scenario": "normal-rich",
+      "changes": {
+        "elapsedMs": {
+          "before": 4234,
+          "after": 4343,
+          "delta": 109,
+          "percent": 2.6
+        },
+        "latencyMedianMs": {
+          "before": 47,
+          "after": 49,
+          "delta": 2,
+          "percent": 4.3
+        },
+        "latencyP95Ms": {
+          "before": 63,
+          "after": 77,
+          "delta": 14,
+          "percent": 22.2
+        },
+        "longTaskTotalMs": {
+          "before": 586,
+          "after": 961,
+          "delta": 375,
+          "percent": 64
+        },
+        "maxLongTaskMs": {
+          "before": 155,
+          "after": 136,
+          "delta": -19,
+          "percent": -12.3
+        }
+      },
+      "reviewTriggers": {
+        "p95": false,
+        "longTaskTotal": true
+      },
+      "correctness": {
+        "events": 32,
+        "expectedEvents": 32,
+        "exactSource": null,
+        "note": "The existing schema-1 normal-rich harness records input count, not a complete document assertion. Do not infer exact source from event count. The schema-2 long-block run below independently verifies exact source and complete paragraph display."
+      }
+    },
+    {
+      "scenario": "long-block-rich",
+      "changes": {
+        "elapsedMs": {
+          "before": 29795,
+          "after": 22883,
+          "delta": -6912,
+          "percent": -23.2
+        },
+        "latencyMedianMs": {
+          "before": 737,
+          "after": 605,
+          "delta": -132,
+          "percent": -17.9
+        },
+        "latencyP95Ms": {
+          "before": 1532,
+          "after": 1358,
+          "delta": -174,
+          "percent": -11.4
+        },
+        "longTaskTotalMs": {
+          "before": 27192,
+          "after": 20913,
+          "delta": -6279,
+          "percent": -23.1
+        },
+        "maxLongTaskMs": {
+          "before": 1786,
+          "after": 1370,
+          "delta": -416,
+          "percent": -23.3
+        }
+      },
+      "reviewTriggers": {
+        "p95": false,
+        "longTaskTotal": false
+      },
+      "correctness": {
+        "before": {
+          "eventCountMatches": true,
+          "exactSource": false,
+          "exactParagraphDisplay": true,
+          "paragraphMatches": 1,
+          "firstDifference": {
+            "offset": 200071,
+            "expected": "le words 42 متن فارسی و English sample w\n",
+            "actual": "le words 42 متن فارسی و English sample w"
+          },
+          "actualSourceSha256": "5310ff81b47887b6caee30e40fb94ff3085174a26bac8446f655a91d62f7d449",
+          "expectedSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470"
+        },
+        "after": {
+          "eventCountMatches": true,
+          "exactSource": true,
+          "exactParagraphDisplay": true,
+          "paragraphMatches": 1,
+          "firstDifference": null,
+          "actualSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470",
+          "expectedSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470"
+        }
+      }
+    }
+  ],
+  "reports": {
+    "normal-source": {
+      "before": {
+        "schemaVersion": 1,
+        "label": "before-refactor-f38dde8",
+        "recordedAt": "2026-10-23T11:23:09.252Z",
+        "environment": {
+          "browserVersion": "156.0.8078.4",
+          "nodeVersion": "v24.8.0",
+          "platform": "win32",
+          "architecture": "x64"
+        },
+        "protocol": {
+          "editor": "source",
+          "fixture": "packages/core/src/default-document.md",
+          "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+          "repeat": 1,
+          "characters": 28147,
+          "viewport": {
+            "width": 393,
+            "height": 851
+          },
+          "cpuThrottleRate": 4,
+          "input": " typing responsiveness benchmark",
+          "keyDelayMs": 35,
+          "settleBeforeMs": 800,
+          "settleAfterMs": 1200,
+          "cpuProfiler": true,
+          "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+        },
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 3549,
+          "latencyMedianMs": 25,
+          "latencyP95Ms": 63,
+          "longTaskCount": 4,
+          "longTaskTotalMs": 556,
+          "maxLongTaskMs": 258
+        },
+        "sourceRendering": {
+          "overlayAvailable": true,
+          "highlighted": true,
+          "initialLineCount": 1263,
+          "mutatedLineIndexes": [
+            2
+          ],
+          "originalLineNodesStillConnected": 1263,
+          "finalLineCount": 1263,
+          "sourceMatchesExpected": true,
+          "overlayMatchesNativeValue": true,
+          "coloredInputFrames": 32,
+          "staleHighlightFrames": 0
+        }
+      },
+      "after": {
+        "schemaVersion": 1,
+        "label": "after-final",
+        "recordedAt": "2026-10-23T12:52:01.705Z",
+        "environment": {
+          "browserVersion": "156.0.8078.4",
+          "nodeVersion": "v24.8.0",
+          "platform": "win32",
+          "architecture": "x64"
+        },
+        "protocol": {
+          "editor": "source",
+          "scenario": "typing",
+          "fixture": "packages/core/src/default-document.md",
+          "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+          "sourceSha256": "15f20b8b467e9c634d9e5058877cf3c58d2af9d8d12324737059b4a10726122b",
+          "repeat": 1,
+          "characters": 28147,
+          "viewport": {
+            "width": 393,
+            "height": 851
+          },
+          "cpuThrottleRate": 4,
+          "input": " typing responsiveness benchmark",
+          "keyDelayMs": 35,
+          "settleBeforeMs": 800,
+          "settleAfterMs": 1200,
+          "cpuProfiler": true,
+          "initCpuThrottleRate": 1,
+          "url": "http://127.0.0.1:1422",
+          "latencyDefinition": "beforeinput event to first requestAnimationFrame callback; browser scheduling, not native-device input latency"
+        },
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 3631,
+          "latencyMedianMs": 24,
+          "latencyP95Ms": 70,
+          "longTaskCount": 7,
+          "longTaskTotalMs": 826,
+          "maxLongTaskMs": 323
+        },
+        "sourceRendering": {
+          "overlayAvailable": true,
+          "highlighted": true,
+          "initialLineCount": 1263,
+          "mutatedLineIndexes": [
+            2
+          ],
+          "originalLineNodesStillConnected": 1263,
+          "finalLineCount": 1263,
+          "sourceMatchesExpected": true,
+          "overlayMatchesNativeValue": true,
+          "coloredInputFrames": 32,
+          "staleHighlightFrames": 0
+        }
+      }
+    },
+    "normal-rich": {
+      "before": {
+        "schemaVersion": 1,
+        "label": "before-refactor-f38dde8",
+        "recordedAt": "2026-10-23T11:24:42.439Z",
+        "environment": {
+          "browserVersion": "156.0.8078.4",
+          "nodeVersion": "v24.8.0",
+          "platform": "win32",
+          "architecture": "x64"
+        },
+        "protocol": {
+          "editor": "preview",
+          "fixture": "packages/core/src/default-document.md",
+          "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+          "repeat": 1,
+          "characters": 28147,
+          "viewport": {
+            "width": 393,
+            "height": 851
+          },
+          "cpuThrottleRate": 4,
+          "input": " typing responsiveness benchmark",
+          "keyDelayMs": 35,
+          "settleBeforeMs": 800,
+          "settleAfterMs": 1200,
+          "cpuProfiler": true,
+          "latencyDefinition": "beforeinput event to the first requestAnimationFrame callback; this is a browser scheduling measurement, not a native-device input latency guarantee"
+        },
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 4234,
+          "latencyMedianMs": 47,
+          "latencyP95Ms": 63,
+          "longTaskCount": 8,
+          "longTaskTotalMs": 586,
+          "maxLongTaskMs": 155
+        }
+      },
+      "after": {
+        "schemaVersion": 1,
+        "label": "after-final",
+        "recordedAt": "2026-10-23T12:52:10.926Z",
+        "environment": {
+          "browserVersion": "156.0.8078.4",
+          "nodeVersion": "v24.8.0",
+          "platform": "win32",
+          "architecture": "x64"
+        },
+        "protocol": {
+          "editor": "preview",
+          "scenario": "typing",
+          "fixture": "packages/core/src/default-document.md",
+          "fixtureSha256": "1dd0f63c832c416fd94b2e9e1705e198366287507e13ae109212044a4e4e88a1",
+          "sourceSha256": "15f20b8b467e9c634d9e5058877cf3c58d2af9d8d12324737059b4a10726122b",
+          "repeat": 1,
+          "characters": 28147,
+          "viewport": {
+            "width": 393,
+            "height": 851
+          },
+          "cpuThrottleRate": 4,
+          "input": " typing responsiveness benchmark",
+          "keyDelayMs": 35,
+          "settleBeforeMs": 800,
+          "settleAfterMs": 1200,
+          "cpuProfiler": true,
+          "initCpuThrottleRate": 1,
+          "url": "http://127.0.0.1:1422",
+          "latencyDefinition": "beforeinput event to first requestAnimationFrame callback; browser scheduling, not native-device input latency"
+        },
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 4343,
+          "latencyMedianMs": 49,
+          "latencyP95Ms": 77,
+          "longTaskCount": 15,
+          "longTaskTotalMs": 961,
+          "maxLongTaskMs": 136
+        }
+      }
+    },
+    "long-block-rich": {
+      "before": {
+        "schemaVersion": 2,
+        "label": "heavy-before-long-block-preview",
+        "recordedAt": "2026-10-23T12:16:24.696Z",
+        "environment": {
+          "browserVersion": "156.0.8078.4",
+          "nodeVersion": "v24.8.0",
+          "platform": "win32",
+          "architecture": "x64"
+        },
+        "protocol": {
+          "editor": "preview",
+          "scenario": "long-block",
+          "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+          "fixtureSha256": "9d672f3708cfbc1b93e462de01f161cef788e093d32e710eb04e951180c34ac9",
+          "sourceSha256": "9d672f3708cfbc1b93e462de01f161cef788e093d32e710eb04e951180c34ac9",
+          "repeat": 1,
+          "characters": 200040,
+          "viewport": {
+            "width": 393,
+            "height": 851
+          },
+          "cpuThrottleRate": 4,
+          "input": " typing responsiveness benchmark",
+          "keyDelayMs": 35,
+          "settleBeforeMs": 800,
+          "settleAfterMs": 1200,
+          "cpuProfiler": true,
+          "initCpuThrottleRate": 4,
+          "url": "http://127.0.0.1:1421",
+          "latencyDefinition": "capturing beforeinput event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+          "reviewTriggers": {
+            "relativeP95": "both >20% and >16ms increase",
+            "longTasks": "both >25% and >50ms increase",
+            "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+          },
+          "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+        },
+        "initialization": {
+          "navigationMs": 711,
+          "readyMs": 9837
+        },
+        "checks": {
+          "eventCountMatches": true,
+          "exactSource": false,
+          "exactParagraphDisplay": true,
+          "paragraphMatches": 1,
+          "firstDifference": {
+            "offset": 200071,
+            "expected": "le words 42 متن فارسی و English sample w\n",
+            "actual": "le words 42 متن فارسی و English sample w"
+          },
+          "actualSourceSha256": "5310ff81b47887b6caee30e40fb94ff3085174a26bac8446f655a91d62f7d449",
+          "expectedSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470"
+        },
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 29795,
+          "latencyMedianMs": 737,
+          "latencyP95Ms": 1532,
+          "longTaskCount": 36,
+          "longTaskTotalMs": 27192,
+          "maxLongTaskMs": 1786,
+          "performanceCounters": {
+            "LayoutCount": 77,
+            "RecalcStyleCount": 21,
+            "LayoutDuration": 13.921288,
+            "RecalcStyleDuration": 0.008876,
+            "ScriptDuration": 4.057086,
+            "TaskDuration": 28.718080999999998,
+            "JSHeapUsedSize": 18497036,
+            "Nodes": 527,
+            "Documents": 1
+          },
+          "timelineCounts": {
+            "Layout": 77,
+            "UpdateLayoutTree": 21,
+            "Paint": 86,
+            "PrePaint": 97,
+            "CompositeLayers": 0
+          },
+          "topFunctions": [
+            {
+              "functionName": "(program) @ :-1",
+              "samples": 13015
+            },
+            {
+              "functionName": "(idle) @ :-1",
+              "samples": 787
+            },
+            {
+              "functionName": "ae @ main-hDHOBE3D.js:1581",
+              "samples": 598
+            },
+            {
+              "functionName": "pA @ main-hDHOBE3D.js:1581",
+              "samples": 411
+            },
+            {
+              "functionName": "(anonymous) @ main-hDHOBE3D.js:1581",
+              "samples": 185
+            },
+            {
+              "functionName": "Ole @ main-hDHOBE3D.js:1783",
+              "samples": 158
+            },
+            {
+              "functionName": "d @ main-hDHOBE3D.js:1581",
+              "samples": 108
+            },
+            {
+              "functionName": "fo @ main-hDHOBE3D.js:1293",
+              "samples": 96
+            },
+            {
+              "functionName": "(garbage collector) @ :-1",
+              "samples": 64
+            },
+            {
+              "functionName": "f @ main-hDHOBE3D.js:1581",
+              "samples": 57
+            },
+            {
+              "functionName": "YV @ main-hDHOBE3D.js:1637",
+              "samples": 35
+            },
+            {
+              "functionName": "JV @ main-hDHOBE3D.js:1637",
+              "samples": 29
+            },
+            {
+              "functionName": "(anonymous) @ main-hDHOBE3D.js:1778",
+              "samples": 21
+            },
+            {
+              "functionName": "u @ main-hDHOBE3D.js:1581",
+              "samples": 18
+            },
+            {
+              "functionName": "Du @ main-hDHOBE3D.js:1596",
+              "samples": 13
+            },
+            {
+              "functionName": "update @ main-hDHOBE3D.js:1643",
+              "samples": 9
+            },
+            {
+              "functionName": "y @ main-hDHOBE3D.js:1581",
+              "samples": 9
+            },
+            {
+              "functionName": "getClientRects @ :-1",
+              "samples": 8
+            },
+            {
+              "functionName": "(anonymous) @ main-hDHOBE3D.js:1783",
+              "samples": 7
+            },
+            {
+              "functionName": "RegExp: [\\r\\n] @ :-1",
+              "samples": 7
+            }
+          ]
+        }
+      },
+      "after": {
+        "schemaVersion": 2,
+        "label": "heavy-after-long-block-preview",
+        "recordedAt": "2026-10-23T12:52:53.286Z",
+        "environment": {
+          "browserVersion": "156.0.8078.4",
+          "nodeVersion": "v24.8.0",
+          "platform": "win32",
+          "architecture": "x64"
+        },
+        "protocol": {
+          "editor": "preview",
+          "scenario": "long-block",
+          "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+          "fixtureSha256": "9d672f3708cfbc1b93e462de01f161cef788e093d32e710eb04e951180c34ac9",
+          "sourceSha256": "9d672f3708cfbc1b93e462de01f161cef788e093d32e710eb04e951180c34ac9",
+          "repeat": 1,
+          "characters": 200040,
+          "viewport": {
+            "width": 393,
+            "height": 851
+          },
+          "cpuThrottleRate": 4,
+          "input": " typing responsiveness benchmark",
+          "keyDelayMs": 35,
+          "settleBeforeMs": 800,
+          "settleAfterMs": 1200,
+          "cpuProfiler": true,
+          "initCpuThrottleRate": 4,
+          "url": "http://127.0.0.1:1422",
+          "latencyDefinition": "capturing beforeinput event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+          "reviewTriggers": {
+            "relativeP95": "both >20% and >16ms increase",
+            "longTasks": "both >25% and >50ms increase",
+            "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+          },
+          "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+        },
+        "initialization": {
+          "navigationMs": 710,
+          "readyMs": 18086
+        },
+        "checks": {
+          "eventCountMatches": true,
+          "exactSource": true,
+          "exactParagraphDisplay": true,
+          "paragraphMatches": 1,
+          "firstDifference": null,
+          "actualSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470",
+          "expectedSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470"
+        },
+        "measurements": {
+          "keys": 32,
+          "elapsedMs": 22883,
+          "latencyMedianMs": 605,
+          "latencyP95Ms": 1358,
+          "longTaskCount": 36,
+          "longTaskTotalMs": 20913,
+          "maxLongTaskMs": 1370,
+          "performanceCounters": {
+            "LayoutCount": 76,
+            "RecalcStyleCount": 20,
+            "LayoutDuration": 1.412687,
+            "RecalcStyleDuration": 0.009116,
+            "ScriptDuration": 8.361482,
+            "TaskDuration": 22.375847,
+            "JSHeapUsedSize": 346948504,
+            "Nodes": 568,
+            "Documents": 1
+          },
+          "timelineCounts": {
+            "Layout": 75,
+            "UpdateLayoutTree": 19,
+            "Paint": 84,
+            "PrePaint": 92,
+            "CompositeLayers": 0
+          },
+          "topFunctions": [
+            {
+              "functionName": "(program) @ :-1",
+              "samples": 9813
+            },
+            {
+              "functionName": "(garbage collector) @ :-1",
+              "samples": 1084
+            },
+            {
+              "functionName": "ae @ main-B72Ki8-z.js:1",
+              "samples": 812
+            },
+            {
+              "functionName": "(idle) @ :-1",
+              "samples": 648
+            },
+            {
+              "functionName": "C @ main-B72Ki8-z.js:1",
+              "samples": 523
+            },
+            {
+              "functionName": "(anonymous) @ main-B72Ki8-z.js:1499",
+              "samples": 350
+            },
+            {
+              "functionName": "(anonymous) @ main-B72Ki8-z.js:1",
+              "samples": 247
+            },
+            {
+              "functionName": "d @ main-B72Ki8-z.js:1",
+              "samples": 194
+            },
+            {
+              "functionName": "Rue @ main-B72Ki8-z.js:1808",
+              "samples": 186
+            },
+            {
+              "functionName": "bB @ main-B72Ki8-z.js:1499",
+              "samples": 184
+            },
+            {
+              "functionName": "TB @ main-B72Ki8-z.js:1500",
+              "samples": 184
+            },
+            {
+              "functionName": "(anonymous) @ main-B72Ki8-z.js:1495",
+              "samples": 163
+            },
+            {
+              "functionName": "kB @ main-B72Ki8-z.js:1512",
+              "samples": 123
+            },
+            {
+              "functionName": "fB @ main-B72Ki8-z.js:1495",
+              "samples": 115
+            },
+            {
+              "functionName": "CB @ main-B72Ki8-z.js:1500",
+              "samples": 97
+            },
+            {
+              "functionName": "(anonymous) @ main-B72Ki8-z.js:1500",
+              "samples": 78
+            },
+            {
+              "functionName": "f @ main-B72Ki8-z.js:1",
+              "samples": 67
+            },
+            {
+              "functionName": "vb @ main-B72Ki8-z.js:1350",
+              "samples": 42
+            },
+            {
+              "functionName": "wB @ main-B72Ki8-z.js:1500",
+              "samples": 41
+            },
+            {
+              "functionName": "y @ main-B72Ki8-z.js:1",
+              "samples": 40
+            }
+          ]
+        }
+      }
+    }
+  }
+}

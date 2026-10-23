@@ -11,6 +11,7 @@
     "tauri": "pnpm --filter @parsiword/app run tauri",
     "test": "vitest run",
     "test:ui": "playwright test",
+    "check:architecture": "node scripts/check-architecture.mjs",
     "android:apk": "pnpm run tauri android build --apk --target aarch64 --ci",
     "android:preview": "pnpm run tauri android build --debug --apk --target aarch64 --ci",
     "android:test-apk": "node scripts/build-android-preview.mjs",

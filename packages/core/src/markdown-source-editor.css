@@ -1,22 +1,90 @@
-.markdown-source-editor { position: relative; isolation: isolate; min-width: 0; background: var(--card); }
-.markdown-source-highlight { position: absolute; inset: 0; margin: 0; border-style: solid; border-color: transparent; overflow: hidden; pointer-events: none; user-select: none; color: var(--foreground); visibility: hidden; }
-.markdown-source-editor .markdown-editor { position: relative; color: var(--foreground); caret-color: var(--foreground); }
-.markdown-source-editor[data-highlighted=true] .markdown-source-highlight { visibility: visible; }
-.markdown-source-editor[data-highlighted=true] .markdown-editor { color: transparent; background: transparent; }
-.markdown-source-editor .markdown-editor::selection { color: HighlightText; background: Highlight; }
+.markdown-source-editor {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  background: var(--card);
+}
+.markdown-source-highlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  border-style: solid;
+  border-color: transparent;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  color: var(--foreground);
+  visibility: hidden;
+}
+.markdown-source-editor .markdown-editor {
+  position: relative;
+  color: var(--foreground);
+  caret-color: var(--document-caret);
+  background: var(--card);
+}
+.markdown-source-editor .markdown-editor:focus {
+  background: var(--card);
+}
+.markdown-source-editor[data-highlighted="true"] .markdown-source-highlight {
+  visibility: visible;
+}
+.markdown-source-editor[data-highlighted="true"] .markdown-editor {
+  color: transparent;
+  background: transparent;
+}
+.markdown-source-editor .markdown-editor::selection {
+  color: HighlightText;
+  background: Highlight;
+}
 /* Keep each logical line in its own inline formatting context. A single
    document-wide inline flow made textarea autosizing reflow all source lines
    on every key, even when React changed just one line. Preserve literal LF
    text and the native line height so the decorative glyphs stay aligned. */
-.markdown-source-highlight [data-source-line] { display: block; min-height: var(--source-line-height); unicode-bidi: plaintext; }
-.markdown-source-highlight [data-md-token] { font: inherit; letter-spacing: inherit; text-decoration: none; unicode-bidi: normal; }
-.markdown-source-highlight [data-md-token=heading], .markdown-source-highlight [data-md-token=link], .markdown-source-highlight [data-md-token=table] { color: var(--source-syntax-heading); }
-.markdown-source-highlight [data-md-token=marker], .markdown-source-highlight [data-md-token=escape], .markdown-source-highlight [data-md-token=quote], .markdown-source-highlight [data-md-token=strike] { color: var(--muted-foreground); }
-.markdown-source-highlight [data-md-token=strong], .markdown-source-highlight [data-md-token=emphasis], .markdown-source-highlight [data-md-token=math] { color: var(--source-syntax-emphasis); }
-.markdown-source-highlight [data-md-token=code] { color: var(--source-syntax-code); }
-.markdown-source-highlight [data-md-token=url] { color: var(--primary); }
-.markdown-source-highlight [data-md-token=list], .markdown-source-highlight [data-md-token=html] { color: var(--source-syntax-list); }
+.markdown-source-highlight [data-source-line] {
+  display: block;
+  min-height: var(--source-line-height);
+  unicode-bidi: plaintext;
+}
+.markdown-source-highlight [data-md-token] {
+  font: inherit;
+  letter-spacing: inherit;
+  text-decoration: none;
+  unicode-bidi: normal;
+}
+.markdown-source-highlight [data-md-token="heading"],
+.markdown-source-highlight [data-md-token="link"],
+.markdown-source-highlight [data-md-token="table"] {
+  color: var(--source-syntax-heading);
+}
+.markdown-source-highlight [data-md-token="marker"],
+.markdown-source-highlight [data-md-token="escape"],
+.markdown-source-highlight [data-md-token="quote"],
+.markdown-source-highlight [data-md-token="strike"] {
+  color: var(--muted-foreground);
+}
+.markdown-source-highlight [data-md-token="strong"],
+.markdown-source-highlight [data-md-token="emphasis"],
+.markdown-source-highlight [data-md-token="math"] {
+  color: var(--source-syntax-emphasis);
+}
+.markdown-source-highlight [data-md-token="code"] {
+  color: var(--source-syntax-code);
+}
+.markdown-source-highlight [data-md-token="url"] {
+  color: var(--document-link);
+}
+.markdown-source-highlight [data-md-token="list"],
+.markdown-source-highlight [data-md-token="html"] {
+  color: var(--source-syntax-list);
+}
 @media (forced-colors: active) {
-  .markdown-source-editor[data-highlighted] .markdown-source-highlight { visibility: hidden; }
-  .markdown-source-editor[data-highlighted] .markdown-editor { color: CanvasText; -webkit-text-fill-color: CanvasText; caret-color: auto; background: Canvas; }
+  .markdown-source-editor[data-highlighted] .markdown-source-highlight {
+    visibility: hidden;
+  }
+  .markdown-source-editor[data-highlighted] .markdown-editor {
+    color: CanvasText;
+    -webkit-text-fill-color: CanvasText;
+    caret-color: auto;
+    background: Canvas;
+  }
 }

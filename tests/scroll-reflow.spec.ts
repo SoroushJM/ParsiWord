@@ -104,6 +104,9 @@ test('fast rich input followed immediately by a mode switch preserves the edited
   await page.locator('[data-mobile-view="preview"]').click();
   await scrollPreviewHeadingToTop(page, 'Wrapped section 6');
   const paragraph = page.locator('.prose h2').filter({ hasText: /^Wrapped section 6$/ }).locator('xpath=following-sibling::p[1]');
+  const originalRendered = await paragraph.textContent();
+  const sectionPrefix = '## Wrapped section 6\n\n';
+  const insertionOffset = wrappingSource.indexOf(sectionPrefix) + sectionPrefix.length;
   await paragraph.evaluate(element => {
     const range = document.createRange();
     range.selectNodeContents(element);
@@ -124,9 +127,15 @@ test('fast rich input followed immediately by a mode switch preserves the edited
   const editor = page.locator('textarea.markdown-editor');
   await expect(editor).toBeVisible();
   const markdown = await editor.inputValue();
-  expect(markdown).toContain('تایپ سریع ' + burst);
-  expect(markdown).toContain('## Wrapped section 6');
-  expect(markdown).toContain('## Wrapped section 7');
+  const entered = 'تایپ سریع ' + burst, suffix = wrappingSource.slice(insertionOffset);
+  expect(await paragraph.textContent()).toBe(entered + originalRendered);
+  expect(markdown.slice(0, insertionOffset)).toBe(wrappingSource.slice(0, insertionOffset));
+  expect(markdown.slice(-suffix.length)).toBe(suffix);
+  const insertedSource = markdown.slice(insertionOffset, markdown.length - suffix.length);
+  // New literal punctuation may be escaped, and a transient trailing space
+  // may use an entity. Decode only this newly inserted interval; the source
+  // before/after it must remain byte-for-byte identical to the fixture.
+  expect(insertedSource.replace(/\\([!-/:-@[-`{-~])/g, '$1').replace(/&#(?:x20|32);/gi, ' ')).toBe(entered);
   const markerOffset = markdown.indexOf(marker) + marker.length;
   const lineTop = await nativeSourceLineTop(page, markerOffset);
   const caretInReadingArea = async () => editor.evaluate((element, top) => {

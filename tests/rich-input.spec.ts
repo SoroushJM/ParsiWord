@@ -78,10 +78,15 @@ test('a rapid burst in the real starter document keeps every character and unrel
   const codeHandle = (await untouchedCode.elementHandle())!;
   const codeText = await untouchedCode.textContent();
   const tableHandle = (await rich.locator('table').first().elementHandle())!;
-  await placeCaretAtEnd(rich.locator(':scope > p').first());
+  const paragraph = rich.locator(':scope > p').first(), originalRendered = await paragraph.textContent();
+  const originalParagraphSource = 'کتابخانهٔ React (version **19**) را نصب کنید.';
+  const paragraphStart = source.indexOf(originalParagraphSource);
+  expect(paragraphStart).toBeGreaterThanOrEqual(0);
+  const insertionOffset = paragraphStart + originalParagraphSource.length;
+  await placeCaretAtEnd(paragraph);
   const burst = ' inputburst0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   await page.keyboard.type(burst, { delay: 0 });
-  await expect(rich.locator(':scope > p').first()).toContainText(burst);
+  expect(await paragraph.textContent()).toBe(originalRendered + burst);
   // An edit in an ordinary paragraph must retain the unaffected NodeViews and
   // table DOM. Replacing the whole rich document is a costly typing regression.
   expect(await codeHandle.evaluate(element => element.isConnected)).toBe(true);
@@ -91,7 +96,14 @@ test('a rapid burst in the real starter document keeps every character and unrel
   // active; selecting it must immediately reveal the current canonical draft.
   await page.locator('[data-mobile-view="edit"]').click();
   const markdown = await page.locator('textarea.markdown-editor').inputValue();
-  expect(markdown.split(burst)).toHaveLength(2);
+  const suffix = source.slice(insertionOffset);
+  expect(markdown.slice(0, insertionOffset)).toBe(source.slice(0, insertionOffset));
+  expect(markdown.slice(-suffix.length)).toBe(suffix);
+  const insertedSource = markdown.slice(insertionOffset, markdown.length - suffix.length);
+  // The first key is a paragraph-trailing space. Its entity spelling retains
+  // that transient rich character; newly entered source need not use a
+  // literal space, while every pre-existing source character stays exact.
+  expect(insertedSource.replace(/&#(?:x20|32);/gi, ' ')).toBe(burst);
 });
 
 test('the Markdown limit counts escaping and still permits deletion at the boundary', async ({ page }) => {
@@ -108,6 +120,7 @@ test('the Markdown limit counts escaping and still permits deletion at the bound
   await page.keyboard.insertText('*');
   await expectMarkdownTail('\\*');
   await page.keyboard.insertText('z');
+  await expect(page.locator('[data-sonner-toast]')).toHaveCount(1);
   const richText = await rich.locator(':scope > p').first().textContent();
   expect({ length: richText?.length, prefixPreserved: richText?.startsWith(source), tail: richText?.slice(source.length) })
     .toEqual({ length: source.length + 1, prefixPreserved: true, tail: '*' });

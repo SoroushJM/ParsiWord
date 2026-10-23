@@ -1,0 +1,1333 @@
+{
+  "baselineRevision": "f38dde8",
+  "note": "Frozen production baseline; seven fixed scenarios. One run each, CPU4 browser emulation. Rich baseline exact-source failures remove the final newline only; do not count them as missing typed input. See protocol and checks per report.",
+  "reports": [
+    {
+      "schemaVersion": 2,
+      "label": "heavy-before-long-block-preview",
+      "recordedAt": "2026-10-23T12:16:24.696Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.8.0",
+        "platform": "win32",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "preview",
+        "scenario": "long-block",
+        "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+        "fixtureSha256": "9d672f3708cfbc1b93e462de01f161cef788e093d32e710eb04e951180c34ac9",
+        "sourceSha256": "9d672f3708cfbc1b93e462de01f161cef788e093d32e710eb04e951180c34ac9",
+        "repeat": 1,
+        "characters": 200040,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": " typing responsiveness benchmark",
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "initCpuThrottleRate": 4,
+        "url": "http://127.0.0.1:1421",
+        "latencyDefinition": "capturing beforeinput event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+        "reviewTriggers": {
+          "relativeP95": "both >20% and >16ms increase",
+          "longTasks": "both >25% and >50ms increase",
+          "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+        },
+        "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+      },
+      "initialization": {
+        "navigationMs": 711,
+        "readyMs": 9837
+      },
+      "checks": {
+        "eventCountMatches": true,
+        "exactSource": false,
+        "exactParagraphDisplay": true,
+        "paragraphMatches": 1,
+        "firstDifference": {
+          "offset": 200071,
+          "expected": "le words 42 متن فارسی و English sample w\n",
+          "actual": "le words 42 متن فارسی و English sample w"
+        },
+        "actualSourceSha256": "5310ff81b47887b6caee30e40fb94ff3085174a26bac8446f655a91d62f7d449",
+        "expectedSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470"
+      },
+      "measurements": {
+        "keys": 32,
+        "elapsedMs": 29795,
+        "latencyMedianMs": 737,
+        "latencyP95Ms": 1532,
+        "longTaskCount": 36,
+        "longTaskTotalMs": 27192,
+        "maxLongTaskMs": 1786,
+        "performanceCounters": {
+          "LayoutCount": 77,
+          "RecalcStyleCount": 21,
+          "LayoutDuration": 13.921288,
+          "RecalcStyleDuration": 0.008876,
+          "ScriptDuration": 4.057086,
+          "TaskDuration": 28.718080999999998,
+          "JSHeapUsedSize": 18497036,
+          "Nodes": 527,
+          "Documents": 1
+        },
+        "timelineCounts": {
+          "Layout": 77,
+          "UpdateLayoutTree": 21,
+          "Paint": 86,
+          "PrePaint": 97,
+          "CompositeLayers": 0
+        },
+        "topFunctions": [
+          {
+            "functionName": "(program) @ :-1",
+            "samples": 13015
+          },
+          {
+            "functionName": "(idle) @ :-1",
+            "samples": 787
+          },
+          {
+            "functionName": "ae @ main-hDHOBE3D.js:1581",
+            "samples": 598
+          },
+          {
+            "functionName": "pA @ main-hDHOBE3D.js:1581",
+            "samples": 411
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1581",
+            "samples": 185
+          },
+          {
+            "functionName": "Ole @ main-hDHOBE3D.js:1783",
+            "samples": 158
+          },
+          {
+            "functionName": "d @ main-hDHOBE3D.js:1581",
+            "samples": 108
+          },
+          {
+            "functionName": "fo @ main-hDHOBE3D.js:1293",
+            "samples": 96
+          },
+          {
+            "functionName": "(garbage collector) @ :-1",
+            "samples": 64
+          },
+          {
+            "functionName": "f @ main-hDHOBE3D.js:1581",
+            "samples": 57
+          },
+          {
+            "functionName": "YV @ main-hDHOBE3D.js:1637",
+            "samples": 35
+          },
+          {
+            "functionName": "JV @ main-hDHOBE3D.js:1637",
+            "samples": 29
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1778",
+            "samples": 21
+          },
+          {
+            "functionName": "u @ main-hDHOBE3D.js:1581",
+            "samples": 18
+          },
+          {
+            "functionName": "Du @ main-hDHOBE3D.js:1596",
+            "samples": 13
+          },
+          {
+            "functionName": "update @ main-hDHOBE3D.js:1643",
+            "samples": 9
+          },
+          {
+            "functionName": "y @ main-hDHOBE3D.js:1581",
+            "samples": 9
+          },
+          {
+            "functionName": "getClientRects @ :-1",
+            "samples": 8
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1783",
+            "samples": 7
+          },
+          {
+            "functionName": "RegExp: [\\r\\n] @ :-1",
+            "samples": 7
+          }
+        ]
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "label": "heavy-before-long-block-source",
+      "recordedAt": "2026-10-23T12:15:43.705Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.8.0",
+        "platform": "win32",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "source",
+        "scenario": "long-block",
+        "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+        "fixtureSha256": "9d672f3708cfbc1b93e462de01f161cef788e093d32e710eb04e951180c34ac9",
+        "sourceSha256": "9d672f3708cfbc1b93e462de01f161cef788e093d32e710eb04e951180c34ac9",
+        "repeat": 1,
+        "characters": 200040,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": " typing responsiveness benchmark",
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "initCpuThrottleRate": 4,
+        "url": "http://127.0.0.1:1421",
+        "latencyDefinition": "capturing beforeinput event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+        "reviewTriggers": {
+          "relativeP95": "both >20% and >16ms increase",
+          "longTasks": "both >25% and >50ms increase",
+          "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+        },
+        "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+      },
+      "initialization": {
+        "navigationMs": 692,
+        "readyMs": 8204
+      },
+      "checks": {
+        "eventCountMatches": true,
+        "exactSource": true,
+        "exactParagraphDisplay": true,
+        "paragraphMatches": 1,
+        "firstDifference": null,
+        "actualSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470",
+        "expectedSourceSha256": "0f78308408e90925b1364ee58b17db0c4771ac710d5063a106a39eb20a345470"
+      },
+      "measurements": {
+        "keys": 32,
+        "elapsedMs": 39139,
+        "latencyMedianMs": 1083,
+        "latencyP95Ms": 1613,
+        "longTaskCount": 40,
+        "longTaskTotalMs": 37542,
+        "maxLongTaskMs": 2188,
+        "performanceCounters": {
+          "LayoutCount": 142,
+          "RecalcStyleCount": 120,
+          "LayoutDuration": 30.500161,
+          "RecalcStyleDuration": 0.063806,
+          "ScriptDuration": 1.15516,
+          "TaskDuration": 39.299445000000006,
+          "JSHeapUsedSize": 12214760,
+          "Nodes": 528,
+          "Documents": 1
+        },
+        "timelineCounts": {
+          "Layout": 142,
+          "UpdateLayoutTree": 114,
+          "Paint": 89,
+          "PrePaint": 64,
+          "CompositeLayers": 0
+        },
+        "topFunctions": [
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:3041",
+            "samples": 9067
+          },
+          {
+            "functionName": "(program) @ :-1",
+            "samples": 8629
+          },
+          {
+            "functionName": "Ole @ main-hDHOBE3D.js:1783",
+            "samples": 193
+          },
+          {
+            "functionName": "getBoundingClientRect @ :-1",
+            "samples": 176
+          },
+          {
+            "functionName": "(idle) @ :-1",
+            "samples": 175
+          },
+          {
+            "functionName": "ae @ main-hDHOBE3D.js:1581",
+            "samples": 51
+          },
+          {
+            "functionName": "(garbage collector) @ :-1",
+            "samples": 42
+          },
+          {
+            "functionName": "pA @ main-hDHOBE3D.js:1581",
+            "samples": 38
+          },
+          {
+            "functionName": "Du @ main-hDHOBE3D.js:1596",
+            "samples": 34
+          },
+          {
+            "functionName": "g @ main-hDHOBE3D.js:1259",
+            "samples": 15
+          },
+          {
+            "functionName": "Tu @ main-hDHOBE3D.js:1596",
+            "samples": 13
+          },
+          {
+            "functionName": "v @ main-hDHOBE3D.js:1259",
+            "samples": 12
+          },
+          {
+            "functionName": "an @ main-hDHOBE3D.js:1596",
+            "samples": 11
+          },
+          {
+            "functionName": "y @ main-hDHOBE3D.js:1259",
+            "samples": 11
+          },
+          {
+            "functionName": "number @ main-hDHOBE3D.js:1597",
+            "samples": 10
+          },
+          {
+            "functionName": "b @ main-hDHOBE3D.js:1259",
+            "samples": 10
+          },
+          {
+            "functionName": "(anonymous) @ :4",
+            "samples": 9
+          },
+          {
+            "functionName": "_ @ main-hDHOBE3D.js:1259",
+            "samples": 9
+          },
+          {
+            "functionName": "Tce @ main-hDHOBE3D.js:1780",
+            "samples": 7
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1581",
+            "samples": 7
+          }
+        ]
+      },
+      "sourceRendering": {
+        "overlayAvailable": true,
+        "highlighted": true,
+        "initialLineCount": 4,
+        "mutatedLineIndexes": [
+          2
+        ],
+        "originalLineNodesStillConnected": 4,
+        "finalLineCount": 4,
+        "sourceMatchesExpected": true,
+        "overlayMatchesNativeValue": true,
+        "coloredInputFrames": 32,
+        "staleHighlightFrames": 0
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "label": "heavy-before-many-blocks-preview",
+      "recordedAt": "2026-10-23T12:17:16.095Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.8.0",
+        "platform": "win32",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "preview",
+        "scenario": "many-blocks",
+        "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+        "fixtureSha256": "3564977baea435f02042156f15500bcfa94ace59d51065ae813ed694b40ddd9a",
+        "sourceSha256": "3564977baea435f02042156f15500bcfa94ace59d51065ae813ed694b40ddd9a",
+        "repeat": 1,
+        "characters": 178171,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": " typing responsiveness benchmark",
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "initCpuThrottleRate": 4,
+        "url": "http://127.0.0.1:1421",
+        "latencyDefinition": "capturing beforeinput event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+        "reviewTriggers": {
+          "relativeP95": "both >20% and >16ms increase",
+          "longTasks": "both >25% and >50ms increase",
+          "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+        },
+        "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+      },
+      "initialization": {
+        "navigationMs": 686,
+        "readyMs": 14310
+      },
+      "checks": {
+        "eventCountMatches": true,
+        "exactSource": false,
+        "exactParagraphDisplay": true,
+        "paragraphMatches": 1,
+        "firstDifference": {
+          "offset": 178202,
+          "expected": "متن فارسی و English sample words 42 end.\n",
+          "actual": "متن فارسی و English sample words 42 end."
+        },
+        "actualSourceSha256": "b7b5fda25d716f6fa16a097973eae4473cddc602ab7538351625b6833add6cba",
+        "expectedSourceSha256": "7a6b7c9e0b19c3c64513242380e912a62705d7c42afcdb3d19ac941fbacf386a"
+      },
+      "measurements": {
+        "keys": 32,
+        "elapsedMs": 9952,
+        "latencyMedianMs": 204,
+        "latencyP95Ms": 380,
+        "longTaskCount": 33,
+        "longTaskTotalMs": 7278,
+        "maxLongTaskMs": 445,
+        "performanceCounters": {
+          "LayoutCount": 78,
+          "RecalcStyleCount": 20,
+          "LayoutDuration": 0.116011,
+          "RecalcStyleDuration": 0.010045,
+          "ScriptDuration": 7.156379,
+          "TaskDuration": 8.565651,
+          "JSHeapUsedSize": 52016296,
+          "Nodes": 26673,
+          "Documents": 1
+        },
+        "timelineCounts": {
+          "Layout": 77,
+          "UpdateLayoutTree": 19,
+          "Paint": 86,
+          "PrePaint": 92,
+          "CompositeLayers": 0
+        },
+        "topFunctions": [
+          {
+            "functionName": "(program) @ :-1",
+            "samples": 1761
+          },
+          {
+            "functionName": "(idle) @ :-1",
+            "samples": 1093
+          },
+          {
+            "functionName": "GY @ main-hDHOBE3D.js:1646",
+            "samples": 1018
+          },
+          {
+            "functionName": "forChild @ main-hDHOBE3D.js:1646",
+            "samples": 804
+          },
+          {
+            "functionName": "child @ main-hDHOBE3D.js:1637",
+            "samples": 318
+          },
+          {
+            "functionName": "posBeforeChild @ main-hDHOBE3D.js:1642",
+            "samples": 178
+          },
+          {
+            "functionName": "findIndex @ main-hDHOBE3D.js:1637",
+            "samples": 173
+          },
+          {
+            "functionName": "Ole @ main-hDHOBE3D.js:1783",
+            "samples": 102
+          },
+          {
+            "functionName": "setAttribute @ :-1",
+            "samples": 89
+          },
+          {
+            "functionName": "get nodeSize @ main-hDHOBE3D.js:1637",
+            "samples": 88
+          },
+          {
+            "functionName": "get isLeaf @ main-hDHOBE3D.js:1638",
+            "samples": 52
+          },
+          {
+            "functionName": "(garbage collector) @ :-1",
+            "samples": 31
+          },
+          {
+            "functionName": "set value @ :-1",
+            "samples": 30
+          },
+          {
+            "functionName": "uu @ main-hDHOBE3D.js:1596",
+            "samples": 28
+          },
+          {
+            "functionName": "Uq @ main-hDHOBE3D.js:1643",
+            "samples": 27
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1778",
+            "samples": 22
+          },
+          {
+            "functionName": "findNodeMatch @ main-hDHOBE3D.js:1643",
+            "samples": 20
+          },
+          {
+            "functionName": "Iq @ main-hDHOBE3D.js:1643",
+            "samples": 19
+          },
+          {
+            "functionName": "get isLeaf @ main-hDHOBE3D.js:1637",
+            "samples": 18
+          },
+          {
+            "functionName": "Vq @ main-hDHOBE3D.js:1643",
+            "samples": 15
+          }
+        ]
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "label": "heavy-before-many-blocks-source",
+      "recordedAt": "2026-10-23T12:16:50.452Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.8.0",
+        "platform": "win32",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "source",
+        "scenario": "many-blocks",
+        "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+        "fixtureSha256": "3564977baea435f02042156f15500bcfa94ace59d51065ae813ed694b40ddd9a",
+        "sourceSha256": "3564977baea435f02042156f15500bcfa94ace59d51065ae813ed694b40ddd9a",
+        "repeat": 1,
+        "characters": 178171,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": " typing responsiveness benchmark",
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "initCpuThrottleRate": 4,
+        "url": "http://127.0.0.1:1421",
+        "latencyDefinition": "capturing beforeinput event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+        "reviewTriggers": {
+          "relativeP95": "both >20% and >16ms increase",
+          "longTasks": "both >25% and >50ms increase",
+          "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+        },
+        "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+      },
+      "initialization": {
+        "navigationMs": 892,
+        "readyMs": 17150
+      },
+      "checks": {
+        "eventCountMatches": true,
+        "exactSource": true,
+        "exactParagraphDisplay": true,
+        "paragraphMatches": 1,
+        "firstDifference": null,
+        "actualSourceSha256": "7a6b7c9e0b19c3c64513242380e912a62705d7c42afcdb3d19ac941fbacf386a",
+        "expectedSourceSha256": "7a6b7c9e0b19c3c64513242380e912a62705d7c42afcdb3d19ac941fbacf386a"
+      },
+      "measurements": {
+        "keys": 32,
+        "elapsedMs": 4099,
+        "latencyMedianMs": 34,
+        "latencyP95Ms": 89,
+        "longTaskCount": 11,
+        "longTaskTotalMs": 3287,
+        "maxLongTaskMs": 1948,
+        "performanceCounters": {
+          "LayoutCount": 146,
+          "RecalcStyleCount": 127,
+          "LayoutDuration": 0.77524,
+          "RecalcStyleDuration": 0.077741,
+          "ScriptDuration": 3.193072,
+          "TaskDuration": 5.363004999999999,
+          "JSHeapUsedSize": 22195156,
+          "Nodes": 20649,
+          "Documents": 1
+        },
+        "timelineCounts": {
+          "Layout": 146,
+          "UpdateLayoutTree": 119,
+          "Paint": 95,
+          "PrePaint": 57,
+          "CompositeLayers": 0
+        },
+        "topFunctions": [
+          {
+            "functionName": "(program) @ :-1",
+            "samples": 1556
+          },
+          {
+            "functionName": "getBoundingClientRect @ :-1",
+            "samples": 810
+          },
+          {
+            "functionName": "(idle) @ :-1",
+            "samples": 523
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:3041",
+            "samples": 175
+          },
+          {
+            "functionName": "Ole @ main-hDHOBE3D.js:1783",
+            "samples": 171
+          },
+          {
+            "functionName": "(garbage collector) @ :-1",
+            "samples": 25
+          },
+          {
+            "functionName": "Du @ main-hDHOBE3D.js:1596",
+            "samples": 24
+          },
+          {
+            "functionName": "g @ main-hDHOBE3D.js:1259",
+            "samples": 23
+          },
+          {
+            "functionName": "GY @ main-hDHOBE3D.js:1646",
+            "samples": 22
+          },
+          {
+            "functionName": "(anonymous) @ :4",
+            "samples": 19
+          },
+          {
+            "functionName": "Ut @ main-hDHOBE3D.js:1259",
+            "samples": 17
+          },
+          {
+            "functionName": "forChild @ main-hDHOBE3D.js:1646",
+            "samples": 17
+          },
+          {
+            "functionName": "v @ main-hDHOBE3D.js:1259",
+            "samples": 15
+          },
+          {
+            "functionName": "number @ main-hDHOBE3D.js:1597",
+            "samples": 13
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1781",
+            "samples": 13
+          },
+          {
+            "functionName": "an @ main-hDHOBE3D.js:1596",
+            "samples": 13
+          },
+          {
+            "functionName": "Tu @ main-hDHOBE3D.js:1596",
+            "samples": 12
+          },
+          {
+            "functionName": "ml @ main-hDHOBE3D.js:1596",
+            "samples": 11
+          },
+          {
+            "functionName": "o @ main-hDHOBE3D.js:1259",
+            "samples": 11
+          },
+          {
+            "functionName": "ls @ main-hDHOBE3D.js:1298",
+            "samples": 11
+          }
+        ]
+      },
+      "sourceRendering": {
+        "overlayAvailable": true,
+        "highlighted": true,
+        "initialLineCount": 4014,
+        "mutatedLineIndexes": [
+          2014
+        ],
+        "originalLineNodesStillConnected": 4014,
+        "finalLineCount": 4014,
+        "sourceMatchesExpected": true,
+        "overlayMatchesNativeValue": true,
+        "coloredInputFrames": 32,
+        "staleHighlightFrames": 0
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "label": "heavy-before-paste-preview",
+      "recordedAt": "2026-10-23T12:18:02.24Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.8.0",
+        "platform": "win32",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "preview",
+        "scenario": "paste",
+        "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+        "fixtureSha256": "a43573d808e5cf8c26f8705b449b0459501bd934c5ad5b08ab53ed328fa48900",
+        "sourceSha256": "a43573d808e5cf8c26f8705b449b0459501bd934c5ad5b08ab53ed328fa48900",
+        "repeat": 1,
+        "characters": 180043,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": {
+          "characters": 100000,
+          "sha256": "9b6a3230eb90fd3bdd7b63275ecd479c2f2e6c6e8928247b73735be709b75779",
+          "mechanism": "real clipboard write + native Control/Meta V"
+        },
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "initCpuThrottleRate": 4,
+        "url": "http://127.0.0.1:1421",
+        "latencyDefinition": "capturing paste event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+        "reviewTriggers": {
+          "relativeP95": "both >20% and >16ms increase",
+          "longTasks": "both >25% and >50ms increase",
+          "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+        },
+        "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+      },
+      "initialization": {
+        "navigationMs": 683,
+        "readyMs": 14754
+      },
+      "checks": {
+        "eventCountMatches": true,
+        "exactSource": false,
+        "exactParagraphDisplay": true,
+        "paragraphMatches": 1,
+        "firstDifference": {
+          "offset": 280042,
+          "expected": " متن فارسی و English sample words 42 END\n",
+          "actual": " متن فارسی و English sample words 42 END"
+        },
+        "actualSourceSha256": "7275a1c448d0e117f48f66b68094a777d532e2036aa4ddaba83daf8a10f83c31",
+        "expectedSourceSha256": "0ad84218ccc0042265243c561a11b95b5b137b40f3785ab16036d2666df39d5a"
+      },
+      "measurements": {
+        "keys": 1,
+        "elapsedMs": 4200,
+        "latencyMedianMs": 2957,
+        "latencyP95Ms": 2957,
+        "longTaskCount": 2,
+        "longTaskTotalMs": 2979,
+        "maxLongTaskMs": 2906,
+        "performanceCounters": {
+          "LayoutCount": 24,
+          "RecalcStyleCount": 26,
+          "LayoutDuration": 2.417666,
+          "RecalcStyleDuration": 0.014923,
+          "ScriptDuration": 0.593073,
+          "TaskDuration": 3.8808469999999997,
+          "JSHeapUsedSize": 39535236,
+          "Nodes": 584,
+          "Documents": 1
+        },
+        "timelineCounts": {
+          "Layout": 24,
+          "UpdateLayoutTree": 26,
+          "Paint": 42,
+          "PrePaint": 47,
+          "CompositeLayers": 0
+        },
+        "topFunctions": [
+          {
+            "functionName": "collapse @ :-1",
+            "samples": 1506
+          },
+          {
+            "functionName": "(idle) @ :-1",
+            "samples": 539
+          },
+          {
+            "functionName": "(program) @ :-1",
+            "samples": 334
+          },
+          {
+            "functionName": "ae @ main-hDHOBE3D.js:1581",
+            "samples": 86
+          },
+          {
+            "functionName": "pA @ main-hDHOBE3D.js:1581",
+            "samples": 79
+          },
+          {
+            "functionName": "Ole @ main-hDHOBE3D.js:1783",
+            "samples": 25
+          },
+          {
+            "functionName": "JV @ main-hDHOBE3D.js:1637",
+            "samples": 17
+          },
+          {
+            "functionName": "YV @ main-hDHOBE3D.js:1637",
+            "samples": 17
+          },
+          {
+            "functionName": "d @ main-hDHOBE3D.js:1581",
+            "samples": 13
+          },
+          {
+            "functionName": "Du @ main-hDHOBE3D.js:1596",
+            "samples": 13
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1581",
+            "samples": 11
+          },
+          {
+            "functionName": "fo @ main-hDHOBE3D.js:1293",
+            "samples": 9
+          },
+          {
+            "functionName": "K6 @ main-hDHOBE3D.js:1751",
+            "samples": 5
+          },
+          {
+            "functionName": "f @ main-hDHOBE3D.js:1581",
+            "samples": 5
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1783",
+            "samples": 4
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1778",
+            "samples": 4
+          },
+          {
+            "functionName": "W6 @ main-hDHOBE3D.js:1751",
+            "samples": 4
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1646",
+            "samples": 3
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1596",
+            "samples": 3
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1653",
+            "samples": 3
+          }
+        ]
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "label": "heavy-before-paste-source",
+      "recordedAt": "2026-10-23T12:17:41.934Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.8.0",
+        "platform": "win32",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "source",
+        "scenario": "paste",
+        "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+        "fixtureSha256": "a43573d808e5cf8c26f8705b449b0459501bd934c5ad5b08ab53ed328fa48900",
+        "sourceSha256": "a43573d808e5cf8c26f8705b449b0459501bd934c5ad5b08ab53ed328fa48900",
+        "repeat": 1,
+        "characters": 180043,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": {
+          "characters": 100000,
+          "sha256": "9b6a3230eb90fd3bdd7b63275ecd479c2f2e6c6e8928247b73735be709b75779",
+          "mechanism": "real clipboard write + native Control/Meta V"
+        },
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "initCpuThrottleRate": 4,
+        "url": "http://127.0.0.1:1421",
+        "latencyDefinition": "capturing paste event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+        "reviewTriggers": {
+          "relativeP95": "both >20% and >16ms increase",
+          "longTasks": "both >25% and >50ms increase",
+          "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+        },
+        "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+      },
+      "initialization": {
+        "navigationMs": 694,
+        "readyMs": 13235
+      },
+      "checks": {
+        "eventCountMatches": true,
+        "exactSource": true,
+        "exactParagraphDisplay": true,
+        "paragraphMatches": 1,
+        "firstDifference": null,
+        "actualSourceSha256": "0ad84218ccc0042265243c561a11b95b5b137b40f3785ab16036d2666df39d5a",
+        "expectedSourceSha256": "0ad84218ccc0042265243c561a11b95b5b137b40f3785ab16036d2666df39d5a"
+      },
+      "measurements": {
+        "keys": 1,
+        "elapsedMs": 6592,
+        "latencyMedianMs": 5304,
+        "latencyP95Ms": 5304,
+        "longTaskCount": 4,
+        "longTaskTotalMs": 8743,
+        "maxLongTaskMs": 5304,
+        "performanceCounters": {
+          "LayoutCount": 27,
+          "RecalcStyleCount": 30,
+          "LayoutDuration": 7.516824,
+          "RecalcStyleDuration": 0.025739,
+          "ScriptDuration": 0.75138,
+          "TaskDuration": 9.514044,
+          "JSHeapUsedSize": 12220124,
+          "Nodes": 527,
+          "Documents": 1
+        },
+        "timelineCounts": {
+          "Layout": 27,
+          "UpdateLayoutTree": 28,
+          "Paint": 42,
+          "PrePaint": 25,
+          "CompositeLayers": 0
+        },
+        "topFunctions": [
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:3041",
+            "samples": 1789
+          },
+          {
+            "functionName": "(program) @ :-1",
+            "samples": 1732
+          },
+          {
+            "functionName": "getBoundingClientRect @ :-1",
+            "samples": 1686
+          },
+          {
+            "functionName": "(idle) @ :-1",
+            "samples": 67
+          },
+          {
+            "functionName": "ae @ main-hDHOBE3D.js:1581",
+            "samples": 61
+          },
+          {
+            "functionName": "pA @ main-hDHOBE3D.js:1581",
+            "samples": 35
+          },
+          {
+            "functionName": "Ole @ main-hDHOBE3D.js:1783",
+            "samples": 30
+          },
+          {
+            "functionName": "g @ main-hDHOBE3D.js:1259",
+            "samples": 26
+          },
+          {
+            "functionName": "v @ main-hDHOBE3D.js:1259",
+            "samples": 26
+          },
+          {
+            "functionName": "(garbage collector) @ :-1",
+            "samples": 26
+          },
+          {
+            "functionName": "Du @ main-hDHOBE3D.js:1596",
+            "samples": 24
+          },
+          {
+            "functionName": "t @ main-hDHOBE3D.js:1259",
+            "samples": 22
+          },
+          {
+            "functionName": "s @ main-hDHOBE3D.js:1261",
+            "samples": 20
+          },
+          {
+            "functionName": "d @ main-hDHOBE3D.js:1581",
+            "samples": 16
+          },
+          {
+            "functionName": "n @ main-hDHOBE3D.js:1259",
+            "samples": 14
+          },
+          {
+            "functionName": "Tu @ main-hDHOBE3D.js:1596",
+            "samples": 12
+          },
+          {
+            "functionName": "_ @ main-hDHOBE3D.js:1259",
+            "samples": 12
+          },
+          {
+            "functionName": "y @ main-hDHOBE3D.js:1259",
+            "samples": 11
+          },
+          {
+            "functionName": "b @ main-hDHOBE3D.js:1259",
+            "samples": 10
+          },
+          {
+            "functionName": "o @ main-hDHOBE3D.js:1259",
+            "samples": 10
+          }
+        ]
+      },
+      "sourceRendering": {
+        "overlayAvailable": true,
+        "highlighted": true,
+        "initialLineCount": 4,
+        "mutatedLineIndexes": [
+          2
+        ],
+        "originalLineNodesStillConnected": 4,
+        "finalLineCount": 4,
+        "sourceMatchesExpected": true,
+        "overlayMatchesNativeValue": true,
+        "coloredInputFrames": 1,
+        "staleHighlightFrames": 0
+      }
+    },
+    {
+      "schemaVersion": 2,
+      "label": "heavy-before-view-switch-source",
+      "recordedAt": "2026-10-23T12:18:41.028Z",
+      "environment": {
+        "browserVersion": "156.0.8078.4",
+        "nodeVersion": "v24.8.0",
+        "platform": "win32",
+        "architecture": "x64"
+      },
+      "protocol": {
+        "editor": "source",
+        "scenario": "view-switch",
+        "fixture": "fixed plain-text generator in scripts/profile-rich-input.mjs",
+        "fixtureSha256": "3564977baea435f02042156f15500bcfa94ace59d51065ae813ed694b40ddd9a",
+        "sourceSha256": "3564977baea435f02042156f15500bcfa94ace59d51065ae813ed694b40ddd9a",
+        "repeat": 1,
+        "characters": 178171,
+        "viewport": {
+          "width": 393,
+          "height": 851
+        },
+        "cpuThrottleRate": 4,
+        "input": {
+          "switches": 20,
+          "tabs": "existing website mobile source/preview tabs"
+        },
+        "keyDelayMs": 35,
+        "settleBeforeMs": 800,
+        "settleAfterMs": 1200,
+        "cpuProfiler": true,
+        "initCpuThrottleRate": 4,
+        "url": "http://127.0.0.1:1421",
+        "latencyDefinition": "capturing tab click event to first requestAnimationFrame callback; browser scheduling, not native-device input latency",
+        "reviewTriggers": {
+          "relativeP95": "both >20% and >16ms increase",
+          "longTasks": "both >25% and >50ms increase",
+          "absoluteFlags": "p95>100ms; tasks>50ms are diagnostic, not device-independent SLOs"
+        },
+        "profileLimit": "CPU samples are not parse/serialize invocation counts; minified names limit attribution."
+      },
+      "initialization": {
+        "navigationMs": 732,
+        "readyMs": 15749
+      },
+      "checks": {
+        "eventCountMatches": true,
+        "exactSource": true,
+        "exactParagraphDisplay": true,
+        "paragraphMatches": 1,
+        "firstDifference": null,
+        "actualSourceSha256": "3564977baea435f02042156f15500bcfa94ace59d51065ae813ed694b40ddd9a",
+        "expectedSourceSha256": "3564977baea435f02042156f15500bcfa94ace59d51065ae813ed694b40ddd9a",
+        "switches": true,
+        "switchChecks": [
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "preview",
+            "active": "preview",
+            "sourceMatches": true,
+            "displayMatches": true
+          },
+          {
+            "target": "edit",
+            "active": "edit",
+            "sourceMatches": true,
+            "displayMatches": true
+          }
+        ]
+      },
+      "measurements": {
+        "keys": 20,
+        "elapsedMs": 21127,
+        "latencyMedianMs": 770,
+        "latencyP95Ms": 4007,
+        "longTaskCount": 21,
+        "longTaskTotalMs": 16299,
+        "maxLongTaskMs": 4054,
+        "performanceCounters": {
+          "LayoutCount": 103,
+          "RecalcStyleCount": 341,
+          "LayoutDuration": 9.288193,
+          "RecalcStyleDuration": 1.808032,
+          "ScriptDuration": 4.213844,
+          "TaskDuration": 20.460327999999997,
+          "JSHeapUsedSize": 22092468,
+          "Nodes": 20675,
+          "Documents": 1
+        },
+        "timelineCounts": {
+          "Layout": 103,
+          "UpdateLayoutTree": 318,
+          "Paint": 199,
+          "PrePaint": 425,
+          "CompositeLayers": 0
+        },
+        "topFunctions": [
+          {
+            "functionName": "(program) @ :-1",
+            "samples": 7618
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1783",
+            "samples": 6613
+          },
+          {
+            "functionName": "getBoundingClientRect @ :-1",
+            "samples": 1997
+          },
+          {
+            "functionName": "(idle) @ :-1",
+            "samples": 848
+          },
+          {
+            "functionName": "(garbage collector) @ :-1",
+            "samples": 114
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:3041",
+            "samples": 86
+          },
+          {
+            "functionName": "querySelector @ :-1",
+            "samples": 82
+          },
+          {
+            "functionName": "Ole @ main-hDHOBE3D.js:1783",
+            "samples": 81
+          },
+          {
+            "functionName": "query @ :5815",
+            "samples": 75
+          },
+          {
+            "functionName": "Gce @ main-hDHOBE3D.js:1783",
+            "samples": 68
+          },
+          {
+            "functionName": "matchMedia @ :-1",
+            "samples": 66
+          },
+          {
+            "functionName": "elementsFromPoint @ :-1",
+            "samples": 58
+          },
+          {
+            "functionName": "(anonymous) @ :0",
+            "samples": 49
+          },
+          {
+            "functionName": "querySelectorAll @ :-1",
+            "samples": 37
+          },
+          {
+            "functionName": "(anonymous) @ :-1",
+            "samples": 27
+          },
+          {
+            "functionName": "(anonymous) @ :4",
+            "samples": 25
+          },
+          {
+            "functionName": "(anonymous) @ main-hDHOBE3D.js:1597",
+            "samples": 16
+          },
+          {
+            "functionName": "Kce @ main-hDHOBE3D.js:1783",
+            "samples": 12
+          },
+          {
+            "functionName": "setStart @ :-1",
+            "samples": 12
+          },
+          {
+            "functionName": "(anonymous) @ :5813",
+            "samples": 11
+          }
+        ]
+      },
+      "sourceRendering": {
+        "overlayAvailable": true,
+        "highlighted": true,
+        "initialLineCount": 4014,
+        "mutatedLineIndexes": [],
+        "originalLineNodesStillConnected": 4014,
+        "finalLineCount": 4014,
+        "sourceMatchesExpected": true,
+        "overlayMatchesNativeValue": true,
+        "coloredInputFrames": 20,
+        "staleHighlightFrames": 0
+      }
+    }
+  ]
+}
