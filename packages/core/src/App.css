@@ -1282,7 +1282,8 @@ body {
   color: var(--foreground);
 }
 .app-shell {
-  max-width: 76rem;
+  width: 100%;
+  max-width: none;
   padding-inline: 2.25rem;
 }
 .app-header {
@@ -1477,11 +1478,38 @@ body {
 }
 .live-workspace {
   --pane-heading-height: 3.25rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
+  display: block;
   border-top: 0.0625rem solid var(--border);
   overflow-anchor: none;
+}
+.workspace-panels {
+  align-items: stretch;
+}
+.workspace-panels > [data-panel] > div {
+  min-width: 0;
+}
+.workspace-panels[data-resizable="true"] > #preview-pane-size {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+}
+.workspace-resize-handle {
+  align-self: stretch;
+  align-items: flex-start;
+}
+.workspace-resize-handle > div {
+  position: sticky;
+  top: 50vh;
+}
+.workspace-panels[data-resizable="false"] {
+  display: block !important;
+}
+.workspace-panels[data-resizable="false"] > [data-panel],
+.workspace-panels[data-resizable="false"] > [data-panel] > div {
+  display: contents !important;
+}
+.workspace-panels[data-resizable="false"] > .workspace-resize-handle {
+  display: none;
 }
 .mobile-view-switch {
   display: none;
@@ -1491,11 +1519,8 @@ body {
   min-width: 0;
 }
 .preview-pane {
-  position: sticky;
-  top: 0;
   align-self: start;
   background: var(--card);
-  border-inline-start: 0.0625rem solid var(--border);
 }
 .pane-heading {
   display: flex;

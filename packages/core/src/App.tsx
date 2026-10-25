@@ -7,6 +7,7 @@ import { MAX_MARKDOWN_LENGTH } from './document-limits';
 import { Button } from '@/components/ui/button';
 import { EditablePreview } from './EditablePreview';
 import { MarkdownSourceEditor } from './MarkdownSourceEditor';
+import { WorkspacePanels } from './WorkspacePanels';
 import { BrandHeader, DocumentHeading, ExportSettingsDialog, IntroControls, MobileViewSwitch, SourceToolbar } from './AppControls';
 import { usePreviewScroll } from './use-preview-scroll';
 import { errorMessage, errorMessages } from './errors';
@@ -301,18 +302,26 @@ function App() {
             {oversized && <div role="alert" className="p-4 text-sm">{locale === 'en' ? 'The complete recovered document exceeds the editing limit. It is preserved here: save a Markdown copy or delete text to return below 500,000 characters. Rich preview is paused.' : 'متن بازیابی‌شده کامل حفظ شده و از حد ویرایش بیشتر است. یک نسخهٔ Markdown ذخیره کن یا با حذف متن آن را به زیر ۵۰۰ هزار نویسه برسان. پیش‌نمایش موقتاً متوقف است.'}</div>}
             <div className="live-workspace" data-view={mobileView} data-mode={viewMode}>
             <MobileViewSwitch view={mobileView} onSelect={selectEditingView} />
-            <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading" onPointerDownCapture={onSourceFocus}>
-              <div className="pane-heading"><h2 id="edit-heading"><Code2 size="1.0625rem" /> {t("ویرایش متن")}</h2><span>Markdown</span></div>
-              <SourceToolbar canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
-              <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} /></Field></FieldGroup>
-            </section>
-
-            <section id="preview-pane" className="preview-pane" aria-labelledby="preview-heading">
-              <div className="pane-heading"><h2 id="preview-heading"><BookOpen size="1.0625rem" /> {t("پیش‌نمایش")}</h2></div>
-              <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus} onPointerDownCapture={onPreviewFocus}>
-                {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} />}
-              </div>
-            </section>
+            <WorkspacePanels
+              combined={viewMode === 'combined'}
+              direction={dir}
+              label={locale === 'en' ? 'Resize editor and preview' : 'تغییر عرض ویرایشگر و پیش‌نمایش'}
+              source={
+                <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading" onPointerDownCapture={onSourceFocus}>
+                  <div className="pane-heading"><h2 id="edit-heading"><Code2 size="1.0625rem" /> {t("ویرایش متن")}</h2><span>Markdown</span></div>
+                  <SourceToolbar canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
+                  <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} /></Field></FieldGroup>
+                </section>
+              }
+              preview={
+                <section id="preview-pane" className="preview-pane" aria-labelledby="preview-heading">
+                  <div className="pane-heading"><h2 id="preview-heading"><BookOpen size="1.0625rem" /> {t("پیش‌نمایش")}</h2></div>
+                  <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus} onPointerDownCapture={onPreviewFocus}>
+                    {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} />}
+                  </div>
+                </section>
+              }
+            />
             </div>
 
             <div className="editor-status"><span>{number(wordCount)} {t("واژه")}<span className="separator">·</span> {number(markdown.length)} {t("نویسه")}</span><Badge variant={storageError ? 'destructive' : 'secondary'}>{storageError ? t("ذخیرهٔ خودکار در دسترس نیست") : saved ? <><CheckCheck data-icon="inline-start" /> {t("ذخیره شد")}</> : t("در حال ذخیره…")}</Badge></div>
