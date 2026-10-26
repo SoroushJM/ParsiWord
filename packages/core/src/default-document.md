@@ -1,5 +1,81 @@
 # فارسی و English؛ کنار هم
 
+با پارسی‌ورد، Markdown راست‌به‌چپ را بنویس و همان‌جا ویرایش کن؛ از سؤال‌های هندسه با **TikZ** تا فرمول‌های پیشرفتهٔ **LaTeX**، جدول و نمودار.
+
+Write and preview RTL Markdown, draw geometry with TikZ, and edit advanced LaTeX equations alongside Persian and English text.
+
+## هندسه با TikZ؛ دایره، دو شعاع و یک سؤال
+
+**صورت سؤال:** شعاع دایره $r=2$ و زاویهٔ بین دو شعاع $60^\circ$ است. طول وتر $AB$ را به دست آورید.
+
+```tikz
+\usetikzlibrary{angles,quotes,calc}
+\begin{tikzpicture}[scale=1.3]
+\coordinate (O) at (0,0);
+\coordinate (A) at (2,0);
+\coordinate (B) at (60:2);
+\fill[blue!10] (O) -- (A) arc[start angle=0,end angle=60,radius=2] -- cycle;
+\draw[blue!70!black,thick] (O) circle (2);
+\draw[thick] (A) -- (O) -- (B);
+\draw[red!75!black,thick,dashed] (A) -- (B) node[midway,right] {$x$};
+\pic[draw,"$60^\circ$",angle radius=0.7cm] {angle=A--O--B};
+\fill (O) circle (0.025) node[below left] {$O$};
+\fill (A) circle (0.025) node[right] {$A$};
+\fill (B) circle (0.025) node[above] {$B$};
+\path (O) -- (A) node[midway,below] {$r=2$};
+\end{tikzpicture}
+```
+
+کدِ همین شکل داخل فایل Markdown می‌ماند. زاویه، شعاع یا رنگ را عوض کن و نتیجه را در پیش‌نمایش ببین. برای ویرایش شکل در پیش‌نمایش، دکمهٔ «ویرایش نمودار TikZ» را بزن.
+
+**راه‌حل با قانون کسینوس‌ها:**
+
+$$
+\begin{aligned}
+AB^2 &= 2r^2(1-\cos\theta), \\
+AB   &= 2r\sin\!\left(\frac{\theta}{2}\right), \\
+     &= 4\sin 30^\circ = 2.
+\end{aligned}
+$$
+
+## فرمول‌های پیشرفتهٔ LaTeX | Advanced equations
+
+**انتگرال گاوسی و کامل‌کردن مربع**؛ یک فرمول چندخطی با کران بی‌نهایت، کسر و توان:
+
+$$
+\begin{aligned}
+-ax^2+bx &= -a\left(x-\frac{b}{2a}\right)^2+\frac{b^2}{4a}, \\
+\int_{-\infty}^{+\infty} e^{-ax^2+bx}\,dx
+  &= \sqrt{\frac{\pi}{a}}\,e^{\frac{b^2}{4a}},\qquad a>0.
+\end{aligned}
+$$
+
+**جبر خطی**؛ ماتریس دوران، ترانهاده و دترمینان در کنار متن راست‌به‌چپ:
+
+$$
+\begin{aligned}
+\mathbf{R}_{\theta} &=
+\begin{pmatrix}
+\cos\theta & -\sin\theta \\
+\sin\theta & \cos\theta
+\end{pmatrix}, \\
+\mathbf{R}_{\theta}^{\mathsf T}\mathbf{R}_{\theta} &= \mathbf{I},
+\qquad \det(\mathbf{R}_{\theta})=1.
+\end{aligned}
+$$
+
+**توابع ویژه و سری بی‌نهایت**؛ رابطهٔ گاما و بتا و مجموع مشهور بازل:
+
+$$
+\begin{aligned}
+\Gamma(z) &= \int_0^{\infty} t^{z-1}e^{-t}\,dt,\qquad z>0, \\
+B(p,q) &= \frac{\Gamma(p)\Gamma(q)}{\Gamma(p+q)},\qquad p,q>0, \\
+\sum_{n=1}^{\infty}\frac{1}{n^2} &= \frac{\pi^2}{6}.
+\end{aligned}
+$$
+
+در پیش‌نمایش، فرمول‌ها را هم می‌توانی ویرایش کنی؛ در خروجی Word نیز به‌صورت فرمول قابل ویرایش ذخیره می‌شوند. شکل TikZ در خروجی Word و PDF به‌صورت تصویر قرار می‌گیرد.
+
 ## پرانتز، عدد و تغییر جهت
 
 کتابخانهٔ React (version **19**) را نصب کنید.
@@ -1255,4 +1331,4 @@ array_nested:
 - comment
 ```
 
-پایان مجموعهٔ آزمون‌ها؛ متن، جهت نوشتن، LaTeX، Mermaid و ۳۶ زبان کد.
+پایان مجموعهٔ آزمون‌ها؛ متن، جهت نوشتن، TikZ، LaTeX، Mermaid و ۳۶ زبان کد.

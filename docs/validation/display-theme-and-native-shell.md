@@ -9,6 +9,24 @@ direction rather than the source textarea's plaintext bidi policy.
 
 ## Web visual evidence
 
+On 2026-10-26 the website's icon menu was replaced by three directly visible
+theme choices: Light, Dark and System, with Persian and English labels.
+The existing display preference storage and VS Code host-theme ownership are
+retained. The mobile header places the choices on a full-width second row;
+desktop keeps them beside the language control. All new UI dimensions use rem.
+
+All six cases in `tests/display-theme.spec.ts` passed locally in Chrome:
+saved choice/reload, live OS preference, English labels and arrow/Space keyboard
+selection, blocked storage, identical Word XML between display themes, and
+320/393/1100-wide layouts with minimum target sizes and no page overflow.
+The production build, architecture check, generated sample check and all
+1,216 unit tests (39 files) also passed locally. Actual helper captures
+`artifacts/theme-buttons-mobile.png` (320×780, Persian/light) and
+`artifacts/theme-buttons-english-dark.png` (1100×850, English/dark) were opened
+and visually inspected. Logs: `artifacts/theme-buttons-tests.log`,
+`artifacts/theme-android-build.log` and `artifacts/theme-android-unit-tests.log`.
+No GitHub workflow was used for these tests.
+
 The prescribed `pnpm run ui:capture` helper produced these real Chromium images,
 with the requested display preference seeded only in a temporary profile:
 

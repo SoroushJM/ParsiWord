@@ -1,0 +1,192 @@
+name: Build Android ARM64 preview
+
+# Build only when requested; do not spend Actions minutes on pushes or PRs.
+on:
+  workflow_dispatch:
+    inputs:
+      signing:
+        description: 'stable = configured Preview signing secrets; ephemeral = one-run key'
+        required: true
+        default: stable
+        type: choice
+        options: [stable, ephemeral]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Signed ARM64 APK (${{ inputs.signing }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      NDK_VERSION: '28.2.13676358'
+      APK_PATH: artifacts/android/ParsiWord-preview-arm64-${{ inputs.signing }}.apk
+      SIGNING_MODE: ${{ inputs.signing }}
+      CARGO_INCREMENTAL: '0'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Prepare explicitly selected signing mode
+        env:
+          PREVIEW_KEYSTORE_BASE64: ${{ secrets.PARSIWORD_ANDROID_PREVIEW_KEYSTORE_BASE64 }}
+          PREVIEW_PASSWORD: ${{ secrets.PARSIWORD_ANDROID_PREVIEW_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          directory = Path(os.environ['RUNNER_TEMP']) / 'parsiword-android-signing'
+          with open(os.environ['GITHUB_ENV'], 'a') as environment:
+              environment.write(f'PARSIWORD_SIGNING_DIR={directory}\n')
+          directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+          directory.chmod(0o700)
+          mode = os.environ['SIGNING_MODE']
+          if mode == 'stable':
+              encoded = os.environ['PREVIEW_KEYSTORE_BASE64']
+              password = os.environ['PREVIEW_PASSWORD']
+              if not encoded or not password:
+                  raise SystemExit('Stable signing requires both PARSIWORD_ANDROID_PREVIEW_KEYSTORE_BASE64 and PARSIWORD_ANDROID_PREVIEW_PASSWORD repository secrets. See docs/android-packaging.md, or select ephemeral for a one-run preview key.')
+              if '\n' in password or '\r' in password:
+                  raise SystemExit('The Preview password secret must contain one line without a newline.')
+              try:
+                  key = base64.b64decode(''.join(encoded.split()), validate=True)
+              except ValueError:
+                  raise SystemExit('The Preview keystore secret is not valid base64.') from None
+              if not key or len(key) > 48000:
+                  raise SystemExit('The Preview keystore secret is empty or unexpectedly large.')
+              (directory / 'preview.keystore').write_bytes(key)
+              (directory / 'preview-password').write_text(password + '\n')
+              for path in directory.iterdir():
+                  path.chmod(0o600)
+              note = 'Stable Preview key restored. Updates require the same certificate and an appropriate Android version code.'
+          elif mode == 'ephemeral':
+              note = 'EPHEMERAL PREVIEW: a new one-run signing key will be generated and deleted. This APK cannot update an existing Preview installation signed with another key. Choose stable with the original Preview secrets for updates.'
+              print('::warning::' + note)
+          else:
+              raise SystemExit('Unsupported signing mode.')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('### Android signing\n\n' + note + '\n\n')
+          PY
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            apps/parsiword/src-tauri/gen/android/**/*.gradle*
+            apps/parsiword/src-tauri/gen/android/gradle/wrapper/gradle-wrapper.properties
+            apps/parsiword/src-tauri/gen/android/gradle.properties
+
+      - name: Validate stable Preview key before building
+        if: inputs.signing == 'stable'
+        run: |
+          keytool -list -keystore "$PARSIWORD_SIGNING_DIR/preview.keystore" \
+            -storepass:file "$PARSIWORD_SIGNING_DIR/preview-password" \
+            -alias parsiword-preview
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0 ndk;28.2.13676358'
+      - name: Select the pinned Android NDK and enable the tracked Gradle wrapper
+        run: |
+          test -x "$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          printf 'NDK_HOME=%s\nANDROID_NDK_HOME=%s\n' \
+            "$ANDROID_HOME/ndk/$NDK_VERSION" "$ANDROID_HOME/ndk/$NDK_VERSION" >> "$GITHUB_ENV"
+          chmod +x apps/parsiword/src-tauri/gen/android/gradlew
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/parsiword/src-tauri -> target
+          key: android-arm64-ndk28
+          cache-on-failure: false
+
+      - name: Install locked JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      # This command builds the current frontend, optimized ARM64 Rust/Android
+      # release, signs the APK, then verifies its signature and native contents.
+      # Unit/browser/device tests stay local; no emulator is installed or started.
+      - name: Build and verify installable ARM64 Preview APK
+        timeout-minutes: 45
+        run: pnpm run android:test-apk "$APK_PATH"
+
+      - name: Record APK identity and download instructions
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          apk = Path(os.environ['APK_PATH'])
+          report = json.loads(apk.with_suffix('.verification.json').read_text())
+          mode = os.environ['SIGNING_MODE']
+          text = '\n'.join([
+              '# ParsiWord Android ARM64 Preview', '',
+              f"Commit: {os.environ['GITHUB_SHA']}",
+              f"Version: {report['version']} (code {report['versionCode']})",
+              f"Application ID: {report['package']}",
+              f"Signing mode: {mode}",
+              f"APK: {apk.name}",
+              f"SHA256: {report['sha256']}",
+              f"Certificate SHA256: {report['certificateSha256']}", '',
+              'Download and unzip the workflow artifact, then install the .apk on an ARM64 Android 7+ phone.',
+              'The verification JSON checks signatures, ZIP/ELF alignment, architecture, release flags and current bundled frontend.',
+              'Device installation and launch have not been tested by this workflow.', '',
+              ('This ephemeral key was generated for this run only and is not retained. This APK cannot update a Preview install signed with a different key.'
+               if mode == 'ephemeral' else
+               'This APK uses the configured stable Preview key. Compare its certificate with the previous APK before distributing it as an update.'), '',
+          ])
+          (apk.parent / 'BUILD-INFO.md').write_text(text)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(text)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ParsiWord-Android-arm64-${{ inputs.signing }}-${{ github.run_number }}
+          path: |
+            artifacts/android/ParsiWord-preview-arm64-${{ inputs.signing }}.apk
+            artifacts/android/ParsiWord-preview-arm64-${{ inputs.signing }}.verification.json
+            artifacts/android/BUILD-INFO.md
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Remove signing material from the runner
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          expected = (Path(os.environ['RUNNER_TEMP']) / 'parsiword-android-signing').resolve()
+          directory = Path(os.environ.get('PARSIWORD_SIGNING_DIR', str(expected))).resolve()
+          if directory != expected:
+              raise SystemExit('Refusing to clean an unexpected signing directory.')
+          for name in ['preview.keystore', 'preview-password']:
+              (directory / name).unlink(missing_ok=True)
+          if directory.exists():
+              directory.rmdir()
+          PY

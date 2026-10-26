@@ -18,8 +18,9 @@ async function openDocument(page: Page, width = 1100, preference?: string) {
 }
 
 async function chooseTheme(page: Page, name: 'تیره' | 'روشن' | 'همگام با سیستم') {
-  await page.getByRole('button', { name: 'ظاهر برنامه', exact: true }).click();
-  await page.getByRole('menuitemradio', { name, exact: true }).click();
+  const choice = page.getByRole('radiogroup', { name: 'ظاهر برنامه', exact: true }).getByRole('radio', { name, exact: true });
+  await choice.click();
+  await expect(choice).toHaveAttribute('aria-checked', 'true');
 }
 
 test('persistent web preference follows system changes and preserves logical Markdown', async ({ page }) => {
@@ -59,6 +60,18 @@ test('persistent web preference follows system changes and preserves logical Mar
   await expect(page.locator('html')).toHaveAttribute('data-display-theme', 'light');
   await page.getByRole('link', { name: 'English', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+  const englishThemes = page.getByRole('radiogroup', { name: 'Appearance', exact: true });
+  await expect(englishThemes.getByRole('radio')).toHaveCount(3);
+  const lightChoice = englishThemes.getByRole('radio', { name: 'Light', exact: true });
+  await lightChoice.focus();
+  await lightChoice.press('Space');
+  await expect(lightChoice).toHaveAttribute('aria-checked', 'true');
+  await lightChoice.press('ArrowRight');
+  const darkChoice = englishThemes.getByRole('radio', { name: 'Dark', exact: true });
+  await expect(darkChoice).toBeFocused();
+  await darkChoice.press('Space');
+  await expect(darkChoice).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-display-theme', 'dark');
   await expect(editor).toHaveValue(source);
   await expect(editor).toHaveAttribute('dir', 'auto');
 });
@@ -91,7 +104,9 @@ for (const width of [320, 393, 1100]) {
   test(`${width}px theme controls preserve layout, source fallback and target size`, async ({ page }) => {
     await openDocument(page, width, 'dark');
     const expectedSize = width < 900 ? 44 : 32;
-    for (const locator of [page.locator('.theme-trigger'), page.getByRole('button', { name: 'باز کردن فایل', exact: true }), page.getByRole('button', { name: 'درج متن پررنگ', exact: true })]) {
+    const themeChoices = page.getByRole('radiogroup', { name: 'ظاهر برنامه', exact: true }).getByRole('radio');
+    await expect(themeChoices).toHaveCount(3);
+    for (const locator of [...await themeChoices.all(), page.getByRole('button', { name: 'باز کردن فایل', exact: true }), page.getByRole('button', { name: 'درج متن پررنگ', exact: true })]) {
       const bounds = await locator.boundingBox();
       expect(bounds?.width).toBeGreaterThanOrEqual(expectedSize);
       expect(bounds?.height).toBeGreaterThanOrEqual(expectedSize);

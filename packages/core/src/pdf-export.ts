@@ -77,7 +77,10 @@ async function formulaPicture(source: string, display: boolean, fontSize: number
     await document.fonts.ready;
     const { toBlob } = await import('html-to-image');
     const width = Math.max(1, element.scrollWidth), height = Math.max(1, element.scrollHeight);
-    const blob = await toBlob(element, { pixelRatio: Math.min(2, 4096 / width, 4096 / height), backgroundColor: '#ffffff', style: { position: 'relative', left: '0', top: '0' }, preferredFontFormat: 'woff2' });
+    // Keep all font sources: html-to-image 1.11.13's preferred-format filter
+    // shares a stateful regex across faces and drops alternating src rules.
+    // Losing regular KaTeX faces substitutes wider bold glyphs and clips math.
+    const blob = await toBlob(element, { pixelRatio: Math.min(2, 4096 / width, 4096 / height), backgroundColor: '#ffffff', style: { position: 'relative', left: '0', top: '0' } });
     if (!blob) throw new RichContentError('PDF_FORMULA_IMAGE_FAILED');
     return { png: new Uint8Array(await blob.arrayBuffer()), width: width * 72 / 96, height: height * 72 / 96 };
   } finally { host.remove(); }

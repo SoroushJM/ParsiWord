@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -48,7 +48,7 @@ function files(directory) {
   });
 }
 const apks = files(join(root, 'apps/parsiword/src-tauri/gen/android/app/build/outputs/apk'))
-  .filter(path => path.includes('/release/') && path.endsWith('-unsigned.apk'))
+  .filter(path => path.split(sep).includes('release') && path.endsWith('-unsigned.apk'))
   .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
 if (!apks.length) throw new Error('The ARM64 unsigned release APK was not generated.');
 const aligned = output.replace(/\.apk$/, '.aligned.apk');

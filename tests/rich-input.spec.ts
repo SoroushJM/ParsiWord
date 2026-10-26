@@ -78,8 +78,9 @@ test('a rapid burst in the real starter document keeps every character and unrel
   const codeHandle = (await untouchedCode.elementHandle())!;
   const codeText = await untouchedCode.textContent();
   const tableHandle = (await rich.locator('table').first().elementHandle())!;
-  const paragraph = rich.locator(':scope > p').first(), originalRendered = await paragraph.textContent();
   const originalParagraphSource = 'کتابخانهٔ React (version **19**) را نصب کنید.';
+  const paragraph = rich.locator(':scope > p').filter({ hasText: 'کتابخانهٔ React (version 19) را نصب کنید.' }).first();
+  const originalRendered = await paragraph.textContent();
   const paragraphStart = source.indexOf(originalParagraphSource);
   expect(paragraphStart).toBeGreaterThanOrEqual(0);
   const insertionOffset = paragraphStart + originalParagraphSource.length;

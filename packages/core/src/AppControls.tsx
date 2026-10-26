@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type Sheet = 'settings' | 'fonts' | null;
 type UpdateSettings = <K extends keyof ExportSettings>(key: K, value: ExportSettings[K]) => void;
@@ -20,25 +20,19 @@ type UpdateSettings = <K extends keyof ExportSettings>(key: K, value: ExportSett
 export const BrandHeader = memo(function BrandHeader({ theme }: { theme: DisplayThemeControls }) {
   const { t, dir, locale, setLocale } = useLocale();
   const nextLanguage = locale === 'fa' ? 'en' : 'fa';
-  const ThemeIcon = theme.preference === 'system' ? Monitor : theme.preference === 'dark' ? Moon : Sun;
   return (<header className="app-header">
         <a className="brand" href="#" onClick={e => e.preventDefault()} aria-label={t("پارسی‌ورد")}>
           <span className="brand-mark"><FileText size="1.4375rem" strokeWidth={1.8} /><span /></span>
           <span className="brand-name">{t("پارسی‌ورد")}<span>PARSIWORD</span></span>
         </a>
         <div className="header-controls">
-        {!theme.isHostControlled && <DropdownMenu dir={dir}>
-          <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="theme-trigger" aria-label={t('ظاهر برنامه')} title={t('ظاهر برنامه')}><ThemeIcon data-icon="inline-start" /></Button></DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="theme-menu">
-            <DropdownMenuGroup><DropdownMenuLabel>{t('ظاهر برنامه')}</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={theme.preference} onValueChange={value => { if (isThemePreference(value)) theme.setPreference(value); }}>
-                <DropdownMenuRadioItem value="system"><Monitor aria-hidden="true" />{t('همگام با سیستم')}</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="light"><Sun aria-hidden="true" />{t('روشن')}</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="dark"><Moon aria-hidden="true" />{t('تیره')}</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>}
+        {!theme.isHostControlled && <ToggleGroup type="single" variant="outline" spacing={1} dir={dir} value={theme.preference}
+          onValueChange={value => { if (isThemePreference(value)) theme.setPreference(value); }}
+          aria-label={t('ظاهر برنامه')} className="theme-choices">
+          <ToggleGroupItem value="light" className="theme-choice"><Sun aria-hidden="true" data-icon="inline-start" />{t('روشن')}</ToggleGroupItem>
+          <ToggleGroupItem value="dark" className="theme-choice"><Moon aria-hidden="true" data-icon="inline-start" />{t('تیره')}</ToggleGroupItem>
+          <ToggleGroupItem value="system" className="theme-choice" aria-label={t('همگام با سیستم')} title={t('همگام با سیستم')}><Monitor aria-hidden="true" data-icon="inline-start" />{t('سیستم')}</ToggleGroupItem>
+        </ToggleGroup>}
         <nav className="language-switch" aria-label={t('زبان رابط')}>
           <Button asChild variant="outline">
             <a href={languagePath(nextLanguage)} hrefLang={nextLanguage} lang={nextLanguage} dir={nextLanguage === 'fa' ? 'rtl' : 'ltr'}

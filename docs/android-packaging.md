@@ -1,5 +1,94 @@
 # Android distribution
 
+## Manual GitHub Actions build
+
+The **Build Android ARM64 preview** workflow in
+[`.github/workflows/android.yml`](../.github/workflows/android.yml) is available
+through **Actions → Build Android ARM64 preview → Run workflow** after this file
+is on the repository's default branch. It has only `workflow_dispatch`; pushes
+and pull requests do not start Android builds. Adding the workflow does not run
+it. Unit, browser and device testing remain local; the workflow performs only
+the build and APK structural/signature verification, without an emulator.
+
+It uses Ubuntu 24.04, Node 24, the pnpm version from `package.json`, a frozen
+lockfile, Temurin JDK 17, Android SDK 36, build-tools 36.0.0 and pinned NDK r28c
+(`28.2.13676358`). Only Rust's `aarch64-linux-android` target is installed.
+The tracked native Android project is retained, including its ARM64 filters
+and Preview package settings; it is not regenerated. pnpm, Gradle dependencies
+and Rust build dependencies are cached, while signing material is kept in the
+runner's temporary directory outside the checkout and is never cached or
+uploaded. A newer manual run on the same branch cancels the previous run. The
+job is limited to 60 minutes and the native build step to 45 minutes.
+
+The tracked Android Gradle plugin is patched to 9.3.2, which fixes the
+[AGP 9.3 lint crash under JDK 17](https://developer.android.com/build/releases/agp-9-3-0-release-notes#android_gradle_plugin_932).
+Release lint remains enabled.
+
+Choose the signing mode explicitly when running it:
+
+- **`ephemeral`** generates a key for that run and deletes it at the
+  end. No repository secrets are needed. The output is clearly named
+  `ephemeral`; it cannot update an installed Preview APK signed with a
+  different key. To preserve an existing installation's data during updates,
+  use `stable` with the original Preview key.
+- **`stable`** (default) restores an existing Preview key from the two repository
+  **Actions secrets** below. Missing or malformed secrets stop the job before
+  dependency installation with setup instructions. A wrong password or missing
+  alias fails the key preflight before the native build. This mode does not
+  generate a replacement key.
+
+| Repository secret | Value |
+| --- | --- |
+| `PARSIWORD_ANDROID_PREVIEW_KEYSTORE_BASE64` | Base64 of the existing external `preview.keystore` file; alias `parsiword-preview`. |
+| `PARSIWORD_ANDROID_PREVIEW_PASSWORD` | Existing keystore/key password, one line without a trailing newline. The same password must unlock both. |
+
+Retain the original key securely. On a local machine, the following Python
+command writes a base64 file beside a private keystore; put that file's contents
+in the first repository secret and delete the temporary base64 file afterward.
+Do not put the key, password or base64 file in this repository or an artifact.
+
+```sh
+python -c "import base64,pathlib; p=pathlib.Path('/private/path/preview.keystore'); p.with_suffix('.base64').write_text(base64.b64encode(p.read_bytes()).decode('ascii'))"
+```
+
+### Configured stable identity, 2026-10-26
+
+The earlier Preview key was not available on the current machine. With the
+user's explicit approval, a new RSA 3072-bit Preview key was created outside
+the repository in `~/.local/share/parsiword/signing`, with a random password
+and access restricted to the local user and Windows SYSTEM. The keystore and
+password were encrypted with the repository's public key and saved directly
+to the two Actions secrets above; metadata reads confirmed both updates.
+No private key, password or base64 payload was printed or committed.
+
+Its public certificate SHA256 is
+`4ca8a6b1c8785dd4de988052bc40b67fe4e70d342728c9c79507d1f38e8c446a`.
+It differs from the historical 0.4.7 Preview certificate below, so the first
+APK using this identity requires reinstalling that older Preview application;
+later APKs can use this new stable identity for updates. Preserve both local
+private files and the repository secrets. Configuring the secrets did not run
+the Android workflow or build an APK.
+
+A successful run uploads one artifact containing the installable signed ARM64
+`.apk`, its `.verification.json` report, and `BUILD-INFO.md` with source commit,
+version code, signing mode, APK SHA256 and signing certificate SHA256. Artifacts
+expire after 14 days. Download and unzip the artifact to obtain the APK; this
+workflow does not publish a GitHub release or a Play Store listing. A stable
+key is necessary for update compatibility, along with the same application ID
+and suitable version code; compare the certificate with the previous APK.
+Physical installation, launch, keyboard and insets remain phone checks.
+
+The workflow and helper were validated locally without dispatching Actions.
+No new Android APK was built as part of this workflow setup: the current local
+environment has no Android SDK/NDK or Rust toolchain configured. Earlier APK
+evidence below describes those earlier builds.
+
+The environment and signing setup follow the official
+[Tauri Android prerequisites](https://v2.tauri.app/start/prerequisites/#android)
+and [Android app signing guidance](https://developer.android.com/studio/publish/app-signing).
+
+## Existing local Preview build
+
 For the current 0.4.7 test build, use `pnpm run android:test-apk /path/output.apk`.
 It builds an optimized, nondebug ARM64 release with application ID
 `app.parsiword.mobile.preview` and label `ParsiWord Preview`, so it can coexist

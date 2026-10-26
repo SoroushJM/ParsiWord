@@ -21,7 +21,7 @@ try {
   const markdown = [intro.trim(), hardStressMarkdown(false),
     '# نمونهٔ ۳۶ زبان و قالب رایج',
     'نام زبان بالای هر بلوک آمده است. این‌ها نمونهٔ رنگ‌آمیزی‌اند و اجرا نمی‌شوند. بلوک plaintext عمداً متن ساده است. نمونه‌های دیگر، از جمله HTML/XML، Markdown و خروجی ترمینال، ساختار کد خود را حفظ می‌کنند.',
-    ...code, 'پایان مجموعهٔ آزمون‌ها؛ متن، جهت نوشتن، LaTeX، Mermaid و ۳۶ زبان کد.',
+    ...code, 'پایان مجموعهٔ آزمون‌ها؛ متن، جهت نوشتن، TikZ، LaTeX، Mermaid و ۳۶ زبان کد.',
   ].join('\n\n') + '\n';
   if (process.argv.includes('--check')) assert.equal(normalizeLineEndings(await readFile('packages/core/src/default-document.md', 'utf8')), markdown, 'Run pnpm run samples:build to update the starter document');
   else await writeFile('packages/core/src/default-document.md', markdown);

@@ -6,6 +6,38 @@ extension version 0.1.5. [Usage and engine limits](../tikz.md) and
 
 ## Executed locally
 
+The first-launch document now starts with a TikZ circle, two radii, a shaded
+sector and a chord question, followed by its solution, a Gaussian integral,
+a rotation matrix, gamma/beta identities and the Basel series. The original
+RTL corpus and 36 code examples remain below it. On 2026-10-26 the regenerated
+document passed `samples:check`, TypeScript and the production build. Fresh
+local Chrome profiles on both `/ParsiWord/` and `/ParsiWord/en/` loaded the exact
+default source, 18 TikZ SVG paths and six display equations with remote HTTP
+requests blocked, no formula errors and no page overflow. An existing saved
+draft was preserved. The four new display equations and drawing also passed
+local Word/PDF export checks: seven native Word equations including inline
+math, one embedded TikZ PNG, and a two-page PDF with eight images, searchable
+text and original TikZ alternative text. Desktop/mobile captures and both
+rendered PDF pages were visually inspected; the existing rapid-input test
+passed against the expanded default document. Evidence is in
+`artifacts/starter-showcase-check.json`, `artifacts/starter-rich-input.log`,
+`artifacts/starter-showcase.docx`, `artifacts/starter-showcase.pdf` and
+`artifacts/starter-*.png`. These new checks ran locally without a test push
+or a workflow dispatch, per the user's GitHub Actions usage preference.
+
+Visual PDF review exposed a separate regular-math-font capture defect:
+html-to-image 1.11.13's preferred-format filter drops alternating font `src`
+declarations because its global regular expression retains `lastIndex`.
+Removing the preferred-format option retains all local font sources and avoids
+bold substitution and clipped symbols. The new browser regression decodes the
+actual PDF equation images and requires nonempty ink with white margins at
+both horizontal edges. It failed before the fix and passed afterward. All
+three PDF browser cases (including native CSP, offline operation and matching
+light/dark exports) plus rapid starter-document input passed locally, four
+tests total; see `artifacts/starter-pdf-fonts-before.log` and
+`artifacts/starter-pdf-fonts-final.log`. The final production sample PDF was
+regenerated and both pages visually inspected after the fix.
+
 | Check | Result | Evidence in the working tree |
 | --- | --- | --- |
 | Unit suite | 1,216 tests, 39 files passed | `artifacts/tikz-unit-final.log` |
@@ -67,7 +99,8 @@ promoted, and the legacy tab's current input is rechecked before closing it.
 All 31 focused comparison checks passed locally after this fix. Comparison edit
 tests use real one-transaction browser text insertion; the dedicated clipboard
 shortcut tests retain their original strict OS assertions. Failure artifacts
-now include tab/session diagnostics. A subsequent full CI run validates the fix.
+now include tab/session diagnostics. These focused checks do not by themselves
+establish a full native-suite pass.
 
 ## Platform and publication limits
 

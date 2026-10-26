@@ -4,6 +4,55 @@ import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import tauri from '../apps/parsiword/src-tauri/tauri.conf.json' with { type: 'json' };
 import JSZip from 'jszip';
 
+test('PDF keeps regular math fonts and the complete edges of aligned equations', async ({ page }, info) => {
+  const markdown = String.raw`PDFMATHFONTS
+
+$$
+\begin{aligned}
+AB^2 &= OA^2+OB^2-2\,OA\cdot OB\cos\theta, \\
+AB &= 2r\sin\!\left(\frac{\theta}{2}\right)=2.
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\Gamma(z) &= \int_0^\infty t^{z-1}e^{-t}\,dt, \\
+\sum_{n=1}^\infty \frac{1}{n^2} &= \frac{\pi^2}{6}.
+\end{aligned}
+$$`;
+  await page.addInitScript(markdown => localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown, settings: {} })), markdown);
+  await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort());
+  await page.goto('/');
+  await page.getByRole('textbox', { name: 'متن Markdown', exact: true }).waitFor();
+  await page.evaluate(csp => { const policy = document.createElement('meta'); policy.httpEquiv = 'Content-Security-Policy'; policy.content = csp; document.head.append(policy); }, tauri.app.security.csp);
+  await page.getByRole('button', { name: 'قالب‌های دیگر خروجی', exact: true }).click();
+  const pending = page.waitForEvent('download');
+  await page.getByRole('menuitem', { name: 'ذخیرهٔ فایل PDF', exact: true }).click();
+  const download = await pending;
+  await download.saveAs(info.outputPath('aligned-equations.pdf'));
+  const pdf = await getDocument({ data: new Uint8Array(await readFile((await download.path())!)), useSystemFonts: false, disableFontFace: true, isEvalSupported: false }).promise;
+  try {
+    const first = await pdf.getPage(1), operators = await first.getOperatorList();
+    const images = operators.fnArray.flatMap((operator, index) => operator === OPS.paintImageXObject ? [operators.argsArray[index][0] as string] : []);
+    expect(images).toHaveLength(2);
+    for (const name of images) {
+      const image = await new Promise<{ width: number; height: number; data: Uint8Array }>(resolve => first.objs.get(name, resolve));
+      const channels = image.data.length / (image.width * image.height);
+      let left = image.width, right = -1;
+      for (let y = 0; y < image.height; y++) for (let x = 0; x < image.width; x++) {
+        const offset = (y * image.width + x) * channels;
+        if (image.data[offset] < 180 && (channels !== 4 || image.data[offset + 3] > 0)) { left = Math.min(left, x); right = Math.max(right, x); }
+      }
+      // Missing regular faces make the SVG substitute wider bold glyphs.
+      // Inspect the actual embedded raster: a substituted final symbol was
+      // cut against its right edge even though the PDF exported successfully.
+      expect(right).toBeGreaterThan(left);
+      expect(left).toBeGreaterThanOrEqual(2);
+      expect(image.width - 1 - right).toBeGreaterThanOrEqual(2);
+    }
+  } finally { await pdf.destroy(); }
+});
+
 test('offline PDF contains visible local formula and Mermaid images alongside searchable text', async ({ page }) => {
   test.setTimeout(90_000);
   const markdown = '# بررسی فارسی (React 19)\n\nمتن فارسی SEARCHABLEPDFGRAPHICS با فرمول $E=mc^2$ و $\\frac{\\alpha+\\beta}{2}$.\n\n$$\n\\int_0^\\infty e^{-x^2}dx=\\frac{\\sqrt{\\pi}}{2}\n$$\n\n```mermaid\nflowchart LR\n  A[شروع فارسی] --> B[React 19]\n```\n';
