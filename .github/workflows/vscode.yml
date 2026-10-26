@@ -89,4 +89,6 @@ jobs:
             artifacts/*.vsix
             artifacts/vscode-test/results.json
             artifacts/vscode-test/*.png
+            artifacts/vscode-test/local-images-*.docx
+            artifacts/vscode-test/local-images-*.pdf
           if-no-files-found: warn

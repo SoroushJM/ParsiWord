@@ -6,6 +6,7 @@ import { chromium, expect, type Browser, type Frame } from '@playwright/test';
 import JSZip from 'jszip';
 import { testGitDiff } from './git-diff';
 import { testShortcuts } from './shortcuts';
+import { testImageExports } from './image-export';
 
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds));
 async function until<T>(read: () => T | PromiseLike<T>, predicate: (value: T) => boolean, label: string): Promise<T> {
@@ -17,6 +18,7 @@ export async function run() {
   const themeWitness = process.env.PARSIWORD_TEST_THEME_WITNESS;
   const results: string[] = [];
   const exports: Record<string,string> = {};
+  let imageExports: Record<string,string> | undefined;
   const themes: unknown[] = [];
   const viewState: unknown[] = [];
   const narrowViews: unknown[] = [];
@@ -72,6 +74,11 @@ export async function run() {
     if (process.env.PARSIWORD_TEST_FOCUS === 'shortcuts') {
       await testShortcuts(browser, artifact, record);
       await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
+      return;
+    }
+    if (process.env.PARSIWORD_TEST_FOCUS === 'image-export') {
+      imageExports = await testImageExports(browser, api, artifact, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results, imageExports }, null, 2));
       return;
     }
     await vscode.commands.executeCommand('vscode.open',uri);
@@ -295,6 +302,7 @@ export async function run() {
     record('The built-in Markdown preview command remains usable');
     await testShortcuts(browser, artifact, record);
     await testGitDiff(browser, api, artifact, record);
+    imageExports = await testImageExports(browser, api, artifact, record);
     // Comparison checks close their editors. Reopen the native document and
     // refresh its webview references before continuing the multi-view checks.
     document = await vscode.workspace.openTextDocument(uri);
@@ -506,7 +514,7 @@ export async function run() {
     }
     await page.setViewportSize(originalViewport);
     record('Actual 400px combined/source/rendered webviews have no page overflow; every enabled source/rich toolbar button is reachable with Tab and scrolls into view');
-    await writeFile(join(artifact,'results.json'),JSON.stringify({version:vscode.version,results,exports,themes,viewState,narrowViews},null,2));
+    await writeFile(join(artifact,'results.json'),JSON.stringify({version:vscode.version,results,exports,imageExports,themes,viewState,narrowViews},null,2));
   } catch (error) {
     if(browser) for(const page of browser.contexts().flatMap(context=>context.pages())) await page.screenshot({path:join(artifact,'failure.png')}).catch(()=>{});
     await writeFile(join(artifact, themeWitness ? `syntax-${themeWitness}-failure.json` : 'results.json'),JSON.stringify({version:vscode.version,results,themes,viewState,narrowViews,error:String(error)},null,2));

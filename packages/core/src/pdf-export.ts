@@ -13,12 +13,13 @@ import { highlightCode } from './code-highlight';
 import { renderMath } from './math';
 import { mathLanguage, RichContentError } from './rich-content';
 import { renderMermaid, type DiagramRenderer } from './diagrams';
+import { prepareExportImages, type ExportImageResolver, type ExportImageReader } from './export-images';
 import 'katex/dist/katex.min.css';
 
 /** Same physical A4 page and margins as the Word export (20 twips = 1pt). */
 export const pdfPage = { width: twipsToPoints(documentLayout.width), height: twipsToPoints(documentLayout.height), top: twipsToPoints(documentLayout.margins.top), bottom: twipsToPoints(documentLayout.margins.bottom), left: twipsToPoints(documentLayout.margins.left), right: twipsToPoints(documentLayout.margins.right) } as const;
 export type PdfPicture = { png: Uint8Array; width: number; height: number };
-export type PdfAssets = { formula?: (source: string, display: boolean, fontSize: number) => Promise<PdfPicture>; diagram?: DiagramRenderer };
+export type PdfAssets = { formula?: (source: string, display: boolean, fontSize: number) => Promise<PdfPicture>; diagram?: DiagramRenderer; resolveImage?: ExportImageResolver; readImage?: ExportImageReader };
 type Inline = { text: string; bold?: boolean; italic?: boolean; strike?: boolean; code?: boolean; href?: string; color?: string; picture?: PdfPicture; font?: string };
 type Part = Inline & { width: number; size: number; font: string };
 type Line = { parts: Part[]; width: number; height: number; text: string };
@@ -60,12 +61,13 @@ export function pdfVisualRuns<T extends { text: string }>(pieces: readonly T[], 
 async function formulaPicture(source: string, display: boolean, fontSize: number): Promise<PdfPicture> {
   if (typeof document === 'undefined') throw new RichContentError('MATH_PDF_UNAVAILABLE');
   const host = document.createElement('div');
-  host.style.cssText = 'position:fixed;left:-20000px;top:0;width:max-content;pointer-events:none';
+  host.style.cssText = 'position:fixed;left:-1250rem;top:0;width:max-content;pointer-events:none';
   const element = document.createElement('span');
   // Keep the captured element in its own local coordinate system. Copying an
   // offscreen element's computed logical insets into foreignObject would move
   // the formula outside the bitmap even after overriding its physical left.
-  element.style.cssText = `display:inline-block;width:max-content;max-width:none;background:white;color:#172d24;font-size:${fontSize * 96 / 72}px;padding:4px;direction:ltr;line-height:normal`;
+  const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  element.style.cssText = `display:inline-block;width:max-content;max-width:none;background:white;color:#172d24;font-size:${fontSize * 96 / 72 / rootSize}rem;padding:0.25rem;direction:ltr;line-height:normal`;
   // This is KaTeX's validated, trust:false output, never raw source HTML.
   element.innerHTML = renderMath(source, display);
   host.append(element); document.body.append(host);
@@ -80,7 +82,7 @@ async function formulaPicture(source: string, display: boolean, fontSize: number
 }
 
 /** Local downloadable PDF. Text remains vector/searchable; only formulas and
- * diagrams use bounded local images, as described in docs/pdf-export.md. */
+ * diagrams and Markdown pictures use bounded embedded images. */
 export async function exportPdf(markdown: string, settings: ExportSettings, suppliedFonts?: FontBundle[], assets: PdfAssets = {}): Promise<Uint8Array> {
   return exportPreparedPdf(markdownContext(markdown), settings, suppliedFonts, assets);
 }
@@ -92,6 +94,7 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
   const fonts = suppliedFonts?.length ? suppliedFonts : await documentFonts(settings.fontFamily, context.root);
   const primary = fonts.find(font => font.family === settings.fontFamily) || fonts.find(font => font.family === bundledFont) || fonts[0];
   if (!primary) throw new RichContentError('PDF_FONT_NOT_READY');
+  const images = await prepareExportImages(context, assets.resolveImage, assets.readImage);
   const { default: PDFDocument } = await import('pdfkit');
   const doc = new PDFDocument({ autoFirstPage: false, font: null as never, compress: true, info: { Title: settings.title || 'یادداشت من', Author: 'ParsiWord', Creator: 'ParsiWord', Producer: 'ParsiWord / PDFKit' } });
   const chunks: Uint8Array[] = [];
@@ -136,6 +139,9 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
     }
     return pictures.get(key)!;
   };
+  // Account each resource once, including repeated reference images. Markdown
+  // intrinsic raster dimensions use 96dpi; PDF layout uses physical points.
+  const markdownImages = new Map([...images].map(([source, image]) => [source, accountPicture({ ...image, width: image.width * 72 / 96, height: image.height * 72 / 96 })]));
   let y = pdfPage.top;
   const bottom = pdfPage.height - pdfPage.bottom, contentWidth = pdfPage.width - pdfPage.left - pdfPage.right;
   const page = () => { doc.addPage({ size: [pdfPage.width, pdfPage.height], margins: { top: pdfPage.top, bottom: pdfPage.bottom, left: pdfPage.left, right: pdfPage.right } }); y = pdfPage.top; };
@@ -158,7 +164,7 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
   }
   const measure = (part: Part, value = part.text) => part.picture ? part.picture.width : doc.font(part.font).fontSize(part.size).widthOfString(value, { features: shapingFeatures });
 
-  function wrap(pieces: readonly Inline[], width: number, size: number): Line[] {
+  function wrap(pieces: readonly Inline[], width: number, size: number, imageHeight = bottom - pdfPage.top - 6): Line[] {
     const output: Line[] = [];
     const code = pieces.length > 0 && pieces.every(piece => piece.code);
     const lineHeight = size * (code ? documentLayout.code.line : documentLayout.paragraph.line) / 240;
@@ -173,7 +179,7 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
     };
     for (const part of typed(pieces, size)) {
       if (part.picture) {
-        const scale = Math.min(1, width / part.picture.width, (bottom - pdfPage.top - 6) / part.picture.height);
+        const scale = Math.min(1, width / part.picture.width, imageHeight / part.picture.height);
         const scaled = { ...part, width: part.picture.width * scale, picture: { ...part.picture, width: part.picture.width * scale, height: part.picture.height * scale } };
         if (line.width && line.width + scaled.width > width) flush();
         append(scaled); continue;
@@ -208,6 +214,7 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
       const part = run.value;
       if (part.picture) {
         doc.image(Buffer.from(part.picture.png), left, top, { width: part.picture.width, height: part.picture.height });
+        if (part.href) doc.link(left, top, part.picture.width, part.picture.height, part.href);
         left += part.picture.width; continue;
       }
       doc.font(part.font).fontSize(part.size).fillColor(part.color || (part.href ? '#087f74' : '#213b30'));
@@ -236,7 +243,12 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
         }
         case 'break': output.push({ ...style, text: '\n' }); break;
         case 'html': output.push({ ...style, text: /^<br\s*\/?\s*>$/i.test(node.value) ? '\n' : node.value }); break;
-        case 'image': case 'imageReference': output.push({ ...style, text: `[تصویر: ${node.alt || 'بدون عنوان'}]` }); break;
+        case 'image': case 'imageReference': {
+          const source = node.type === 'image' ? node.url : definitions.get(node.identifier.toLowerCase())?.url;
+          const image = source ? markdownImages.get(source) : undefined;
+          if (!image) throw new RichContentError('IMAGE_NOT_READY');
+          output.push({ ...style, text: '\ufffc', picture: image }); break;
+        }
         case 'footnoteReference': output.push({ ...style, text: `[${node.label || node.identifier}]` }); break;
       }
     }
@@ -268,11 +280,12 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
     if (columns > 50) throw new RichContentError('PDF_TABLE_TOO_WIDE');
     const effectiveIndent = Math.min(indent, contentWidth / 2);
     const width = contentWidth - effectiveIndent, cellWidth = width / columns, padding = Math.min(6, cellWidth / 8);
+    let repeatedHeaderHeight = 0;
     const prepareRow = async (rowIndex: number) => {
       const cells: { lines: Line[]; direction: 'ltr' | 'rtl' }[] = [];
       for (const cell of node.children[rowIndex].children) {
         const pieces = await inlines(cell.children, rowIndex ? {} : { bold: true });
-        cells.push({ lines: wrap(pieces, cellWidth - padding * 2, fontSize), direction: directionFor(pieces.map(piece => piece.text).join('')) });
+        cells.push({ lines: wrap(pieces, cellWidth - padding * 2, fontSize, bottom - pdfPage.top - padding * 2 - 4 - (rowIndex ? repeatedHeaderHeight : 0)), direction: directionFor(pieces.map(piece => piece.text).join('')) });
       }
       return cells;
     };
@@ -291,7 +304,12 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
           while (cursors[column] < lines.length && height + lines[cursors[column]].height <= space) { const line = lines[cursors[column]++]; result.push(line); height += line.height; }
           return { lines: result, direction };
         });
-        if (!fragments.some(cell => cell.lines.length)) throw new RichContentError('PDF_CELL_TOO_LARGE');
+        if (!fragments.some(cell => cell.lines.length)) {
+          // A tall picture may need the whole page after a repeated header.
+          // Move it intact, without clipping or changing its aspect ratio.
+          if (y > pdfPage.top) { page(); continue; }
+          throw new RichContentError('PDF_CELL_TOO_LARGE');
+        }
         const height = rowHeight(fragments);
         fragments.forEach(({ lines, direction }, column) => {
           const cellX = x + (tableDirection === 'rtl' ? columns - column - 1 : column) * cellWidth;
@@ -305,12 +323,13 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
       }
     };
     const header = node.children.length ? await prepareRow(0) : undefined;
+    if (header && rowHeight(header) + Math.max(17, fontSize * 1.45) + padding * 2 < bottom - pdfPage.top) repeatedHeaderHeight = rowHeight(header);
     for (let index = 0; index < node.children.length; index++) {
       const row = index ? await prepareRow(index) : header!;
       const height = rowHeight(row);
       if (y + height > bottom && y > pdfPage.top) {
         page();
-        if (index && header && rowHeight(header) + Math.max(17, fontSize * 1.45) + padding * 2 < bottom - pdfPage.top) renderRow(header, true);
+        if (index && header && repeatedHeaderHeight) renderRow(header, true);
       }
       renderRow(row, index === 0);
     }

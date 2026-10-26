@@ -15,6 +15,7 @@ const runDirectory = resolve(artifact, `run-${Date.now()}`);
 const fixture = resolve(runDirectory, 'workspace');
 await mkdir(resolve(fixture, 'nested folder'), { recursive: true });
 await mkdir(resolve(fixture, 'nested folder/assets'), { recursive: true });
+await mkdir(resolve(fixture, 'image export/assets'), { recursive: true });
 await mkdir(resolve(runDirectory, 'profile/User'), { recursive: true });
 await mkdir(resolve(runDirectory, 'extensions'), { recursive: true });
 await writeFile(resolve(runDirectory, 'profile/User/settings.json'), JSON.stringify({ 'files.simpleDialog.enable': true, 'files.autoSave': 'off', 'workbench.colorTheme': 'Default Light Modern', 'window.titleBarStyle': 'custom', 'window.restoreWindows': 'none', 'workbench.startupEditor': 'none', 'security.workspace.trust.enabled': false, 'update.mode': 'none', 'git.autofetch': false, 'extensions.autoUpdate': false, 'window.commandCenter': false, 'telemetry.telemetryLevel': 'off' }));
@@ -23,6 +24,9 @@ await writeFile(resolve(fixture, 'sample.md'), markdown);
 await writeFile(resolve(fixture, 'other.md'), '# Other\n\nLinked document.\n');
 await writeFile(resolve(fixture, 'crlf.md'), '# Windows\r\n\r\nمتن اصلی\r\n');
 await writeFile(resolve(fixture, 'nested folder/assets/diagram.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><circle cx="80" cy="50" r="40" fill="none" stroke="green"/><path d="M80 50L120 50M80 50L80 10" stroke="blue"/></svg>');
+await writeFile(resolve(fixture, 'image export/assets/circle.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><circle cx="80" cy="50" r="40" fill="none" stroke="green"/><path d="M80 50L120 50M80 50L80 10" stroke="blue"/></svg>');
+await writeFile(resolve(fixture, 'image export/assets/sample image.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAYElEQVR4nO3QMQEAIAgAMOIYw9PABKIJxuBgxwos6r6edG6NCgECBAgQIECAAAECBAgQIECAAAECBAgQIGBTQL6edLJGCRAgQIAAAQIECBAgQIAAAQIECBAgQIAAAYsCPgHNzcMN6g4/AAAAAElFTkSuQmCC', 'base64'));
+await writeFile(resolve(fixture, 'image export/image-export.md'), '# تصویرهای محلی\n\nSEARCHABLE_IMAGE_EXPORT متن قابل ویرایش.\n\n![بردار SVG](./assets/circle.svg)\n\n![نگاره PNG][raster]\n\n[raster]: <./assets/sample image.png> "Raster"\n');
 const diagram = '\n![شرح تصویر](./assets/diagram.svg)\n';
 const scrollContent = '\n' + Array.from({ length: 24 }, (_, index) => `## بخش اسکرول ${index + 1}\n\nمتن مشترک فارسی و English paragraph ${index + 1} برای آزمایش اسکرول هماهنگ در دو سوی مقایسه. این پاراگراف بلند است تا با تغییر عرض ستون‌ها در چند خط بشکند و موقعیت یکسان محتوا را مستقل از درصد اسکرول بررسی کنیم.\n`).join('\n');
 await writeFile(resolve(fixture, 'nested folder/nested.md'), '# مقایسه فارسی و English\n\nمتن ORIGINAL برای مقایسه.\n\nاین بخش ثابت است و تغییری ندارد.\n' + diagram + scrollContent);
@@ -47,8 +51,31 @@ await runTests({
 if (!process.env.PARSIWORD_TEST_THEME_WITNESS) {
 const reportPath=resolve(artifact,'results.json');
 const report=JSON.parse(await readFile(reportPath,'utf8'));
-if (process.env.PARSIWORD_TEST_FOCUS) process.exit(0);
-const { getDocument }=await import('pdfjs-dist/legacy/build/pdf.mjs');
+if (process.env.PARSIWORD_TEST_FOCUS && process.env.PARSIWORD_TEST_FOCUS !== 'image-export') process.exit(0);
+const { getDocument, OPS }=await import('pdfjs-dist/legacy/build/pdf.mjs');
+if (report.imageExports) {
+  const imagesPdf=await getDocument({data:new Uint8Array(await readFile(report.imageExports.pdf)),useSystemFonts:false,disableFontFace:true,isEvalSupported:false}).promise;
+  const imageOperators=new Set([OPS.paintImageXObject,OPS.paintInlineImageXObject,OPS.paintImageXObjectRepeat]);
+  let imageCount=0, text='';
+  try {
+    for(let number=1;number<=imagesPdf.numPages;number++) {
+      const page=await imagesPdf.getPage(number);
+      const operators=await page.getOperatorList();
+      imageCount+=operators.fnArray.filter(value=>imageOperators.has(value)).length;
+      const content=await page.getTextContent();
+      text+=content.items.filter(item=>'str' in item).map(item=>item.str).join(' ');
+    }
+    if(imageCount!==2) throw Error(`Expected both actual Markdown images in exported PDF, got ${imageCount} image paint operations`);
+    if(!text.includes('SEARCHABLE_IMAGE_EXPORT')) throw Error('Image export lost searchable surrounding PDF text');
+  } finally { await imagesPdf.destroy(); }
+  report.results.push('Actual local-image PDF parsed outside Electron: both SVG/PNG image paint operations and searchable text are present');
+  report.imageExportPdf={imageCount,searchableText:true};
+  console.log('PASS Actual exported local-image PDF contains both image paint operations and searchable text');
+}
+if (process.env.PARSIWORD_TEST_FOCUS === 'image-export') {
+  await writeFile(reportPath,JSON.stringify(report,null,2));
+  process.exit(0);
+}
 const pdf=await getDocument({data:new Uint8Array(await readFile(report.exports.pdf)),useSystemFonts:false,disableFontFace:true,isEvalSupported:false}).promise;
 const content=await (await pdf.getPage(1)).getTextContent();
 if(!content.items.filter(item=>'str' in item).map(item=>item.str).join(' ').includes('SEARCHABLE_EXTENSION')) throw Error('Exported PDF text is not searchable');

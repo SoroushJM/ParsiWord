@@ -305,7 +305,11 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
           rect: element.getBoundingClientRect().toJSON(), display: getComputedStyle(element).display, flex: getComputedStyle(element).flex,
         })),
       }))));
-      await input.click(); await input.press('Control+End');
+      if (view === 'rendered') await input.locator('p').filter({ hasText: 'English paragraph 24' }).click();
+      else await input.click();
+      await expect(frame.getByRole('dialog')).toHaveCount(0);
+      await expect(input).toBeFocused();
+      await input.press('Control+End');
       await vscode.env.clipboard.writeText('INLINEEDIT'); await input.press('Control+v');
       await until(() => doc.getText(), text => text.includes('INLINEEDIT'), `inline ${view} modified version edit`);
       await input.press('Control+z'); await until(() => doc.getText(), text => text === next, `inline ${view} native Undo`);
@@ -368,7 +372,13 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     } finally { await page.setViewportSize(previousViewport); }
     await setMode(frame, 'rendered', 'side-by-side');
     const rich = modified.locator('.rich-document');
-    await rich.click(); await rich.press('Control+End');
+    // A centre click on this long document can hit the SVG atomic block and
+    // open its markup dialog, especially after restoring a CI-sized viewport.
+    // Exercise native editor history from a real text paragraph instead.
+    await rich.locator('p').filter({ hasText: 'English paragraph 24' }).click();
+    await expect(frame.getByRole('dialog')).toHaveCount(0);
+    await expect(rich).toBeFocused();
+    await rich.press('Control+End');
     await vscode.env.clipboard.writeText('RICHDIFF'); await rich.press('Control+v');
     await until(() => doc.getText(), text => text.includes('RICHDIFF'), 'rendered edit in unified comparison');
     await expect(original.locator('.rich-document')).not.toContainText('RICHDIFF');

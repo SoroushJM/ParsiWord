@@ -28,7 +28,7 @@ export function rawMarkdownLabel(source: string): string {
   if (!/^!\[/.test(source)) return source;
   const root = markdownParser.parse(source) as unknown as MarkdownNode;
   const image = root.children?.[0]?.children?.[0];
-  return image?.type === 'image' ? `تصویر: ${image.alt || 'بدون عنوان'} (خروجی تصویر پشتیبانی نمی‌شود)` : source;
+  return image?.type === 'image' ? `تصویر: ${image.alt || 'بدون عنوان'}` : source;
 }
 
 export function parseRichMarkdown(source: string, inherited?: ReadonlyMap<string, { url?: string; title?: string | null }>) {
@@ -61,7 +61,7 @@ export function parseRichMarkdown(source: string, inherited?: ReadonlyMap<string
         }
         case 'image': case 'imageReference': {
           const definition = node.type === 'image' ? node : definitions.get(node.identifier || '');
-          return [{ type: 'rawInline', attrs: { source: raw(node), label: `تصویر: ${node.alt || 'بدون عنوان'} (خروجی تصویر پشتیبانی نمی‌شود)`,
+          return [{ type: 'rawInline', attrs: { source: raw(node), label: `تصویر: ${node.alt || 'بدون عنوان'}`,
             image: definition?.url ? { url: definition.url, alt: node.alt || '', title: definition.title || null } : null }, marks }];
         }
         default: return [{ type: 'rawInline', attrs: { source: raw(node), label: raw(node) }, marks }];

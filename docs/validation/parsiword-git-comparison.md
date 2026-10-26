@@ -2,6 +2,8 @@
 
 Date: 2026-10-26. Target extension: **0.1.2**. Test host: Windows, installed VS Code **1.143.1**; browser checks use installed Chrome.
 
+Follow-up: **0.1.3** adds real Word/PDF Markdown image embedding and fixes the CI rendered-Undo test's accidental click on an image. Its fresh full-suite evidence is recorded in [image-exports.md](image-exports.md); the 0.1.2 results below are retained as historical evidence.
+
 **Extension 0.1.2 was packaged and installed from the final verified build.** The implementation and acceptance coverage below describe the current single-tab comparison. Full-suite results are distinguished from focused checks performed after the final presentation changes.
 
 | Final verification | Result / evidence |

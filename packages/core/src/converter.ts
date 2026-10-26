@@ -11,16 +11,17 @@ export { paragraphDirection, defaultSettings, type Direction, type ExportSetting
 import { delimiterFont, delimiterFontParts } from './delimiter-font';
 import { highlightCode } from './code-highlight';
 import { documentFontSize, documentHeadingSize, documentLayout } from './document-layout';
+import { prepareExportImages, type ExportImage, type ExportImageReader, type ExportImageResolver } from './export-images';
 import {
   AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel,
   LevelFormat, Packer, Paragraph, ShadingType, Table, TableCell, TableRow,
-  TextRun, WidthType, ImageRun, BuilderElement,
+  TextRun, WidthType, ImageRun, BuilderElement, TableLayoutType, LineRuleType,
   type IParagraphOptions, type IRunOptions, type NumberingDefinition,
   type ParagraphChild,
 } from 'docx';
 import type { RootContent, PhrasingContent, List, Table as MdTable } from 'mdast';
 
-type Leaf = { text: string; style: IRunOptions; href?: string; math?: ParagraphChild; code?: boolean; break?: boolean };
+type Leaf = { text: string; style: IRunOptions; href?: string; math?: ParagraphChild; image?: { source: string; alt: string; title?: string | null }; code?: boolean; break?: boolean };
 function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href?: string, context?: MarkdownContext): Leaf[] {
   return nodes.flatMap((n): Leaf[] => {
     switch (n.type) {
@@ -32,7 +33,7 @@ function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href
       case 'inlineCode': return [{ text: n.value, style: { ...style, font: codeRunFont, color: '145A53', shading: { fill: 'EDF5F3', type: ShadingType.CLEAR } }, code: true }];
       case 'link': return leaves(n.children, style, /^(https?:|mailto:)/i.test(n.url) ? n.url : undefined, context);
       case 'break': return [{ text: '\n', style, break: true }];
-      case 'image': return [{ text: `[تصویر: ${n.alt || 'بدون عنوان'}]`, style }];
+      case 'image': return [{ text: '\ufffc', style, href, image: { source: n.url, alt: n.alt || '', title: n.title } }];
       case 'html': return /^<br\s*\/?\s*>$/i.test(n.value)
         ? [{ text: '\n', style, href, break: true }]
         : [{ text: n.value, style }];
@@ -41,23 +42,45 @@ function leaves(nodes: readonly PhrasingContent[], style: IRunOptions = {}, href
         const url = context?.definitions.get(n.identifier.toLowerCase())?.url;
         return leaves(n.children, style, url && /^(https?:|mailto:)/i.test(url) ? url : undefined, context);
       }
-      case 'imageReference': return [{ text: `[تصویر: ${n.alt || n.identifier}]`, style }];
+      case 'imageReference': {
+        const definition = context?.definitions.get(n.identifier.toLowerCase());
+        if (!definition) throw new RichContentError('IMAGE_NOT_READY');
+        return [{ text: '\ufffc', style, href, image: { source: definition.url, alt: n.alt || '', title: definition.title } }];
+      }
       default: return [];
     }
   });
 }
 
-export function createWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], diagrams: ReadonlyMap<string, Diagram> = new Map()): Document {
-  return createPreparedWord(markdownContext(markdown), settings, fonts, diagrams);
+export function createWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], diagrams: ReadonlyMap<string, Diagram> = new Map(), images: ReadonlyMap<string, ExportImage> = new Map()): Document {
+  return createPreparedWord(markdownContext(markdown), settings, fonts, diagrams, images);
 }
-function createPreparedWord(context: MarkdownContext, settings: ExportSettings, fonts: FontBundle[], diagrams: ReadonlyMap<string, Diagram>): Document {
+function createPreparedWord(context: MarkdownContext, settings: ExportSettings, fonts: FontBundle[], diagrams: ReadonlyMap<string, Diagram>, images: ReadonlyMap<string, ExportImage>): Document {
   const { root } = context;
   const numbering: NumberingDefinition[] = [];
   let listId = 0;
   let usesDelimiterFont = false;
+  const pageWidth = documentLayout.width - documentLayout.margins.left - documentLayout.margins.right;
+  const pageHeight = documentLayout.height - documentLayout.margins.top - documentLayout.margins.bottom;
+  // Drawing dimensions use 96 dpi units; Word page and indentation data use twips.
+  const imageHeight = (pageHeight - documentLayout.paragraph.after - documentLayout.paragraph.line) / 15;
+
+  function imageRun(image: NonNullable<Leaf['image']>, availableWidth: number, availableHeight: number) {
+    const prepared = images.get(image.source);
+    if (!prepared || !prepared.png.byteLength || !Number.isFinite(prepared.width) || !Number.isFinite(prepared.height) || prepared.width <= 0 || prepared.height <= 0) {
+      throw new RichContentError('IMAGE_NOT_READY');
+    }
+    if (availableWidth <= 0 || availableHeight <= 0) throw new RichContentError('IMAGE_EXPORT_TOO_LARGE');
+    const scale = Math.min(1, availableWidth / 15 / prepared.width, availableHeight / prepared.height);
+    return new ImageRun({
+      type: 'png', data: prepared.png,
+      transformation: { width: prepared.width * scale, height: prepared.height * scale },
+      altText: { name: image.alt || 'Image', title: image.title || image.alt || 'Image', description: image.alt },
+    });
+  }
 
   function fallbackPieces(pieces: Leaf[]): Leaf[] {
-    return pieces.flatMap(piece => (piece.break || piece.math) ? [piece] : delimiterFontParts(piece.text).map(part => {
+    return pieces.flatMap(piece => (piece.break || piece.math || piece.image) ? [piece] : delimiterFontParts(piece.text).map(part => {
       if (!part.fallback) return { ...piece, text: part.text };
       usesDelimiterFont = true;
       return { ...piece, text: part.text, style: { ...piece.style, font: {
@@ -67,7 +90,7 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
     }));
   }
 
-  function para(nodes: readonly PhrasingContent[], extra: IParagraphOptions = {}) {
+  function para(nodes: readonly PhrasingContent[], extra: IParagraphOptions = {}, availableWidth = pageWidth, availableHeight = imageHeight) {
     const pieces = fallbackPieces(leaves(nodes, {}, undefined, context));
     const text = pieces.map(p => p.text).join('');
     const dir = paragraphDirection(text, settings.direction);
@@ -108,13 +131,13 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
         const end = Math.min(span.end, pieceEnd) - pieceStart;
         if (end > start) {
           const isRtl = !settings.alignmentOnly && span.direction === 'rtl';
-          const run = piece.math || new TextRun({
+          const run = piece.math || (piece.image ? imageRun(piece.image, availableWidth, availableHeight) : new TextRun({
             ...piece.style,
             ...(piece.break ? { break: 1 } : { text: piece.text.slice(start, end) }),
             rightToLeft: isRtl ? true : undefined,
             language: { value: isRtl ? 'fa-IR' : 'en-US', bidirectional: 'fa-IR' },
             ...(piece.href ? { color: '087F74', underline: {} } : {}),
-          });
+          }));
           appendRun(run, piece.href);
           endLink = piece.href;
         }
@@ -131,10 +154,13 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
       alignment: rtl || settings.alignmentOnly ? AlignmentType.RIGHT : AlignmentType.LEFT,
       spacing: { ...documentLayout.paragraph },
       ...extra,
+      // Images set their own line height. Keep the usual text minimum without
+      // multiplying a page-sized drawing by the normal prose line multiple.
+      ...(pieces.some(piece => piece.image) ? { spacing: { ...documentLayout.paragraph, ...extra.spacing, lineRule: LineRuleType.AT_LEAST } } : {}),
     });
   }
 
-  function list(node: List, depth = 0): (Paragraph | Table)[] {
+  function list(node: List, depth = 0, availableWidth = pageWidth): (Paragraph | Table)[] {
     const reference = `list-${++listId}`;
     const flat = node.children.map(item => item.children.map(n => 'children' in n ? leaves(n.children as PhrasingContent[], {}, undefined, context).map(l => l.text).join('') : '').join('')).join(' ');
     const rtl = !settings.alignmentOnly && paragraphDirection(flat, settings.direction) === 'rtl';
@@ -149,46 +175,52 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
     return node.children.flatMap(item => {
       let first = true;
       return item.children.flatMap((child): (Paragraph | Table)[] => {
-        if (child.type === 'list') return list(child, Math.min(depth + 1, 8));
+        if (child.type === 'list') return list(child, Math.min(depth + 1, 8), availableWidth);
         if (child.type === 'paragraph') {
           const task = item.checked == null ? [] : [{ type: 'text' as const, value: item.checked ? '☑ ' : '☐ ' }];
           const options: IParagraphOptions = first ? { numbering: { reference, level: depth } } : { indent: rtl ? { right: 440 * (depth + 1) } : { left: 440 * (depth + 1) } };
           first = false;
-          return [para([...task, ...child.children], options)];
+          return [para([...task, ...child.children], options, availableWidth - 440 * (depth + 1))];
         }
-        return block(child);
+        return block(child, availableWidth - 440 * (depth + 1));
       });
     });
   }
 
-  function table(node: MdTable) {
+  function table(node: MdTable, availableWidth: number) {
     const content = node.children.flatMap(r => r.children.flatMap(c => leaves(c.children, {}, undefined, context).map(l => l.text))).join(' ');
     const rtl = !settings.alignmentOnly && paragraphDirection(content, settings.direction) === 'rtl';
+    const columns = node.children.reduce((maximum, row) => Math.max(maximum, row.children.length), 1);
+    const columnWidths = Array.from({ length: columns }, (_, index) => Math.floor(availableWidth * (index + 1) / columns) - Math.floor(availableWidth * index / columns));
+    const hasImages = node.children.some(row => row.children.some(cell => leaves(cell.children, {}, undefined, context).some(leaf => leaf.image)));
+    const horizontalMargin = hasImages ? Math.min(120, Math.max(0, Math.floor((Math.floor(availableWidth / columns) - 15) / 2))) : 120;
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      ...(hasImages ? { width: { size: availableWidth, type: WidthType.DXA }, columnWidths, layout: TableLayoutType.FIXED } : {}),
       visuallyRightToLeft: rtl,
       rows: node.children.map((row, rowIndex) => new TableRow({
         tableHeader: rowIndex === 0,
         children: row.children.map((cell, cellIndex) => new TableCell({
+          ...(hasImages ? { width: { size: columnWidths[cellIndex], type: WidthType.DXA } } : {}),
           shading: rowIndex === 0 ? { fill: 'E7F1EE' } : undefined,
-          margins: { top: 100, bottom: 100, left: 120, right: 120 },
+          margins: { top: 100, bottom: 100, left: horizontalMargin, right: horizontalMargin },
           children: [para(cell.children, {
             ...(node.align?.[cellIndex] ? { alignment: node.align[cellIndex] === 'center' ? AlignmentType.CENTER : node.align[cellIndex] === 'right' ? AlignmentType.RIGHT : AlignmentType.LEFT } : {}),
-          })],
+          }, columnWidths[cellIndex] - horizontalMargin * 2, (pageHeight / 2 - 200 - documentLayout.paragraph.after - documentLayout.paragraph.line) / 15)],
         })),
       })),
     });
   }
 
-  function block(node: RootContent): (Paragraph | Table)[] {
+  function block(node: RootContent, availableWidth = pageWidth): (Paragraph | Table)[] {
     switch (node.type) {
-      case 'paragraph': return [para(node.children)];
-      case 'heading': return [para(node.children, { heading: HeadingLevel[`HEADING_${node.depth}`], keepNext: true, spacing: { before: 260, after: 160 } })];
-      case 'list': return list(node);
-      case 'table': return [table(node), new Paragraph({ text: '' })];
+      case 'paragraph': return [para(node.children, {}, availableWidth)];
+      case 'heading': return [para(node.children, { heading: HeadingLevel[`HEADING_${node.depth}`], keepNext: true, spacing: { before: 260, after: 160 } }, availableWidth, imageHeight - 260 / 15)];
+      case 'list': return list(node, 0, availableWidth);
+      case 'table': return [table(node, availableWidth), new Paragraph({ text: '' })];
       case 'blockquote': return node.children.flatMap(child => child.type === 'paragraph'
-        ? [para(child.children, { border: { right: { color: '219888', size: 18, style: BorderStyle.SINGLE, space: 12 } }, indent: { left: 200, right: 200 } })]
-        : block(child));
+        ? [para(child.children, { border: { right: { color: '219888', size: 18, style: BorderStyle.SINGLE, space: 12 } }, indent: { left: 200, right: 200 } }, availableWidth - 400)]
+        : block(child, availableWidth - 400));
       case 'math': return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER, spacing: { before: 160, after: 160 } })];
       case 'code': {
         if (mathLanguage(node.lang)) return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER })];
@@ -219,7 +251,7 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
       }
       case 'thematicBreak': return [new Paragraph({ border: { bottom: { color: 'CEDBD7', size: 6, style: BorderStyle.SINGLE } } })];
       case 'html': return [para([{ type: 'text', value: node.value }])];
-      case 'footnoteDefinition': return [para([{ type: 'text', value: `[${node.label || node.identifier}] ` }]), ...node.children.flatMap(block)];
+      case 'footnoteDefinition': return [para([{ type: 'text', value: `[${node.label || node.identifier}] ` }]), ...node.children.flatMap(child => block(child, availableWidth))];
       default: return [];
     }
   }
@@ -233,7 +265,7 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
     run: { font: documentFont, size: documentHeadingSize(settings.fontSize, i + 1) * 2, sizeComplexScript: documentHeadingSize(settings.fontSize, i + 1) * 2, bold: true, boldComplexScript: true, color: '183D36' },
   }));
   // Walk the content first: embed the fallback only when a run actually uses it.
-  const children = root.children.flatMap(block);
+  const children = root.children.flatMap(node => block(node));
   const embeddedFonts = fonts.map(font => ({ name: font.family, data: Buffer.from(font.regular), ...(font.bold ? { bold: Buffer.from(font.bold) } : {}) }));
   if (usesDelimiterFont) embeddedFonts.push({ name: delimiterFont.family, data: Buffer.from(delimiterFont.ttfBase64, 'base64') });
   const document = new Document({
@@ -254,12 +286,12 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
   return document;
 }
 
-export async function exportWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid): Promise<Uint8Array> {
-  return exportPreparedWord(markdownContext(markdown), settings, fonts, renderer);
+export async function exportWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid, resolveImage?: ExportImageResolver, readImage?: ExportImageReader): Promise<Uint8Array> {
+  return exportPreparedWord(markdownContext(markdown), settings, fonts, renderer, resolveImage, readImage);
 }
 
-/** One operation owns its source, parsed tree and font/diagram inputs. */
-export async function exportPreparedWord(context: MarkdownContext, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid): Promise<Uint8Array> {
+/** One operation owns its source, parsed tree and font/image/diagram inputs. */
+export async function exportPreparedWord(context: MarkdownContext, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid, resolveImage?: ExportImageResolver, readImage?: ExportImageReader): Promise<Uint8Array> {
   settings = { ...settings };
   const diagrams = new Map<string, Diagram>();
   async function prepare(node: { type: string; lang?: string | null; value?: string; children?: readonly unknown[] }): Promise<void> {
@@ -268,8 +300,9 @@ export async function exportPreparedWord(context: MarkdownContext, settings: Exp
     }
     if (node.children) for (const child of node.children) await prepare(child as Parameters<typeof prepare>[0]);
   }
+  const images = await prepareExportImages(context, resolveImage, readImage);
   await prepare(context.root);
-  return new Uint8Array(await Packer.toArrayBuffer(createPreparedWord(context, settings, fonts, diagrams)));
+  return new Uint8Array(await Packer.toArrayBuffer(createPreparedWord(context, settings, fonts, diagrams, images)));
 }
 
 export function safeFilename(title: string): string {

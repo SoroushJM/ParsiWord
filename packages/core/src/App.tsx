@@ -282,8 +282,8 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
         const fonts = await documentFonts(settings.fontFamily, context.root);
         if (format === 'pdf') {
           const { exportPreparedPdf } = await import('./adapters/pdf');
-          saved = await savePdf(await exportPreparedPdf(context, settings, fonts), filename);
-        } else saved = await saveDocx(await exportPreparedWord(context, settings, fonts), filename);
+          saved = await savePdf(await exportPreparedPdf(context, settings, fonts, { resolveImage: platform.resolveImage ?? localImages.resolveImage, readImage: platform.readImage }), filename);
+        } else saved = await saveDocx(await exportPreparedWord(context, settings, fonts, undefined, platform.resolveImage ?? localImages.resolveImage, platform.readImage), filename);
       }
       if (saved) {
         const label = format === 'docx' ? 'Word' : format === 'md' ? 'Markdown' : 'PDF';
@@ -293,7 +293,7 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
       console.error(`${format.toUpperCase()} export failed`, error);
       setNotice({ text: t(errorMessage(error, "ذخیرهٔ فایل انجام نشد. فضای خالی و محل ذخیره را بررسی کن و دوباره امتحان کن.")), error: true });
     } finally { exporting.current = false; setBusy(false); }
-  }, [t, locale, session]);
+  }, [t, locale, session, platform, localImages.resolveImage]);
 
   const importFile = useCallback(async () => {
     if (platform.kind === 'web') { input.current?.click(); return; }

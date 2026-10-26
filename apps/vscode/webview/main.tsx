@@ -2,7 +2,7 @@ import '@parsiword/core/styles.css';
 import './vscode.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { EditorApp as App, ComparisonWorkspace, LocaleProvider, translate } from '@parsiword/core/ui';
+import { EditorApp as App, ComparisonWorkspace, LocaleProvider, translate, browserImageUrl } from '@parsiword/core/ui';
 import { configureHost, DocumentSync, isHostMessage, ParsiWordError, errorMessage, type DocumentSnapshot, type DocumentComparison, type EditorAction, type EditorHost, isRecord } from '@parsiword/core/host';
 import { toast } from 'sonner';
 
@@ -77,7 +77,11 @@ window.addEventListener('message', event => {
       subscribeDocument: listener => { listeners.add(listener); return () => { listeners.delete(listener); }; },
       settingsChanged: settings => api.postMessage({ type: 'settings', settings }),
       localeChanged: locale => api.postMessage({ type: 'locale', locale }),
-      resolveImage: source => request<string | null>('imageUri', { source }),
+      resolveImage: source => /^data:/i.test(source) ? Promise.resolve(browserImageUrl(source)) : request<string | null>('imageUri', { source }),
+      readImage: async source => {
+        const image = await request<{ bytes: number[]; mimeType?: string }>('imageBytes', { source });
+        return { ...image, bytes: Uint8Array.from(image.bytes) };
+      },
       fontResource: async url => Uint8Array.from(await request<number[]>('font', { url })),
       saveBytes: async (bytes, filename, format) => {
         await sync.drain();
@@ -88,7 +92,7 @@ window.addEventListener('message', event => {
       command: name => { void sync.drain().then(() => request('command', { name })).catch(showError); },
     };
     configureHost(host);
-    const originalImage = (source: string) => request<string | null>('imageUri', { source, baseUri: comparison?.originalUri });
+    const originalImage = (source: string) => /^data:/i.test(source) ? Promise.resolve(browserImageUrl(source)) : request<string | null>('imageUri', { source, baseUri: comparison?.originalUri });
     if (comparison?.singleTab && comparison.originalUri) api.setState({ comparisonOriginal: comparison.originalUri });
     root.render(<React.StrictMode><LocaleProvider>{comparison?.singleTab ? <ComparisonWorkspace host={host} resolveOriginalImage={originalImage} onFocusSide={focusSide} /> : <App />}</LocaleProvider></React.StrictMode>);
   }

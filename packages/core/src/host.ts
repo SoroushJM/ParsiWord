@@ -15,6 +15,8 @@ export interface EditorHost {
   asset?: (path: string) => string;
   /** Resolve a Markdown image URL relative to this document's environment. */
   resolveImage?: (source: string) => Promise<string | null>;
+  /** Read export image bytes through the host, outside webview fetch/CORS. */
+  readImage?: (source: string) => Promise<{ bytes: Uint8Array; mimeType?: string }>;
   nativeFonts?: boolean;
   fontResource?: (url: string) => Promise<Uint8Array>;
   saveBytes?: (bytes: Uint8Array, filename: string, format: SaveFormat) => Promise<boolean>;

@@ -90,8 +90,8 @@ describe('runtime host protocol', () => {
       expect(accepts({ ...comparison, singleTab: true, originalUri })).toEqual([false, false]);
     }
   });
-  it('bounds image URI requests and optional document bases without coercing values', () => {
-    const request = { type: 'request', id: 1, method: 'imageUri' };
+  it.each(['imageUri', 'imageBytes'])('bounds %s requests and optional document bases without coercing values', method => {
+    const request = { type: 'request', id: 1, method };
     for (const source of ['./assets/a%20b.svg', 'https://example.com/a.png', 'a'.repeat(8192)]) {
       for (const baseUri of [undefined, 'file:///workspace/readme.md', 'a'.repeat(8192)]) {
         expect(isClientMessage({ ...request, args: { source, baseUri } })).toBe(true);

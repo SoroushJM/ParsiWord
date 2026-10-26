@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
   const configureResources = (session: Session) => {
     session.panel.webview.options = { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'dist/webview'), ...imageRoots(session)] };
   };
-  const imageUri = async (session: Session, source: string, baseUri?: string): Promise<string | null> => {
+  const imageResource = async (session: Session, source: string, baseUri?: string): Promise<vscode.Uri | string | null> => {
     if (source !== source.trim() || /[\u0000-\u001f\u007f]/.test(source)) return null;
     if (baseUri && baseUri !== session.document.uri.toString() && baseUri !== session.original?.uri.toString()) return null;
     const base = localUri(baseUri && session.original && baseUri === session.original.uri.toString() ? session.original.uri : session.document.uri);
@@ -56,8 +56,53 @@ export function activate(context: vscode.ExtensionContext) {
       })) return null;
       const stat = await vscode.workspace.fs.stat(uri.with({ query: '', fragment: '' }));
       if (!(stat.type & vscode.FileType.File)) return null;
-      return session.panel.webview.asWebviewUri(uri).toString();
+      return uri.with({ query: '', fragment: '' });
     } catch { return null; }
+  };
+  const imageUri = async (session: Session, source: string, baseUri?: string): Promise<string | null> => {
+    const resource = await imageResource(session, source, baseUri);
+    return typeof resource === 'string' || resource === null ? resource : session.panel.webview.asWebviewUri(resource).toString();
+  };
+  const imageBytes = async (session: Session, source: string, baseUri?: string): Promise<{ bytes: number[]; mimeType?: string }> => {
+    const resource = await imageResource(session, source, baseUri);
+    if (!resource) throw new ParsiWordError('IMAGE_EXPORT_FAILED');
+    const limit = 8 * 1024 * 1024;
+    if (typeof resource !== 'string') {
+      const stat = await vscode.workspace.fs.stat(resource);
+      if (stat.size > limit) throw new ParsiWordError('IMAGE_EXPORT_TOO_LARGE');
+      const bytes = await vscode.workspace.fs.readFile(resource);
+      if (bytes.byteLength > limit) throw new ParsiWordError('IMAGE_EXPORT_TOO_LARGE');
+      return { bytes: Array.from(bytes) };
+    }
+    // Online images are read by the extension, then decoded locally in the
+    // webview. No proxy server, authentication cookie or webview CSP exception.
+    let url = new URL(resource);
+    const signal = AbortSignal.timeout(25_000);
+    for (let redirects = 0; redirects <= 3; redirects++) {
+      if (url.protocol !== 'https:' || url.username || url.password) throw new ParsiWordError('IMAGE_EXPORT_FAILED');
+      const response = await fetch(url, { redirect: 'manual', credentials: 'omit', signal });
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        await response.body?.cancel();
+        const location = response.headers.get('location');
+        if (!location || redirects === 3) throw new ParsiWordError('IMAGE_EXPORT_FAILED');
+        url = new URL(location, url); continue;
+      }
+      if (!response.ok || !response.body) { await response.body?.cancel(); throw new ParsiWordError('IMAGE_EXPORT_FAILED'); }
+      if (Number(response.headers.get('content-length') || 0) > limit) { await response.body.cancel(); throw new ParsiWordError('IMAGE_EXPORT_TOO_LARGE'); }
+      const reader = response.body.getReader(), chunks: Uint8Array[] = []; let length = 0;
+      try {
+        for (;;) {
+          const { done, value } = await reader.read(); if (done) break;
+          length += value.byteLength;
+          if (length > limit) throw new ParsiWordError('IMAGE_EXPORT_TOO_LARGE');
+          chunks.push(value);
+        }
+      } finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
+      const bytes = new Uint8Array(length); let offset = 0;
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+      return { bytes: Array.from(bytes), mimeType: response.headers.get('content-type')?.split(';')[0] };
+    }
+    throw new ParsiWordError('IMAGE_EXPORT_FAILED');
   };
   const gitRef = (uri: vscode.Uri): string | undefined => {
     if (uri.scheme !== 'git') return;
@@ -338,11 +383,13 @@ export function activate(context: vscode.ExtensionContext) {
           if (message.type === 'settings') { await context.workspaceState.update(`settings:${document.uri.toString()}`, message.settings); return; }
           if (message.type === 'locale' && ['fa','en'].includes(message.locale)) { await context.globalState.update('locale', message.locale); return; }
           if (message.type !== 'request' || !Number.isSafeInteger(message.id)) return;
+          const requestClient = session.client;
           try {
             let result: unknown;
             const args = message.args ?? {};
             if (message.method === 'command') await command(String(args.name), document, panel);
             else if (message.method === 'imageUri') result = await imageUri(session, String(args.source), typeof args.baseUri === 'string' ? args.baseUri : undefined);
+            else if (message.method === 'imageBytes') result = await imageBytes(session, String(args.source), typeof args.baseUri === 'string' ? args.baseUri : undefined);
             else if (message.method === 'open') {
               const files = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { Markdown: ['md','markdown','mdown','mkd','txt'] } });
               if (files?.[0]) await open(files[0]);
@@ -373,9 +420,9 @@ export function activate(context: vscode.ExtensionContext) {
               session.journal.clear();
               await recover(args.text);
             } else throw new ParsiWordError('INVALID_HOST_REQUEST');
-            await panel.webview.postMessage({ type: 'response', id: message.id, result });
+            if (session.client === requestClient) await panel.webview.postMessage({ type: 'response', id: message.id, result });
           } catch (error) {
-            await panel.webview.postMessage({ type: 'response', id: message.id, errorCode: getErrorCode(error) ?? 'HOST_REQUEST_FAILED' });
+            if (session.client === requestClient) await panel.webview.postMessage({ type: 'response', id: message.id, errorCode: getErrorCode(error) ?? (message.method === 'imageBytes' ? 'IMAGE_EXPORT_FAILED' : 'HOST_REQUEST_FAILED') });
           }
         }),
       ];

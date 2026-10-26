@@ -1,6 +1,6 @@
 import { ParsiWordError, isErrorCode, type ErrorCode, type ErrorDetails } from './errors';
 
-/** User-facing failures: do not silently lose formulas or diagrams in a document. */
+/** User-facing failures: do not silently lose formulas, diagrams or images. */
 export class RichContentError extends ParsiWordError {
   constructor(code: ErrorCode, details?: ErrorDetails);
   /** @deprecated Pass a stable ErrorCode. Kept for existing deep-import consumers. */
