@@ -14,6 +14,7 @@ async function until<T>(read: () => T | PromiseLike<T>, predicate: (value: T) =>
 export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: string, record: (text: string) => void) {
   const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'nested folder/nested.md');
   const page = browser.contexts().flatMap(context => context.pages())[0];
+  const initialViewport = page.viewportSize() ?? await page.evaluate(() => ({ width: innerWidth, height: innerHeight }));
   const comparison = async () => until(async () => {
     for (const p of browser.contexts().flatMap(context => context.pages())) for (const frame of p.frames()) {
       try { if (await frame.locator('.comparison-workspace').isVisible()) return frame; } catch { /* A closed comparison replaces its frame. */ }
@@ -410,6 +411,9 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
 
     // Unequal line counts and unequal pane widths make equal scroll percentages
     // visibly wrong. Both directions must preserve a common content anchor.
+    // Exercise the actual Windows CI desktop geometry on larger local screens.
+    // Its narrower paragraphs wrap differently from a maximized developer IDE.
+    await page.setViewportSize({ width: 1024, height: 768 });
     await setMode(frame, 'source', 'side-by-side');
     const scrollDivider = frame.getByRole('separator', { name: 'Resize comparison panes', exact: true });
     const scrollDividerBox = await scrollDivider.boundingBox(); assert.ok(scrollDividerBox);
@@ -417,6 +421,26 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     await page.mouse.down(); await page.mouse.move(scrollDividerBox.x + 90, scrollDividerBox.y + 120, { steps: 8 }); await page.mouse.up();
     for (const view of ['source', 'rendered'] as const) {
       await setMode(frame, view, 'side-by-side');
+      const toolbarSelector = view === 'source' ? '.format-toolbar' : '.rich-toolbar-container';
+      const toolbars = [original.locator(toolbarSelector), modified.locator(toolbarSelector)];
+      await Promise.all(toolbars.map(toolbar => expect(toolbar).toBeVisible()));
+      await expect.poll(async () => {
+        const boxes = await Promise.all(toolbars.map(toolbar => toolbar.boundingBox()));
+        return boxes[0] && boxes[1] && boxes.every(box => box && box.height > 0)
+          ? Math.abs(boxes[0].height - boxes[1].height) : Infinity;
+      }, { message: `${view} toolbar containers must reserve equal height despite different wrapping` }).toBeLessThanOrEqual(1);
+      const toolbarGeometry = await Promise.all([original, modified].map(side => side.evaluate((element, selector) => {
+        const toolbar = element.querySelector<HTMLElement>(selector)!;
+        const row = toolbar.querySelector<HTMLElement>('.rich-format-toolbar') ?? toolbar;
+        return { paneWidth: element.getBoundingClientRect().width, top: toolbar.getBoundingClientRect().top,
+          bottom: toolbar.getBoundingClientRect().bottom, height: toolbar.getBoundingClientRect().height,
+          scrollWidth: row.scrollWidth, clientWidth: row.clientWidth };
+      }, toolbarSelector)));
+      if (view === 'rendered') {
+        const narrower = toolbarGeometry.reduce((a, b) => a.paneWidth < b.paneWidth ? a : b);
+        assert.ok(narrower.scrollWidth > narrower.clientWidth + 1, 'The narrower rendered formatting row must actually overflow to exercise scrollbar gutter alignment');
+      }
+      console.log('Scroll synchronization toolbar geometry', JSON.stringify({ view, toolbars: toolbarGeometry }));
       for (const [driver, follower, heading] of [[original, modified, 'بخش اسکرول 12'], [modified, original, 'بخش اسکرول 20']] as const) {
         const selector = view === 'source' ? '.markdown-source-highlight [data-source-line]' : '.rich-document > h2';
         const anchor = driver.locator(selector).filter({ hasText: heading }).first();
@@ -438,6 +462,14 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
           original: await original.evaluate(element => ({ top: element.scrollTop, height: element.scrollHeight, client: element.clientHeight, rect: element.getBoundingClientRect().toJSON() })),
           modified: await modified.evaluate(element => ({ top: element.scrollTop, height: element.scrollHeight, client: element.clientHeight, rect: element.getBoundingClientRect().toJSON() })),
           active: await anchor.boundingBox(), passive: await peerAnchor.boundingBox(),
+          blocks: await Promise.all([anchor, peerAnchor].map(item => item.evaluate(element => {
+            const siblings = element.parentElement ? [...element.parentElement.children] : [];
+            const index = siblings.indexOf(element);
+            return siblings.slice(Math.max(0, index - 2), index + 2).map(block => ({
+              tag: block.tagName, start: block.getAttribute('data-source-start'), end: block.getAttribute('data-source-end'),
+              top: block.getBoundingClientRect().top, bottom: block.getBoundingClientRect().bottom,
+            }));
+          }))),
         }));
         await expect.poll(async () => {
           const [active, passive] = await Promise.all([anchor.boundingBox(), peerAnchor.boundingBox()]);
@@ -457,6 +489,7 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     await page.mouse.move(changedDivider.x + changedDivider.width / 2, changedDivider.y + 120);
     await page.mouse.down(); await page.mouse.move(scrollDividerBox.x + scrollDividerBox.width / 2, changedDivider.y + 120, { steps: 8 }); await page.mouse.up();
     await original.evaluate(element => { element.scrollTop = 0; }); await modified.evaluate(element => { element.scrollTop = 0; });
+    await page.setViewportSize(initialViewport);
 
     await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     await until(() => api.getOpenDocuments(), docs => !docs.some(item => item.visible && item.comparison), 'one close disposes the comparison');
@@ -516,6 +549,7 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     await page.screenshot({ path: join(artifact, 'git-diff-failure.png') }).catch(() => {});
     throw error;
   } finally {
+    await page.setViewportSize(initialViewport);
     await vscode.workspace.saveAll(false);
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     await workbench.update('colorTheme', previousTheme, vscode.ConfigurationTarget.Workspace);

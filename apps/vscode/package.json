@@ -2,7 +2,7 @@
   "name": "parsiword-vscode",
   "displayName": "ParsiWord — RTL Markdown Editor",
   "description": "View and edit Persian, Arabic and mixed RTL/LTR Markdown, with editable preview, LaTeX, Mermaid and Word/PDF export.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "publisher": "SoroushJM",
   "engines": {
     "vscode": "^1.100.0"

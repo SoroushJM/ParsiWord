@@ -194,7 +194,7 @@ export function useComparisonScroll({ containerRef, enabled, original, modified,
     const expected = new WeakMap<HTMLElement, number>();
     let surfaces: Partial<Record<Side, Surface>> = {}, frame = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const observed = new WeakSet<Element>();
+    const observed = new Set<Element>();
     const observe = (node: Element) => { if (!observed.has(node)) { observed.add(node); sizes.observe(node); } };
     const write = (surface: Surface, source: number, gap: number) => {
       const target = clamp(project(surface.points, source, 'source') - readingInset(surface) - gap, surface.owner.scrollHeight - surface.owner.clientHeight);
@@ -205,11 +205,17 @@ export function useComparisonScroll({ containerRef, enabled, original, modified,
     const update = () => {
       frame = 0;
       if (dirty.current) {
+        // Search controls and editor surfaces can be replaced while this
+        // comparison stays open; release their detached DOM immediately.
+        for (const node of observed) if (!root.contains(node)) { sizes.unobserve(node); observed.delete(node); }
         surfaces = {};
         for (const side of ['original', 'modified'] as const) {
           const pane = panes[side]!;
           const measured = measure(pane, view, current.current[side]);
-          if (measured) { surfaces[side] = measured; observe(measured.content); observe(measured.owner); }
+          if (measured) {
+            surfaces[side] = measured; observe(measured.content); observe(measured.owner);
+            for (const header of pane.querySelectorAll('.comparison-revision, .format-toolbar, .rich-toolbar-container, .editor-search')) observe(header);
+          }
         }
         dirty.current = false;
       }

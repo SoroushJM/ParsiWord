@@ -238,6 +238,12 @@ body.vscode-shell {
   padding-bottom: 0;
   scroll-padding-inline: 0.125rem;
 }
+/* Classic horizontal scrollbars occupy height only in the overflowing pane.
+   Reserve the same track in both comparison toolbars so their reading edges
+   stay aligned when the divider makes one side narrower. */
+.vscode-shell .comparison-workspace[data-layout="side-by-side"] :is(.format-toolbar, .rich-format-toolbar) {
+  overflow-x: scroll;
+}
 .vscode-shell .editing-pane .markdown-editor {
   border: 0;
   padding: 1.25rem 0.75rem;
