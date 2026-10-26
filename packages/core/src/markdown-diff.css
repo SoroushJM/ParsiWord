@@ -1,0 +1,29 @@
+.app-shell {
+  --diff-insert-background: #e4f3e8;
+  --diff-delete-background: #fce8e8;
+  --diff-insert-word: #afe0bc;
+  --diff-delete-word: #f2b5b5;
+  --diff-insert-border: #268140;
+  --diff-delete-border: #c43e3e;
+}
+.diff-toolbar { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .75rem; padding: .875rem 1rem; margin-block: .75rem; border: .0625rem solid var(--border); background: var(--card); color: var(--foreground); border-radius: .75rem; }
+.diff-revision { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 1.5rem; font-size: .8125rem; }
+.diff-summary { display: flex; flex-wrap: wrap; align-items: center; gap: .625rem; font-size: .8125rem; }
+fieldset.format-toolbar { margin: 0; min-width: 0; border: 0; border-block-end: .0625rem solid var(--border); }
+fieldset.rich-toolbar-container { min-width: 0; border: 0; border-block-end: .0625rem solid var(--border); }
+.diff-toolbar nav { display: flex; align-items: center; gap: .5rem; font-size: .8125rem; }
+.diff-toolbar p { grid-column: 1 / -1; font-size: .8125rem; margin: 0; }
+.diff-count { padding: .125rem .375rem; border-radius: .25rem; }
+.diff-count[data-diff=insert] { background: var(--diff-insert-background); color: #17562c; }
+.diff-count[data-diff=delete] { background: var(--diff-delete-background); color: #8d2424; }
+.markdown-source-highlight [data-source-line][data-diff=insert], .rich-document > [data-diff=insert] { background: var(--diff-insert-background); box-shadow: inset .1875rem 0 var(--diff-insert-border); }
+.markdown-source-highlight [data-source-line][data-diff=delete], .rich-document > [data-diff=delete] { background: var(--diff-delete-background); box-shadow: inset .1875rem 0 var(--diff-delete-border); }
+.markdown-source-highlight [data-diff-word=insert] { background: var(--diff-insert-word); }
+.markdown-source-highlight [data-diff-word=delete] { background: var(--diff-delete-word); }
+.app-shell[data-comparison] .intro-copy > h1, .app-shell[data-comparison] .intro-description { display: none; }
+.app-shell[data-comparison] .intro { margin-block: 0; padding: 0; }
+.app-shell[data-comparison] .rich-document > [data-diff] { border-radius: 0; }
+@media (forced-colors: active) {
+  .rich-document > [data-diff=insert], .diff-count[data-diff=insert] { outline: .125rem solid Highlight; }
+  .rich-document > [data-diff=delete], .diff-count[data-diff=delete] { outline: .125rem dashed CanvasText; }
+}

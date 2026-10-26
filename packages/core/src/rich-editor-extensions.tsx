@@ -13,6 +13,7 @@ import { mathLanguage } from './rich-content';
 import { paragraphDirection, type Direction } from './document-model';
 import { canApplyMarkdown } from './document-limits';
 import { rawMarkdownLabel, type SourcePosition } from './rich-editor-markdown';
+import { changedBlock, type DiffSide } from './markdown-diff';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -193,10 +194,11 @@ export const MarkdownLengthLimit = Extension.create<{ snapshot: (transaction: Tr
   },
 });
 
-export function sourceAnnotations(getPositions: (doc: ProseMirrorNode) => SourcePosition[], getDirection: () => Direction) {
+export function sourceAnnotations(getPositions: (doc: ProseMirrorNode) => SourcePosition[], getDirection: () => Direction, getDiff: () => DiffSide | undefined = () => undefined) {
   let previousPositions: SourcePosition[] | undefined;
   let previousDoc: ProseMirrorNode | undefined;
   let previousDirection: Direction | undefined;
+  let previousDiff: DiffSide | undefined;
   let cached = DecorationSet.empty;
   const directions = new WeakMap<ProseMirrorNode, { mode: Direction; direction: string }>();
   return Extension.create({
@@ -205,7 +207,8 @@ export function sourceAnnotations(getPositions: (doc: ProseMirrorNode) => Source
       return [new Plugin({ props: { decorations(state) {
         const positions = getPositions(state.doc);
         const direction = getDirection();
-        if (positions === previousPositions && state.doc === previousDoc && direction === previousDirection) return cached;
+        const diff = getDiff();
+        if (positions === previousPositions && state.doc === previousDoc && direction === previousDirection && diff === previousDiff) return cached;
         const end = positions[positions.length - 1]?.end || 0;
         const decorations: Decoration[] = [];
         let index = 0;
@@ -214,6 +217,7 @@ export function sourceAnnotations(getPositions: (doc: ProseMirrorNode) => Source
           decorations.push(Decoration.node(pos, pos + node.nodeSize, {
             'data-source-start': String(span?.start ?? end),
             'data-source-end': String(span?.end ?? end),
+            'data-diff': changedBlock(diff, span?.start ?? end, span?.end ?? end) ?? '',
           }));
         });
         state.doc.descendants((node, pos) => {
@@ -228,6 +232,7 @@ export function sourceAnnotations(getPositions: (doc: ProseMirrorNode) => Source
         previousDoc = state.doc;
         previousPositions = positions;
         previousDirection = direction;
+        previousDiff = diff;
         cached = DecorationSet.create(state.doc, decorations);
         return cached;
       } } })];

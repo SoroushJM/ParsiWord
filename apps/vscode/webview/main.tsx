@@ -3,11 +3,18 @@ import './vscode.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { EditorApp as App, LocaleProvider, translate } from '@parsiword/core/ui';
-import { configureHost, DocumentSync, isHostMessage, ParsiWordError, errorMessage, type DocumentSnapshot } from '@parsiword/core/host';
+import { configureHost, DocumentSync, isHostMessage, ParsiWordError, errorMessage, type DocumentSnapshot, type DocumentComparison, type EditorAction } from '@parsiword/core/host';
 import { toast } from 'sonner';
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void; getState(): unknown; setState(value: unknown): void };
 const api = acquireVsCodeApi();
+// A retained webview can receive real input before panel.active reflects its
+// editor group. Route document actions to the view that actually has focus.
+const reportFocus = () => api.postMessage({ type: 'focus', focused: true });
+document.addEventListener('focusin', reportFocus);
+document.addEventListener('pointerdown', reportFocus);
+window.addEventListener('focus', reportFocus);
+window.addEventListener('blur', () => api.postMessage({ type: 'focus', focused: false }));
 document.body.classList.add('vscode-shell');
 const root = createRoot(document.getElementById('root')!);
 const showError = (error: unknown) => toast.error(translate(errorMessage(error), document.documentElement.lang === 'en' ? 'en' : 'fa'));
@@ -16,6 +23,10 @@ let client = '';
 let eol: '\n' | '\r\n' = '\n';
 let sync: DocumentSync;
 const listeners = new Set<(snapshot: DocumentSnapshot) => void>();
+const comparisonListeners = new Set<(comparison: DocumentComparison | undefined) => void>();
+const navigationListeners = new Set<(index: number) => void>();
+const actionListeners = new Set<(action: EditorAction) => void>();
+let comparison: DocumentComparison | undefined;
 const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
 const request = <T,>(method: string, args: unknown): Promise<T> => new Promise((resolve, reject) => {
   const id = ++serial;
@@ -26,15 +37,23 @@ const request = <T,>(method: string, args: unknown): Promise<T> => new Promise((
 window.addEventListener('message', event => {
   const message = event.data;
   if (!isHostMessage(message)) return;
-  if (message.type === 'response') {
+  if (message.type === 'editorAction') {
+    for (const listener of actionListeners) listener(message.action);
+  } else if (message.type === 'response') {
     const operation = pending.get(message.id);
     if (operation) { clearTimeout(operation.timer); pending.delete(message.id); if (message.error || message.errorCode) operation.reject(new ParsiWordError(message.errorCode ?? 'HOST_REQUEST_FAILED')); else operation.resolve(message.result); }
+  } else if (message.type === 'comparison') {
+    comparison = message.comparison ?? undefined;
+    for (const listener of comparisonListeners) listener(comparison);
+  } else if (message.type === 'comparisonNavigate') {
+    for (const listener of navigationListeners) listener(message.index);
   } else if (message.type === 'document' && sync) {
     eol = message.snapshot.eol ?? eol;
     sync.receive(message.snapshot, message.snapshot.client === client);
   } else if (message.type === 'init' && !sync) {
     client = message.client;
     eol = message.snapshot.eol ?? '\n';
+    comparison = message.comparison ?? undefined;
     sync = new DocumentSync(message.snapshot,
       edit => api.postMessage({ type: 'edit', edit }),
       snapshot => { for (const listener of listeners) listener({ markdown: snapshot.text, dirty: snapshot.dirty }); },
@@ -43,6 +62,11 @@ window.addEventListener('message', event => {
       edit => api.postMessage({ type: 'draft', edit }));
     configureHost({
       kind: 'vscode', version: message.version, locale: message.locale,
+      readOnly: message.readOnly, comparison,
+      subscribeComparison: listener => { comparisonListeners.add(listener); listener(comparison); return () => { comparisonListeners.delete(listener); }; },
+      navigateComparison: index => api.postMessage({ type: 'comparisonNavigate', index }),
+      subscribeComparisonNavigation: listener => { navigationListeners.add(listener); return () => { navigationListeners.delete(listener); }; },
+      subscribeEditorAction: listener => { actionListeners.add(listener); return () => { actionListeners.delete(listener); }; },
       asset: path => `${message.assetRoot}/${path.replace(/^\/+/, '')}`,
       initial: { markdown: message.snapshot.text, settings: message.settings, dirty: message.snapshot.dirty, viewMode: message.viewMode },
       documentChanged: text => sync.edit(text),

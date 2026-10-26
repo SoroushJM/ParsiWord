@@ -21,27 +21,28 @@ const markdown = '# عنوان فارسی\n\nمتن فارسی و English SEARCH
 await writeFile(resolve(fixture, 'sample.md'), markdown);
 await writeFile(resolve(fixture, 'other.md'), '# Other\n\nLinked document.\n');
 await writeFile(resolve(fixture, 'crlf.md'), '# Windows\r\n\r\nمتن اصلی\r\n');
-await writeFile(resolve(fixture, 'nested folder/nested.md'), '# Nested\n');
+await writeFile(resolve(fixture, 'nested folder/nested.md'), '# مقایسه فارسی و English\n\nمتن ORIGINAL برای مقایسه.\n\nاین بخش ثابت است و تغییری ندارد.\n');
 const git = args => { const result = spawnSync('git', args, { cwd: fixture, encoding: 'utf8' }); if (result.status) throw Error(result.stderr); };
 git(['init','-b','main']); git(['add','.']);
 git(['-c','user.name=ParsiWord Test','-c','user.email=parsiword-test@example.invalid','commit','--allow-empty','-m','Integration fixture']);
-await writeFile(resolve(fixture, 'nested folder/nested.md'), '# Nested\n\nWorking tree edit.\n');
+await writeFile(resolve(fixture, 'nested folder/nested.md'), '# مقایسه فارسی و English\n\nمتن STAGED برای مقایسه.\n\nاین بخش ثابت است و تغییری ندارد.\n');
 git(['add','nested folder/nested.md']);
-await writeFile(resolve(fixture, 'nested folder/nested.md'), '# Nested\n\nWorking tree edit.\n\nUnstaged.\n');
+await writeFile(resolve(fixture, 'nested folder/nested.md'), '# مقایسه فارسی و English\n\nمتن WORKING برای مقایسه.\n\nاین بخش ثابت است و تغییری ندارد.\n\nخط افزوده در فایل فعلی.\n');
 await build({ entryPoints: [resolve(root,'apps/vscode/test/runner.ts')], outfile: resolve(root,'apps/vscode/dist/test.cjs'), platform: 'node', format: 'cjs', bundle: true, external: ['vscode','@playwright/test','jszip','pdfjs-dist/*'] });
 const server = createServer(); await new Promise(resolve => server.listen(0,'127.0.0.1',resolve));
 const port = server.address().port; await new Promise(resolve => server.close(resolve));
 await runTests({
   vscodeExecutablePath: process.env.VSCODE_EXECUTABLE_PATH || (process.platform === 'win32' && await access('C:/Program Files/Microsoft VS Code/Code.exe').then(()=>true,()=>false) ? 'C:/Program Files/Microsoft VS Code/Code.exe' : undefined),
   extensionDevelopmentPath: cliPath(resolve(root,'apps/vscode')), extensionTestsPath: cliPath(resolve(root,'apps/vscode/dist/test.cjs')),
-  launchArgs: [cliPath(fixture), '--new-window', '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust', '--disable-updates', '--disable-extension=github.copilot-chat', '--disable-extension=github.copilot', `--user-data-dir=${cliPath(resolve(runDirectory,'profile'))}`, `--extensions-dir=${cliPath(resolve(runDirectory,'extensions'))}`, `--remote-debugging-port=${port}`],
-  extensionTestsEnv: { PARSIWORD_TEST_CDP: String(port), PARSIWORD_TEST_ARTIFACT: artifact, ...(process.env.PARSIWORD_TEST_THEME_WITNESS ? { PARSIWORD_TEST_THEME_WITNESS: process.env.PARSIWORD_TEST_THEME_WITNESS } : {}) },
+  launchArgs: [cliPath(fixture), '--new-window', '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust', '--disable-updates', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-extension=github.copilot-chat', '--disable-extension=github.copilot', `--user-data-dir=${cliPath(resolve(runDirectory,'profile'))}`, `--extensions-dir=${cliPath(resolve(runDirectory,'extensions'))}`, `--remote-debugging-port=${port}`],
+  extensionTestsEnv: { PARSIWORD_TEST_CDP: String(port), PARSIWORD_TEST_ARTIFACT: artifact, ...(process.env.PARSIWORD_TEST_FOCUS ? { PARSIWORD_TEST_FOCUS: process.env.PARSIWORD_TEST_FOCUS } : {}), ...(process.env.PARSIWORD_TEST_THEME_WITNESS ? { PARSIWORD_TEST_THEME_WITNESS: process.env.PARSIWORD_TEST_THEME_WITNESS } : {}) },
 });
 // Parse the actual exported PDF in Node, outside Electron's extension host,
 // where PDF.js can load its optional canvas bindings normally.
 if (!process.env.PARSIWORD_TEST_THEME_WITNESS) {
 const reportPath=resolve(artifact,'results.json');
 const report=JSON.parse(await readFile(reportPath,'utf8'));
+if (process.env.PARSIWORD_TEST_FOCUS) process.exit(0);
 const { getDocument }=await import('pdfjs-dist/legacy/build/pdf.mjs');
 const pdf=await getDocument({data:new Uint8Array(await readFile(report.exports.pdf)),useSystemFonts:false,disableFontFace:true,isEvalSupported:false}).promise;
 const content=await (await pdf.getPage(1)).getTextContent();

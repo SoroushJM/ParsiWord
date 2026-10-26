@@ -4,6 +4,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium, expect, type Browser, type Frame } from '@playwright/test';
 import JSZip from 'jszip';
+import { testGitDiff } from './git-diff';
+import { testShortcuts } from './shortcuts';
 
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds));
 async function until<T>(read: () => T | PromiseLike<T>, predicate: (value: T) => boolean, label: string): Promise<T> {
@@ -24,7 +26,7 @@ export async function run() {
     const folder = vscode.workspace.workspaceFolders![0].uri;
     const uri = vscode.Uri.joinPath(folder,'sample.md');
     const initial = await vscode.workspace.fs.readFile(uri).then(bytes => new TextDecoder().decode(bytes));
-    const extension = vscode.extensions.getExtension<{getOpenDocuments(): {uri: string;ready: boolean}[]}>('SoroushJM.parsiword-vscode')!;
+    const extension = vscode.extensions.getExtension<{getOpenDocuments(): {uri: string;ready: boolean;visible: boolean;comparison?: string}[]}>('SoroushJM.parsiword-vscode')!;
     assert.ok(extension, 'Extension is discovered');
     // Test-only transport interception, installed before the real provider.
     // This delays only delivery, leaving the native document queue unblocked.
@@ -62,6 +64,16 @@ export async function run() {
     await vscode.commands.executeCommand('workbench.action.closeSidebar');
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${process.env.PARSIWORD_TEST_CDP}`);
     const pages = browser.contexts().flatMap(context=>context.pages());
+    if (process.env.PARSIWORD_TEST_FOCUS === 'diff') {
+      await testGitDiff(browser, api, artifact, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
+      return;
+    }
+    if (process.env.PARSIWORD_TEST_FOCUS === 'shortcuts') {
+      await testShortcuts(browser, artifact, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
+      return;
+    }
     await vscode.commands.executeCommand('vscode.open',uri);
     await until(() => api.getOpenDocuments(), items => items.some(item => item.uri===uri.toString() && item.ready),'custom editor webview ready');
     assert.ok(vscode.window.tabGroups.all.flatMap(group=>group.tabs).some(tab=>tab.input instanceof vscode.TabInputCustom && tab.input.viewType==='parsiword.markdown'));
@@ -110,7 +122,7 @@ export async function run() {
     }
     const edited = initial + '\nویرایش منبع EXTENSION_SOURCE\n';
     await frame.locator('#markdown-source').fill(edited);
-    const document = await vscode.workspace.openTextDocument(uri);
+    let document = await vscode.workspace.openTextDocument(uri);
     await until(()=>document.getText(),text=>text===edited,'source edit reaches TextDocument');
     await until(()=>document.isDirty,value=>value,'document dirty state');
     record('Typing in the webview changes the native document and dirty state');
@@ -267,6 +279,7 @@ export async function run() {
     const md=await saveExport('md',async()=>{await more();await frame.getByRole('menuitem',{name:'Save Markdown file',exact:true}).click();});
     assert.equal(md.toString('utf8'),document.getText());
     record('Markdown export preserves the exact current logical UTF-8 source');
+    await page.bringToFront();
     await page.screenshot({path:join(artifact,'extension-workspace.png')});
     await frame.getByRole('button',{name:'VS Code source',exact:true}).click();
     await until(()=>vscode.window.activeTextEditor?.document.uri.toString(),value=>value===uri.toString(),'native source opens');
@@ -278,14 +291,11 @@ export async function run() {
     await page.screenshot({path:join(artifact,'native-source-beside.png')});
     await vscode.commands.executeCommand('parsiword.nativePreview',uri);
     record('The built-in Markdown preview command remains usable');
-    const nested = vscode.Uri.joinPath(folder,'nested folder/nested.md');
-    await vscode.commands.executeCommand('parsiword.gitDiff',nested);
-    await until(()=>vscode.window.tabGroups.all.flatMap(group=>group.tabs),tabs=>tabs.some(tab=>tab.input instanceof vscode.TabInputTextDiff),'native working-tree diff');
-    const diff = vscode.window.tabGroups.all.flatMap(group=>group.tabs).find(tab=>tab.input instanceof vscode.TabInputTextDiff)!.input as vscode.TabInputTextDiff;
-    assert.equal(diff.original.scheme,'git'); assert.equal(diff.modified.toString(),nested.toString());
-    await vscode.commands.executeCommand('parsiword.stagedDiff',nested);
-    await until(()=>vscode.window.tabGroups.all.flatMap(group=>group.tabs),tabs=>tabs.some(tab=>tab.input instanceof vscode.TabInputTextDiff && tab.input.original.scheme==='git' && tab.input.modified.scheme==='git'),'native staged diff');
-    record('Working-tree and staged Git comparisons open native text diffs for paths containing spaces');
+    await testShortcuts(browser, artifact, record);
+    await testGitDiff(browser, api, artifact, record);
+    // Comparison checks close their editors. Reopen the native document and
+    // refresh its webview references before continuing the multi-view checks.
+    document = await vscode.workspace.openTextDocument(uri);
     assert.equal(errors.filter(error=>!error.includes('ResizeObserver')).length,0,errors.join('\n'));
     await vscode.commands.executeCommand('vscode.openWith',uri,'parsiword.markdown',{viewColumn:vscode.ViewColumn.One});
     await vscode.commands.executeCommand('vscode.openWith',uri,'parsiword.markdown',{viewColumn:vscode.ViewColumn.Beside});
@@ -306,7 +316,7 @@ export async function run() {
     await until(()=>document.getText(),text=>text.includes('DISK_CHANGE'),'external file change');
     for(const f of frames) await expect(f.locator('#markdown-source')).toHaveValue(multi+'\nDISK_CHANGE\n');
     record('Two custom views stay synchronized with each other and external disk changes');
-    const modeTitle = await frame.locator('#document-title').inputValue();
+    const modeTitle = await frames[0].locator('#document-title').inputValue();
     const findMode = async (mode: string) => until(async () => {
       for (const p of browser!.contexts().flatMap(c => c.pages())) for (const f of p.frames()) {
         try { if (await f.locator(`.live-workspace[data-mode="${mode}"]`).count() && await f.locator('#document-title').inputValue() === modeTitle) return f; }

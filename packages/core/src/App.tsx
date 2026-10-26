@@ -1,6 +1,10 @@
 import { useLocale } from './locale';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { editorHost } from './host';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { editorHost, type DocumentComparison } from './host';
+import type { Editor } from '@tiptap/react';
+import { EditorSearch, type SearchRequest } from './EditorSearch';
+import { compareMarkdown } from './markdown-diff';
+import { DiffToolbar } from './DiffToolbar';
 import { useDisplayTheme } from './display-theme';
 import { DocumentSession, type MutationOrigin } from './document-session';
 import { MAX_MARKDOWN_LENGTH } from './document-limits';
@@ -36,9 +40,17 @@ function App() {
   const [initial] = useState(() => platform.initial ?? { markdown: defaultDocument, settings: { ...defaultSettings, title: locale === 'en' ? 'My note' : defaultSettings.title } });
   const [session] = useState(() => new DocumentSession(initial.markdown, initial.settings));
   const { markdown, settings } = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const [comparison, setComparison] = useState<DocumentComparison | undefined>(platform.comparison);
+  const [changeIndex, setChangeIndex] = useState(0);
+  const [search, setSearch] = useState<SearchRequest | null>(null);
+  const [richEditor, setRichEditor] = useState<Editor | null>(null);
+  const readOnly = !!platform.readOnly;
+  const diff = useMemo(() => comparison ? comparison.side === 'original' ? compareMarkdown(markdown, comparison.other) : compareMarkdown(comparison.other, markdown) : undefined, [markdown, comparison]);
+  const diffSide = comparison && diff?.[comparison.side];
   const oversized = markdown.length > MAX_MARKDOWN_LENGTH;
   const viewMode = oversized ? 'source' : platform.kind === 'vscode' ? platform.initial?.viewMode ?? 'combined' : 'combined';
   const setMarkdown = useCallback((next: string | ((previous: string) => string), origin: Exclude<MutationOrigin, 'host'> = 'source') => {
+    if (platform.readOnly) return false;
     const previous = session.getSnapshot().markdown;
     const value = typeof next === 'function' ? next(previous) : next;
     if (!session.change(value, origin)) {
@@ -67,6 +79,24 @@ function App() {
   const preview = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const { mobileView, selectView, activateView } = usePreviewScroll(editor, preview, markdown, previewMarkdown, viewMode);
+  useEffect(() => platform.subscribeComparison?.(value => { setComparison(value); setChangeIndex(0); }), [platform]);
+  useEffect(() => platform.subscribeComparisonNavigation?.(index => {
+    if (!diffSide?.anchors.length) return;
+    const next = Math.max(0, Math.min(index, diffSide.anchors.length - 1));
+    setChangeIndex(next);
+    const offset = diffSide.anchors[next];
+    requestAnimationFrame(() => {
+      let target: Element | undefined;
+      if (viewMode === 'rendered' || (viewMode === 'combined' && mobileView === 'preview')) {
+        const blocks = [...(preview.current?.querySelectorAll('[data-source-start]') ?? [])];
+        target = blocks.find(block => Number(block.getAttribute('data-source-end')) > offset) ?? blocks[blocks.length - 1];
+      } else {
+        const line = markdown.slice(0, offset).split('\n').length - 1;
+        target = document.querySelector(`[data-source-line="${line}"]`) ?? editor.current ?? undefined;
+      }
+      target?.scrollIntoView({ block: 'center', behavior: 'auto' });
+    });
+  }), [platform, diffSide, mobileView, markdown, viewMode]);
   // Markdown state, export and persistence are current in the input task.
   // Only the secondary textarea's DOM value waits for a short pause. Replacing
   // its entire value on every rich keystroke makes WebView reshape all source.
@@ -99,6 +129,12 @@ function App() {
   }, [activateEditingView, selectView, session]);
   const onSourceFocus = useCallback(() => activateEditingView('edit'), [activateEditingView]);
   const onPreviewFocus = useCallback(() => activateEditingView('preview'), [activateEditingView]);
+  useEffect(() => platform.subscribeEditorAction?.(action => {
+    if (session.getSnapshot().composing) return;
+    const focused = document.activeElement;
+    if (focused?.closest('[role="dialog"]')) return;
+    setSearch(previous => ({ action, sequence: (previous?.sequence ?? 0) + 1, rich: previous?.rich ?? editingViewRef.current === 'preview' }));
+  }), [platform, session]);
   const updateFromPreview = useCallback((value: string) => {
     activateEditingView('preview');
     if (!setMarkdown(value, 'rich')) return;
@@ -275,11 +311,18 @@ function App() {
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/u).length : 0;
 
   return (
-    <div className="app-shell" data-host={platform.kind} onKeyDownCapture={event => {
+    <div className="app-shell" data-host={platform.kind} data-comparison={comparison?.side} onKeyDownCapture={event => {
       if (platform.kind !== 'vscode' || event.nativeEvent.isComposing || !(event.ctrlKey || event.metaKey)) return;
       const key = event.key.toLowerCase();
       const command = key === 's' ? 'save' : key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
-      if (command) { event.preventDefault(); event.stopPropagation(); platform.command?.(command); }
+      const documentInput = (event.target as HTMLElement).closest('#markdown-source, .rich-document');
+      if ((command === 'undo' || command === 'redo') && !documentInput && (event.target as HTMLElement).matches('input, textarea, [contenteditable="true"]')) {
+        // Let ordinary form controls keep their browser history without the
+        // outer VS Code webview forwarding Undo to the Markdown document.
+        event.stopPropagation();
+        return;
+      }
+      if (command && (command === 'save' || documentInput)) { event.preventDefault(); event.stopPropagation(); if (!readOnly) platform.command?.(command); }
     }}>
       <BrandHeader theme={displayTheme} />
 
@@ -289,10 +332,12 @@ function App() {
           <Button variant="outline" onClick={() => platform.command?.('preview')}>{locale === 'fa' ? 'پیش‌نمایش VS Code' : 'VS Code preview'}</Button>
           <Button variant="outline" onClick={() => platform.command?.('diff')}>Git diff</Button>
           <Button variant="outline" onClick={() => platform.command?.('stagedDiff')}>Staged diff</Button>
-          <Button variant="outline" onClick={() => platform.command?.('save')}>{locale === 'fa' ? 'ذخیرهٔ سند' : 'Save document'}</Button>
-          <Button variant="ghost" onClick={() => platform.command?.('undo')}>Undo</Button>
-          <Button variant="ghost" onClick={() => platform.command?.('redo')}>Redo</Button>
+          <Button variant="outline" disabled={readOnly} onClick={() => platform.command?.('save')}>{locale === 'fa' ? 'ذخیرهٔ سند' : 'Save document'}</Button>
+          <Button variant="ghost" disabled={readOnly} onClick={() => platform.command?.('undo')}>Undo</Button>
+          <Button variant="ghost" disabled={readOnly} onClick={() => platform.command?.('redo')}>Redo</Button>
         </nav>}
+        {comparison && diff && <DiffToolbar comparison={comparison} diff={diff} index={changeIndex} onNavigate={index => platform.navigateComparison?.(index)} />}
+        {search && <EditorSearch request={search} markdown={markdown} source={editor} rich={richEditor} readOnly={readOnly} onChange={setMarkdown} onClose={() => setSearch(null)} />}
         <IntroControls direction={settings.direction} onDirectionChange={onDirectionChange} />
 
         <div className="workspace">
@@ -309,15 +354,15 @@ function App() {
               source={
                 <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading" onPointerDownCapture={onSourceFocus}>
                   <div className="pane-heading"><h2 id="edit-heading"><Code2 size="1.0625rem" /> {t("ویرایش متن")}</h2><span>Markdown</span></div>
-                  <SourceToolbar canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
-                  <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} /></Field></FieldGroup>
+                  <SourceToolbar readOnly={readOnly} canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
+                  <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} diff={diffSide} readOnly={readOnly} searching={!!search} /></Field></FieldGroup>
                 </section>
               }
               preview={
                 <section id="preview-pane" className="preview-pane" aria-labelledby="preview-heading">
                   <div className="pane-heading"><h2 id="preview-heading"><BookOpen size="1.0625rem" /> {t("پیش‌نمایش")}</h2></div>
                   <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus} onPointerDownCapture={onPreviewFocus}>
-                    {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} />}
+                    {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} diff={diffSide} readOnly={readOnly} onEditor={setRichEditor} />}
                   </div>
                 </section>
               }

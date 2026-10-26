@@ -25,7 +25,7 @@ function FormatButton({ label, disabled = false, action, children }: {
     onMouseDown={event => event.preventDefault()} onClick={action}>{children}</Button>;
 }
 
-export const RichToolbar = memo(function RichToolbar({ editor }: { editor: Editor }) {
+export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false }: { editor: Editor; readOnly?: boolean }) {
   const { t, dir, number } = useLocale();
   const [linkOpen, setLinkOpen] = useState(false);
   const [url, setUrl] = useState('');
@@ -48,7 +48,7 @@ export const RichToolbar = memo(function RichToolbar({ editor }: { editor: Edito
     else editor.chain().focus().extendMarkRange('link').unsetLink().run();
     setLinkOpen(false); setLinkError('');
   };
-  return <div className="rich-toolbar-container rich-editor-toolbar" onClickCapture={event => {
+  return <fieldset disabled={readOnly} className="rich-toolbar-container rich-editor-toolbar" onClickCapture={event => {
     const button = (event.target as HTMLElement).closest('button');
     if (button && ![t("واگرد"), t("انجام دوباره")].includes(button.getAttribute('aria-label') || '')) historyBoundary();
   }}>
@@ -104,5 +104,5 @@ export const RichToolbar = memo(function RichToolbar({ editor }: { editor: Edito
       </Field>
       <div className="flex flex-wrap gap-2"><Button type="button" size="sm" onClick={setLink}>{t("ثبت پیوند")}</Button><Button type="button" variant="outline" size="sm" onClick={() => setLinkOpen(false)}>{t("بستن")}</Button></div>
     </FieldGroup>}
-  </div>;
+  </fieldset>;
 });

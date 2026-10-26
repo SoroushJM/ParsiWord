@@ -1,5 +1,6 @@
 body {
   padding: 0;
+  min-height: 100vh;
 }
 .app-shell[data-host="vscode"] {
   max-width: none;
@@ -41,14 +42,38 @@ body {
    follow the workbench; source/rich document typography stays user controlled. */
 body.vscode-shell {
   font-family: var(--vscode-font-family, sans-serif);
-  font-size: var(--vscode-font-size, 13px);
+  font-size: var(--vscode-font-size, 0.8125rem);
   font-weight: var(--vscode-font-weight, normal);
   color: var(--vscode-foreground);
   background: var(--vscode-editor-background);
-  --control-size: 26px;
-  --control-icon-size: 16px;
-  --radius: 2px;
+  --control-size: 1.625rem;
+  --control-icon-size: 1rem;
+  --radius: 0.125rem;
 }
+
+/* Comparison controls extend the existing native shell at its established density. */
+.vscode-shell .app-shell[data-comparison] {
+  --diff-insert-background: var(--vscode-diffEditor-insertedLineBackground, #9ccc2c22);
+  --diff-delete-background: var(--vscode-diffEditor-removedLineBackground, #ff000022);
+  --diff-insert-word: var(--vscode-diffEditor-insertedTextBackground, #9ccc2c44);
+  --diff-delete-word: var(--vscode-diffEditor-removedTextBackground, #ff000044);
+  --diff-insert-border: var(--vscode-gitDecoration-addedResourceForeground, #48985d);
+  --diff-delete-border: var(--vscode-gitDecoration-deletedResourceForeground, #d55a5a);
+}
+.vscode-shell .diff-toolbar {
+  gap: 0.25rem 0.5rem;
+  margin: 0;
+  padding: 0.25rem 0.75rem;
+  border: 0;
+  border-bottom: 0.0625rem solid var(--vscode-panel-border, var(--border));
+  border-radius: 0;
+  font: inherit;
+}
+.vscode-shell .diff-toolbar :is(.diff-revision, .diff-summary, nav, p) {
+  gap: 0.375rem;
+  font: inherit;
+}
+.vscode-shell .diff-count[data-diff] { color: var(--vscode-editor-foreground); }
 
 .vscode-shell .app-shell[data-host="vscode"] {
   padding: 0;
@@ -69,15 +94,15 @@ body.vscode-shell {
     .host-actions
   ) {
   font-family: var(--vscode-font-family, sans-serif);
-  font-size: var(--vscode-font-size, 13px);
+  font-size: var(--vscode-font-size, 0.8125rem);
   letter-spacing: normal;
 }
 
 .vscode-shell .app-header {
   height: auto;
-  min-height: 32px;
-  padding: 3px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border, var(--border));
+  min-height: 2rem;
+  padding: 0.1875rem 0.75rem;
+  border-bottom: 0.0625rem solid var(--vscode-panel-border, var(--border));
 }
 .vscode-shell .brand {
   gap: 0;
@@ -98,22 +123,22 @@ body.vscode-shell {
 }
 .vscode-shell .header-controls,
 .vscode-shell .language-switch {
-  gap: 4px;
+  gap: 0.25rem;
 }
 .vscode-shell .language-switch a {
-  height: 26px;
-  min-height: 26px;
-  padding-inline: 6px;
+  height: 1.625rem;
+  min-height: 1.625rem;
+  padding-inline: 0.375rem;
 }
 .vscode-shell .host-actions {
-  gap: 2px;
+  gap: 0.125rem;
   margin: 0;
-  padding: 4px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border, var(--border));
+  padding: 0.25rem 0.75rem;
+  border-bottom: 0.0625rem solid var(--vscode-panel-border, var(--border));
 }
 .vscode-shell .intro {
   margin: 0;
-  padding: 4px 12px;
+  padding: 0.25rem 0.75rem;
 }
 .vscode-shell .intro-controls {
   margin: 0;
@@ -121,11 +146,11 @@ body.vscode-shell {
 .vscode-shell .intro-controls [data-slot="toggle-group"] {
   width: fit-content;
   max-width: 100%;
-  gap: 2px;
+  gap: 0.125rem;
 }
 .vscode-shell .intro-controls [data-slot="toggle-group-item"] {
   flex: 0 1 auto;
-  padding-inline: 8px;
+  padding-inline: 0.5rem;
 }
 .vscode-shell .document-panel {
   border: 0;
@@ -133,48 +158,48 @@ body.vscode-shell {
   box-shadow: none;
 }
 .vscode-shell .document-heading {
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
   background: var(--vscode-editorWidget-background, var(--background));
 }
 .vscode-shell .document-name {
-  flex: 1 1 160px;
-  max-width: 340px;
-  gap: 6px;
+  flex: 1 1 10rem;
+  max-width: 21.25rem;
+  gap: 0.375rem;
 }
 .vscode-shell .file-icon {
-  width: 18px;
-  height: 26px;
+  width: 1.125rem;
+  height: 1.625rem;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--vscode-textLink-foreground);
 }
 .vscode-shell .file-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
 }
 .vscode-shell .document-name input {
   max-width: 100%;
 }
 .vscode-shell .document-tools {
-  gap: 2px;
+  gap: 0.125rem;
   margin-inline-end: auto;
 }
 .vscode-shell .document-export {
   flex: 0 1 auto;
-  gap: 4px;
+  gap: 0.25rem;
 }
 .vscode-shell .document-export-button {
-  padding-inline: 8px;
+  padding-inline: 0.5rem;
 }
 .vscode-shell .live-workspace {
-  --pane-heading-height: 28px;
-  --view-switch-height: 34px;
+  --pane-heading-height: 1.75rem;
+  --view-switch-height: 2.125rem;
 }
 .vscode-shell .pane-heading {
   min-height: var(--pane-heading-height);
-  padding: 4px 12px;
+  padding: 0.25rem 0.75rem;
   background: var(--vscode-editorGroupHeader-tabsBackground, var(--muted));
 }
 .vscode-shell .pane-heading h2,
@@ -182,52 +207,52 @@ body.vscode-shell {
   font-size: inherit;
 }
 .vscode-shell .pane-heading h2 {
-  gap: 6px;
+  gap: 0.375rem;
   font-weight: 400;
 }
 .vscode-shell .pane-heading h2 > svg {
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
 }
 .vscode-shell .format-toolbar,
 .vscode-shell .rich-toolbar-container {
-  padding: 3px 8px;
+  padding: 0.1875rem 0.5rem;
   background: var(--vscode-editor-background);
 }
 .vscode-shell .preview-pane .preview-panel {
-  padding: 0 12px 12px;
+  padding: 0 0.75rem 0.75rem;
 }
 .vscode-shell .rich-toolbar-container {
-  margin: 0 -12px 12px;
+  margin: 0 -0.75rem 0.75rem;
 }
 .vscode-shell .format-toolbar,
 .vscode-shell .rich-format-toolbar {
   display: flex;
   flex-wrap: nowrap;
-  gap: 2px;
+  gap: 0.125rem;
   overflow-x: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
 }
 .vscode-shell .rich-format-toolbar {
-  padding-bottom: 2px;
-  scroll-padding-inline: 2px;
+  padding-bottom: 0.125rem;
+  scroll-padding-inline: 0.125rem;
 }
 .vscode-shell .rich-format-toolbar :is(button, [tabindex]) {
-  scroll-margin-inline: 2px;
+  scroll-margin-inline: 0.125rem;
 }
 .vscode-shell .rich-heading-field {
   width: var(--control-size);
 }
 .vscode-shell .mobile-view-switch {
   height: var(--view-switch-height);
-  padding: 4px 8px;
-  gap: 2px;
+  padding: 0.25rem 0.5rem;
+  gap: 0.125rem;
 }
 .vscode-shell .editor-status {
-  gap: 6px;
-  padding: 3px 12px;
-  font-size: 12px;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.75rem;
+  font-size: 0.75rem;
   border-radius: 0;
   background: var(--vscode-editor-background);
 }
@@ -246,9 +271,9 @@ body.vscode-shell {
     [data-sonner-toast]
   ) {
   font-family: var(--vscode-font-family, sans-serif);
-  font-size: var(--vscode-font-size, 13px);
+  font-size: var(--vscode-font-size, 0.8125rem);
   letter-spacing: normal;
-  border-radius: 2px;
+  border-radius: 0.125rem;
 }
 .vscode-shell
   :is(
@@ -256,8 +281,8 @@ body.vscode-shell {
     [data-slot="toggle"],
     [data-slot="toggle-group-item"]
   ) {
-  height: 26px;
-  min-height: 26px;
+  height: 1.625rem;
+  min-height: 1.625rem;
   box-shadow: none;
 }
 .vscode-shell .rich-icon-control {
@@ -278,8 +303,8 @@ body.vscode-shell {
   font-size: inherit;
 }
 .vscode-shell [data-slot="input"] {
-  height: 26px;
-  padding: 3px 6px;
+  height: 1.625rem;
+  padding: 0.1875rem 0.375rem;
   color: var(--vscode-input-foreground);
   background: var(--vscode-input-background);
   border-color: var(--vscode-input-border, var(--border));
@@ -301,8 +326,8 @@ body.vscode-shell {
 }
 .vscode-shell [data-slot="toggle"][data-state="on"] {
   background: var(--vscode-toolbar-activeBackground, var(--accent));
-  outline: 1px solid var(--vscode-focusBorder);
-  outline-offset: -1px;
+  outline: 0.0625rem solid var(--vscode-focusBorder);
+  outline-offset: -0.0625rem;
 }
 .vscode-shell
   :is(
@@ -311,31 +336,31 @@ body.vscode-shell {
     [data-slot="toggle-group-item"]
   )
   svg {
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
 }
 .vscode-shell :is(button, a, input, textarea):focus-visible {
-  outline: 1px solid var(--vscode-focusBorder);
-  outline-offset: 1px;
+  outline: 0.0625rem solid var(--vscode-focusBorder);
+  outline-offset: 0.0625rem;
   box-shadow: none;
 }
 .vscode-shell .markdown-source-editor:focus-within,
 .vscode-shell .preview-panel:focus-within {
-  outline: 1px solid var(--vscode-focusBorder);
-  outline-offset: -1px;
+  outline: 0.0625rem solid var(--vscode-focusBorder);
+  outline-offset: -0.0625rem;
 }
 .vscode-shell [data-slot="dialog-content"],
 .vscode-shell [data-slot="dropdown-menu-content"],
 .vscode-shell [data-slot="select-content"] {
   border-color: var(--vscode-editorWidget-border, var(--border));
-  box-shadow: 0 2px 8px var(--vscode-widget-shadow, #0003);
+  box-shadow: 0 0.125rem 0.5rem var(--vscode-widget-shadow, #0003);
 }
 .vscode-shell [data-slot="dialog-content"] {
-  padding: 16px;
-  gap: 12px;
+  padding: 1rem;
+  gap: 0.75rem;
 }
 .vscode-shell [data-slot="dialog-title"] {
-  font-size: 16px;
+  font-size: 1rem;
 }
 .vscode-shell .rich-math-button,
 .vscode-shell .rich-raw-block > button,
@@ -348,7 +373,7 @@ body.vscode-shell {
     align-items: center;
   }
   .vscode-shell .document-name {
-    flex-basis: calc(100% - 80px);
+    flex-basis: calc(100% - 5rem);
     max-width: none;
   }
   .vscode-shell .document-export {

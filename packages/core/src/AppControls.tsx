@@ -107,9 +107,9 @@ export const MobileViewSwitch = memo(function MobileViewSwitch({ view, onSelect 
             </ToggleGroup>);
 });
 
-export const SourceToolbar = memo(function SourceToolbar({ canRestore, onWrap, onRestore }: { canRestore: boolean; onWrap: (before: string, after?: string) => void; onRestore: () => void }) {
+export const SourceToolbar = memo(function SourceToolbar({ canRestore, onWrap, onRestore, readOnly = false }: { canRestore: boolean; onWrap: (before: string, after?: string) => void; onRestore: () => void; readOnly?: boolean }) {
   const { t } = useLocale();
-  return (<div className="format-toolbar" role="toolbar" aria-label={t("ابزار قالب‌بندی")}>
+  return (<fieldset disabled={readOnly} className="format-toolbar" role="toolbar" aria-label={t("ابزار قالب‌بندی")}>
                 <Button variant="ghost" size="icon" title={t("تیتر")} aria-label={t("درج تیتر")} onClick={() => onWrap('## ')}><Heading2 data-icon="inline-start" /></Button>
                 <Button variant="ghost" size="icon" title={t("پررنگ")} aria-label={t("درج متن پررنگ")} onClick={() => onWrap('**', '**')}><Bold data-icon="inline-start" /></Button>
                 <Button variant="ghost" size="icon" title={t("مورب")} aria-label={t("درج متن مورب")} onClick={() => onWrap('*', '*')}><Italic data-icon="inline-start" /></Button>
@@ -117,7 +117,7 @@ export const SourceToolbar = memo(function SourceToolbar({ canRestore, onWrap, o
                 <Button variant="ghost" size="icon" title={t("فهرست")} aria-label={t("درج فهرست")} onClick={() => onWrap('- ')}><List data-icon="inline-start" /></Button>
                 <Button variant="ghost" size="icon" title={t("کد")} aria-label={t("درج کد")} onClick={() => onWrap('`', '`')}><Code2 data-icon="inline-start" /></Button>
                 {canRestore && <Button variant="ghost" size="sm" className="ms-auto" onClick={onRestore}><Undo2 data-icon="inline-start" /> {t("متن قبلی")}</Button>}
-              </div>);
+              </fieldset>);
 });
 
 export const ExportSettingsDialog = memo(function ExportSettingsDialog({ settings, sheet, onSheetChange, onUpdate }: { settings: ExportSettings; sheet: Sheet; onSheetChange: (sheet: Sheet) => void; onUpdate: UpdateSettings }) {

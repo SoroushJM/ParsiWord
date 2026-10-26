@@ -1,11 +1,14 @@
 import { isExportSettings, isRecord } from './document-validation';
 import { canApplyMarkdown } from './document-limits';
 import type { ExportSettings } from './document-model';
-import type { DocumentViewMode, HostCommand } from './host';
+import type { DocumentViewMode, HostCommand, DocumentComparison, EditorAction } from './host';
 import type { SyncEdit, SyncPending, SyncSnapshot } from './document-sync';
 import { isErrorCode, type ErrorCode } from './errors';
 
 const integer = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
+export function isDocumentComparison(value: unknown): value is DocumentComparison {
+  return isRecord(value) && (value.side === 'original' || value.side === 'modified') && typeof value.other === 'string' && typeof value.staged === 'boolean';
+}
 export const isViewMode = (value: unknown): value is DocumentViewMode => typeof value === 'string' && ['combined', 'source', 'rendered'].includes(value);
 export const isHostCommand = (value: unknown): value is HostCommand => typeof value === 'string' && ['source', 'preview', 'diff', 'stagedDiff', 'save', 'undo', 'redo', 'new'].includes(value);
 export function isSyncSnapshot(value: unknown): value is SyncSnapshot {
@@ -26,11 +29,15 @@ export function isSyncPending(value: unknown): value is SyncPending {
     && typeof change.text === 'string';
 }
 export type ClientMessage = { type: 'ready' } | { type: 'edit' | 'draft'; edit: SyncEdit } | { type: 'pending'; pending: SyncPending }
+  | { type: 'focus'; focused: boolean }
+  | { type: 'comparisonNavigate'; index: number }
   | { type: 'settings'; settings: ExportSettings } | { type: 'locale'; locale: 'fa' | 'en' }
   | { type: 'request'; id: number; method: 'command' | 'open' | 'saveBytes' | 'font' | 'recover'; args: Record<string, unknown> };
 export function isClientMessage(value: unknown): value is ClientMessage {
   if (!isRecord(value)) return false;
   if (value.type === 'ready') return true;
+  if (value.type === 'focus') return typeof value.focused === 'boolean';
+  if (value.type === 'comparisonNavigate') return integer(value.index);
   if (value.type === 'edit' || value.type === 'draft') return isSyncEdit(value.edit);
   if (value.type === 'pending') return isSyncPending(value.pending);
   if (value.type === 'settings') return isExportSettings(value.settings);
@@ -47,13 +54,21 @@ export function isClientMessage(value: unknown): value is ClientMessage {
   return false;
 }
 export type HostMessage = { type: 'document'; snapshot: SyncSnapshot }
+  | { type: 'editorAction'; action: EditorAction }
+  | { type: 'comparison'; comparison: DocumentComparison | null }
+  | { type: 'comparisonNavigate'; index: number }
   | { type: 'response'; id: number; result?: unknown; error?: string; errorCode?: ErrorCode }
-  | { type: 'init'; snapshot: SyncSnapshot; client: string; settings: ExportSettings; assetRoot: string; locale: 'fa' | 'en'; version: string; viewMode: DocumentViewMode };
+  | { type: 'init'; snapshot: SyncSnapshot; client: string; settings: ExportSettings; assetRoot: string; locale: 'fa' | 'en'; version: string; viewMode: DocumentViewMode; readOnly?: boolean; comparison?: DocumentComparison | null };
 export function isHostMessage(value: unknown): value is HostMessage {
   if (!isRecord(value)) return false;
+  if (value.type === 'editorAction') return typeof value.action === 'string' && ['find', 'replace', 'goToLine', 'findNext', 'findPrevious'].includes(value.action);
+  if (value.type === 'comparison') return value.comparison === null || isDocumentComparison(value.comparison);
+  if (value.type === 'comparisonNavigate') return integer(value.index);
   if (value.type === 'document') return isSyncSnapshot(value.snapshot);
   if (value.type === 'response') return integer(value.id) && (value.error === undefined || typeof value.error === 'string') && (value.errorCode === undefined || isErrorCode(value.errorCode));
   return value.type === 'init' && isSyncSnapshot(value.snapshot) && typeof value.client === 'string'
     && isExportSettings(value.settings) && typeof value.assetRoot === 'string'
-    && (value.locale === 'fa' || value.locale === 'en') && typeof value.version === 'string' && isViewMode(value.viewMode);
+    && (value.locale === 'fa' || value.locale === 'en') && typeof value.version === 'string' && isViewMode(value.viewMode)
+    && (value.readOnly === undefined || typeof value.readOnly === 'boolean')
+    && (value.comparison === undefined || value.comparison === null || isDocumentComparison(value.comparison));
 }

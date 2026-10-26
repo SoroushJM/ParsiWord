@@ -4,6 +4,9 @@ export type DocumentSnapshot = { markdown: string; dirty: boolean };
 export type SaveFormat = { label: string; extension: string; mime: string };
 export type HostCommand = 'source' | 'preview' | 'diff' | 'stagedDiff' | 'save' | 'undo' | 'redo' | 'new';
 export type DocumentViewMode = 'combined' | 'source' | 'rendered';
+export type EditorAction = 'find' | 'replace' | 'goToLine' | 'findNext' | 'findPrevious';
+export type { DocumentComparison } from './markdown-diff';
+import type { DocumentComparison } from './markdown-diff';
 
 /** Environment services. The shared workspace never imports a host SDK. */
 export interface EditorHost {
@@ -23,6 +26,12 @@ export interface EditorHost {
   command?: (command: HostCommand) => void;
   locale?: 'fa' | 'en';
   localeChanged?: (locale: 'fa' | 'en') => void;
+  readOnly?: boolean;
+  comparison?: DocumentComparison;
+  subscribeComparison?: (listener: (comparison: DocumentComparison | undefined) => void) => () => void;
+  navigateComparison?: (index: number) => void;
+  subscribeComparisonNavigation?: (listener: (index: number) => void) => () => void;
+  subscribeEditorAction?: (listener: (action: EditorAction) => void) => () => void;
 }
 
 let host: EditorHost = { kind: 'web', version: '0.4.7' };

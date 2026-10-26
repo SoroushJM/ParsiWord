@@ -30,7 +30,7 @@ to a server. The web app is free to use in a modern browser.
 | وب و اپ پارسی‌ورد | `apps/parsiword` | سایت دوزبانه، پیش‌نویس و پروژه‌های Tauri دسکتاپ/موبایل |
 
 `pnpm run dev`، `pnpm run build` و فرمان‌های ساخت اپ از ریشه اجرا می‌شوند.
-برای اکستنشن: `pnpm run package:vscode`؛ بسته در `artifacts/parsiword-vscode-0.1.0.vsix` قرار می‌گیرد.
+برای اکستنشن: `pnpm run package:vscode`؛ بسته در `artifacts/parsiword-vscode-0.1.1.vsix` قرار می‌گیرد.
 آزمون واقعی VS Code: `pnpm run test:vscode`، با پروفایل و مخزن آزمایشی مستقل.
 [راهنمای اکستنشن](apps/vscode/README.md) · [نقشهٔ راه و معیارهای پذیرش](docs/architecture-roadmap.md) · [نتایج آزمون میزبان](docs/validation/vscode-session-validation.md).
 
@@ -43,10 +43,18 @@ to a server. The web app is free to use in a modern browser.
 
 دکمهٔ «منبع بومی VS Code» همان سند را کنار
 پیش‌نمایش باز می‌کند تا تکمیل خودکار، Outline، folding، پیوندها و سایر امکانات
-Markdown و افزونه‌های نصب‌شده در ادیتور بومی باقی بمانند. «Git diff» و
-«Staged diff» مقایسه‌های بومی VS Code را باز می‌کنند. قابلیت‌های ادیتور بومی
-به textarea وب منتقل نشده‌اند؛ همهٔ نماها از یک سند و تاریخچهٔ Undo/Redo استفاده می‌کنند.
+Markdown و افزونه‌های نصب‌شده در ادیتور بومی باقی بمانند. «Git diff»،
+«Staged diff» و بازکردن تغییر Markdown از Source Control، دو نمای پارسی‌ورد
+را در دو گروه کنار هم باز می‌کنند: منبع با هایلایت قرمز/سبز خط و کلمه و
+پیش‌نمایش با هایلایت بلوک‌های تغییرکرده. نسخهٔ Git فقط خواندنی است؛ فایل فعلی
+همچنان ویرایش، ذخیره و Undo/Redo بومی همان سند را دارد. جهت، زبان و پوستهٔ
+فشردهٔ VS Code حفظ می‌شوند. برای staging تکه‌های تغییر و حالت inline از
+مقایسه‌گر متن بومی استفاده کن. [جزئیات و آزمون مقایسه](docs/validation/parsiword-git-comparison.md).
 
+میان‌برهای رایج داخل منبع و پیش‌نمایش افزونه کار می‌کنند: کپی/بریدن/چسباندن،
+ذخیره و Undo/Redo، جست‌وجو با Ctrl+F، جایگزینی با Ctrl+H و رفتن به خط Markdown
+با Ctrl+G. Quick Open، Command Palette و جابه‌جایی تب‌ها به خود VS Code می‌رسند.
+[جدول میان‌برها](apps/vscode/README.md) و [تصمیم دامنهٔ این مرحله](docs/adr/0007-vscode-ui-history-and-shortcuts.md).
 
 ## استفاده
 

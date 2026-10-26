@@ -2,7 +2,7 @@
   "name": "parsiword-vscode",
   "displayName": "ParsiWord — RTL Markdown Editor",
   "description": "View and edit Persian, Arabic and mixed RTL/LTR Markdown, with editable preview, LaTeX, Mermaid and Word/PDF export.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "SoroushJM",
   "engines": {
     "vscode": "^1.100.0"
@@ -43,6 +43,11 @@
     "vscode.markdown-language-features"
   ],
   "contributes": {
+    "configurationDefaults": {
+      "workbench.diffEditorAssociations": {
+        "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}": "parsiword.markdown"
+      }
+    },
     "customEditors": [
       {
         "viewType": "parsiword.markdown",
@@ -92,7 +97,19 @@
         "command": "parsiword.stagedDiff",
         "title": "ParsiWord: Git Diff (Staged)",
         "icon": "$(git-compare)"
-      }
+      },
+      { "command": "parsiword.find", "title": "ParsiWord: Find in Document" },
+      { "command": "parsiword.replace", "title": "ParsiWord: Replace in Document" },
+      { "command": "parsiword.goToLine", "title": "ParsiWord: Go to Markdown Line" },
+      { "command": "parsiword.findNext", "title": "ParsiWord: Find Next" },
+      { "command": "parsiword.findPrevious", "title": "ParsiWord: Find Previous" }
+    ],
+    "keybindings": [
+      { "command": "parsiword.find", "key": "ctrl+f", "mac": "cmd+f", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" },
+      { "command": "parsiword.replace", "key": "ctrl+h", "mac": "alt+cmd+f", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" },
+      { "command": "parsiword.goToLine", "key": "ctrl+g", "mac": "ctrl+g", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" },
+      { "command": "parsiword.findNext", "key": "f3", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" },
+      { "command": "parsiword.findPrevious", "key": "shift+f3", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" }
     ],
     "menus": {
       "editor/title": [

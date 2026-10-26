@@ -12,6 +12,7 @@ import { RichToolbar } from './RichToolbar';
 import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import './editable-preview.css';
+import type { DiffSide } from './markdown-diff';
 
 type Props = {
   markdown: string; direction: Direction; fontFamily: string; fontSize: number;
@@ -19,14 +20,17 @@ type Props = {
   onCompositionChange?: (composing: boolean) => void;
   onRejected?: (code: 'FILE_TOO_LARGE') => void;
   readOnly?: boolean;
+  diff?: DiffSide;
+  onEditor?: (editor: Editor | null) => void;
 };
 
-export const EditablePreview = memo(function EditablePreview({ markdown, direction, fontFamily, fontSize, onChange, onStartWriting, onCompositionChange, onRejected, readOnly = false }: Props) {
+export const EditablePreview = memo(function EditablePreview({ markdown, direction, fontFamily, fontSize, onChange, onStartWriting, onCompositionChange, onRejected, readOnly = false, diff, onEditor }: Props) {
   const { t } = useLocale();
   const onChangeRef = useRef(onChange);
   const applied = useRef(markdown);
   const source = useRef(markdown);
   const directionRef = useRef(direction);
+  const diffRef = useRef(diff);
   const latestMarkdown = useRef(markdown);
   const externalSyncVersion = useRef(0);
   const annotationFrame = useRef(0);
@@ -40,6 +44,7 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
   compositionChange.current = onCompositionChange;
   rejected.current = onRejected;
   directionRef.current = direction;
+  diffRef.current = diff;
   latestMarkdown.current = markdown;
   const documentSnapshot = useCallback((doc: ProseMirrorNode) => ledger.current.snapshot(doc), []);
   const sourcePositions = useCallback((doc: ProseMirrorNode) => externalPositions.current || (cachedEditor.current ? documentSnapshot(doc).positions : initial.positions), [documentSnapshot, initial.positions]);
@@ -64,7 +69,7 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
         if (cachedEditor.current === null) ledger.current.reset(transaction.before, source.current, initial.positions, initial.definitions);
         return { previous: ledger.current.snapshot(transaction.before).text, next: ledger.current.prepare(transaction, state).text };
       }, onRejected: code => rejected.current?.(code) }),
-      sourceAnnotations(sourcePositions, () => directionRef.current),
+      sourceAnnotations(sourcePositions, () => directionRef.current, () => diffRef.current),
     ], [sourcePositions, initial]);
   const editor = useEditor({
     extensions,
@@ -128,7 +133,9 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
     if (editor) editor.view.dom.setAttribute('aria-label', t(readOnly ? 'پیش‌نمایش' : 'ویرایش پیش‌نمایش'));
   }, [editor, t, readOnly]);
   useEffect(() => { editor?.setEditable(!readOnly, false); editor?.view.dom.setAttribute('aria-readonly', String(readOnly)); }, [editor, readOnly]);
+  useLayoutEffect(() => { if (editor) scheduleAnnotation(editor); }, [editor, diff, scheduleAnnotation]);
   useEffect(() => () => cancelAnimationFrame(annotationFrame.current), []);
+  useEffect(() => { onEditor?.(editor); return () => onEditor?.(null); }, [editor, onEditor]);
 
   return <>
     {editor && !readOnly && <RichToolbar editor={editor} />}

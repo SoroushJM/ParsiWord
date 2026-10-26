@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { MarkdownSourceHighlighter, type MarkdownSourceLine } from './markdown-source-highlight';
 import { MAX_MARKDOWN_LENGTH } from './document-limits';
 import './markdown-source-editor.css';
+import type { DiffLine, DiffSide } from './markdown-diff';
 
 type Props = {
   editorRef: RefObject<HTMLTextAreaElement | null>;
@@ -12,17 +13,25 @@ type Props = {
   onChange: (value: string) => void;
   onFocus: () => void;
   onCompositionChange?: (composing: boolean) => void;
+  diff?: DiffSide;
+  readOnly?: boolean;
+  searching?: boolean;
 };
 
-const SourceLine = memo(function SourceLine({ line, index }: { line: MarkdownSourceLine; index: number }) {
-  return <span data-source-line={index}>{line.tokens.map((token, index) => token.kind
-    ? <span key={index} data-md-token={token.kind}>{token.text}</span>
-    : token.text)}{line.newline}</span>;
+const SourceLine = memo(function SourceLine({ line, index, diff }: { line: MarkdownSourceLine; index: number; diff?: DiffLine }) {
+  let offset = 0;
+  return <span data-source-line={index} data-diff={diff?.kind}>{line.tokens.map((token, index) => {
+    const start = offset, end = start + token.text.length;
+    offset = end;
+    const boundaries = [...new Set([start, end, ...(diff?.words.flatMap(range => [Math.max(start, Math.min(end, range.start)), Math.max(start, Math.min(end, range.end))]) ?? [])])].sort((a, b) => a - b);
+    const text = diff ? boundaries.slice(0, -1).map((from, part) => <span key={part} data-diff-word={diff.words.some(range => from < range.end && boundaries[part + 1] > range.start) ? diff.kind : undefined}>{token.text.slice(from - start, boundaries[part + 1] - start)}</span>) : token.text;
+    return <span key={index} data-md-token={token.kind}>{text}</span>;
+  })}{line.newline}</span>;
 });
 
 // The native textarea remains the input, selection and sizing surface. Color
 // spans are decorative: they never change font metrics or execute source HTML.
-export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorRef, value, direction, onChange, onFocus, onCompositionChange }: Props) {
+export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorRef, value, direction, onChange, onFocus, onCompositionChange, diff, readOnly = false, searching = false }: Props) {
   const { t } = useLocale();
   const paint = useRef<HTMLDivElement>(null);
   const surface = useRef<HTMLDivElement>(null);
@@ -48,10 +57,10 @@ export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorR
         if (count > 20_000) return null;
         colored ||= line.tokens.some(token => token.kind !== undefined);
       }
-      return colored ? result : null;
+      return colored || diff || searching ? result : null;
     }
     catch { return null; }
-  }, [displayed]);
+  }, [displayed, !!diff, searching]);
   const highlighted = metricsReady && !composing && !!displayed && lines !== null;
 
   useLayoutEffect(() => {
@@ -90,10 +99,10 @@ export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorR
 
   return <div ref={surface} className="markdown-source-editor" data-highlighted={highlighted}>
     <div ref={paint} className="markdown-source-highlight" dir={direction} aria-hidden="true">
-      {lines?.map((line, index) => <SourceLine key={line.id} line={line} index={index} />)}
+      {lines?.map((line, index) => <SourceLine key={line.id} line={line} index={index} diff={diff?.lines.get(index)} />)}
     </div>
     <Textarea id="markdown-source" ref={editorRef} className="markdown-editor rounded-none" aria-label={t("متن Markdown")} dir={direction}
-      value={value} onFocus={onFocus} onChange={event => onChange(event.target.value)}
+      value={value} readOnly={readOnly} onFocus={onFocus} onChange={event => onChange(event.target.value)}
       onCompositionStart={() => { if (surface.current) surface.current.dataset.highlighted = 'false'; setComposing(true); onCompositionChange?.(true); }}
       onCompositionEnd={() => { setComposing(false); onCompositionChange?.(false); }} placeholder={t("از اینجا شروع کن…")} spellCheck={false} maxLength={value.length > MAX_MARKDOWN_LENGTH ? undefined : MAX_MARKDOWN_LENGTH} />
   </div>;

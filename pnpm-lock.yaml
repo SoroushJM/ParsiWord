@@ -169,6 +169,9 @@ importers:
       cn:
         specifier: ^0.5.0
         version: 0.5.0
+      diff:
+        specifier: ^8.0.4
+        version: 8.0.4
       docx:
         specifier: ^9.13.0
         version: 9.13.0

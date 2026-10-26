@@ -6,6 +6,13 @@ import { normalizeSettings } from './document-validation';
 import { PendingDocument } from './pending-document';
 
 describe('runtime host protocol', () => {
+  it('accepts only supported editor actions from the host', () => {
+    for (const action of ['find', 'replace', 'goToLine', 'findNext', 'findPrevious']) expect(isHostMessage({ type: 'editorAction', action })).toBe(true);
+    for (const action of [null, [], 'undo', 'execute', 1]) expect(isHostMessage({ type: 'editorAction', action })).toBe(false);
+    expect(isClientMessage({ type: 'focus', focused: true })).toBe(true);
+    expect(isClientMessage({ type: 'focus', focused: false })).toBe(true);
+    expect(isClientMessage({ type: 'focus', focused: 'true' })).toBe(false);
+  });
   it('validates requests and settings before dispatch', () => {
     expect(isClientMessage({ type: 'request', id: 1, method: 'command', args: { name: 'save' } })).toBe(true);
     for (const value of [null, { type: 'request', id: 1, method: 'unknown', args: {} }, { type: 'request', id: 1, method: 'command', args: { name: ['save'] } }, { type: 'request', id: 1, method: 'saveBytes', args: { filename: 'a.md', extension: 'md', bytes: [256] } }, { type: 'settings', settings: { ...defaultSettings, direction: 'sideways' } }]) expect(isClientMessage(value)).toBe(false);
@@ -28,5 +35,21 @@ describe('runtime host protocol', () => {
   it('migrates partial settings without accepting coerced enum values', () => {
     expect(normalizeSettings({ direction: ['rtl'], fontSize: '18', title: 'x' })).toEqual({ ...defaultSettings, title: 'x' });
     expect(normalizeSettings({ direction: 'ltr', fontSize: 18, alignmentOnly: true })).toMatchObject({ direction: 'ltr', fontSize: 18, alignmentOnly: false });
+  });
+  it('validates comparison metadata and navigation across the webview boundary', () => {
+    const comparison = { side: 'original', other: 'متن English', staged: true };
+    expect(isHostMessage({ type: 'comparison', comparison })).toBe(true);
+    expect(isHostMessage({ type: 'comparison', comparison: null })).toBe(true);
+    for (const invalid of [{ ...comparison, side: 'both' }, { ...comparison, other: 1 }, { ...comparison, staged: 'true' }]) {
+      expect(isHostMessage({ type: 'comparison', comparison: invalid })).toBe(false);
+    }
+    for (const index of [0, 3]) {
+      expect(isClientMessage({ type: 'comparisonNavigate', index })).toBe(true);
+      expect(isHostMessage({ type: 'comparisonNavigate', index })).toBe(true);
+    }
+    for (const index of [-1, 0.5, '1', Number.POSITIVE_INFINITY]) {
+      expect(isClientMessage({ type: 'comparisonNavigate', index })).toBe(false);
+      expect(isHostMessage({ type: 'comparisonNavigate', index })).toBe(false);
+    }
   });
 });
