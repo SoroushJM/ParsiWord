@@ -40,7 +40,9 @@ Use **Reopen Editor With… → Text Editor** to return to the native source or 
 
 The compact extension interface follows VS Code's UI font, colors and Light, Dark or High Contrast theme. The filename, personal-draft label and website-only Open/New controls are omitted inside the editor, since VS Code manages files and tabs. Export and document display settings remain available; comparison places them in its shared toolbar. Document typography stays independently configurable. Word/PDF exports retain their print colors. Small rich edits preserve unrelated Markdown spelling, spacing and line endings; ordinary source newlines flow within a paragraph, while explicit hard breaks remain visible.
 
-Choose Persian/English in the header. Export settings control RTL/LTR/automatic direction, font and size. Google Fonts requests contain font names only. Document text is processed locally. Mermaid is an image in Word/PDF and LaTeX is editable in Word; surrounding text and code remain editable in Word and searchable in PDF.
+Choose Persian/English in the header. Export settings control RTL/LTR/automatic direction, font and size. Google Fonts requests contain font names only. Document text is processed locally. Mermaid and TikZ are images in Word/PDF and LaTeX equations are editable in Word; surrounding text and code remain editable in Word and searchable in PDF.
+
+Fenced `tikz` and `tikzpicture` blocks compile with the bundled local TeX/PGF engine, including TikZ libraries and PGFPlots. **Edit TikZ drawing** opens a draft dialog; applying shares the native document's Undo/Redo history. Drawings and self-contained math-label outlines render under the webview CSP, and both exports embed their image and original-source metadata. No LaTeX installation or remote rendering service is required. See [usage, supported source forms and Unicode/memory limits](../../docs/tikz.md).
 
 Build from the repository root with `pnpm install --frozen-lockfile`, `pnpm run package:vscode`; install the generated VSIX using **Extensions → Install from VSIX…**. `pnpm run test:vscode` runs integration tests in an isolated VS Code profile.
 

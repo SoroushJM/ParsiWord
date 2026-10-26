@@ -6,5 +6,8 @@ const file = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 export default defineConfig({
   root: file('./webview'), base: './', publicDir: file('../../packages/core/public'),
   plugins: [react(), tailwindcss()], resolve: { alias: { '@': file('../../packages/core/src') } },
-  build: { outDir: file('./dist/webview'), emptyOutDir: true, manifest: true, target: 'chrome120', chunkSizeWarningLimit: 2000 },
+  build: { outDir: file('./dist/webview'), emptyOutDir: true, manifest: true, target: 'chrome120', chunkSizeWarningLimit: 2000,
+    // Small KaTeX fonts must keep local URLs under the webview's font-src CSP.
+    assetsInlineLimit: path => /\.(?:woff2?|ttf|otf)$/i.test(path) ? false : undefined,
+  },
 });

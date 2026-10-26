@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as assert from 'node:assert/strict';
 import { join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import { expect, type Browser, type Frame } from '@playwright/test';
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -29,8 +30,32 @@ export async function testShortcuts(browser: Browser, artifact: string, record: 
     if (await en.count()) await en.click();
     const doc = await vscode.workspace.openTextDocument(uri);
     const source = frame.locator('#markdown-source');
-    await source.click(); await source.press('Control+a'); await source.press('Control+c');
-    await until(() => vscode.env.clipboard.readText(), text => text.replace(/\r\n/g, '\n') === base, 'native copy and select all');
+    await frame.page().bringToFront();
+    await expect(source).toHaveValue(base);
+    await source.click(); await expect(source).toBeFocused();
+    await expect.poll(() => frame.evaluate(() => document.hasFocus())).toBe(true);
+    const events: { stage: string; clipboard: string; source?: string; selection?: number[]; activeElement?: string; focused?: boolean; }[] = [];
+    const capture = async (stage: string) => {
+      const state = await source.evaluate((element: HTMLTextAreaElement) => ({ source: element.value, selection: [element.selectionStart, element.selectionEnd], activeElement: document.activeElement?.id, focused: document.hasFocus() }));
+      const value = { stage, clipboard: await vscode.env.clipboard.readText(), ...state }; events.push(value);
+      await writeFile(join(artifact, 'shortcuts-clipboard-stages.json'), JSON.stringify(events, null, 2));
+      return value;
+    };
+    await vscode.env.clipboard.writeText('PARSIWORD_CLIPBOARD_SENTINEL');
+    const written = await capture('API write sentinel');
+    assert.equal(written.clipboard, 'PARSIWORD_CLIPBOARD_SENTINEL', 'VS Code clipboard API must round-trip before testing native Copy');
+    await source.press('Control+a');
+    assert.deepEqual(await source.evaluate((element: HTMLTextAreaElement) => [element.selectionStart, element.selectionEnd]), [0, base.length]);
+    await source.press('Control+c');
+    await capture('Ctrl+C');
+    try {
+      await until(() => vscode.env.clipboard.readText(), text => text.replace(/\r\n/g, '\n') === base, 'native copy and select all');
+    } catch (error) {
+      const state = await source.evaluate((element: HTMLTextAreaElement) => ({ source: element.value, selection: [element.selectionStart, element.selectionEnd], activeElement: document.activeElement?.id, focused: document.hasFocus() }));
+      await writeFile(join(artifact, 'shortcuts-copy-failure.json'), JSON.stringify({ clipboard: await vscode.env.clipboard.readText(), ...state }, null, 2));
+      await frame.page().screenshot({ path: join(artifact, 'shortcuts-copy-failure.png') });
+      throw error;
+    }
     await vscode.env.clipboard.writeText('PASTED فارسی');
     await source.press('Control+v');
     await until(() => doc.getText(), text => text === 'PASTED فارسی', 'native paste');

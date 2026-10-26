@@ -13,13 +13,15 @@ import { highlightCode } from './code-highlight';
 import { renderMath } from './math';
 import { mathLanguage, RichContentError } from './rich-content';
 import { renderMermaid, type DiagramRenderer } from './diagrams';
+import { renderTikz } from './tikz';
+import { isTikzLanguage } from './tikz-language';
 import { prepareExportImages, type ExportImageResolver, type ExportImageReader } from './export-images';
 import 'katex/dist/katex.min.css';
 
 /** Same physical A4 page and margins as the Word export (20 twips = 1pt). */
 export const pdfPage = { width: twipsToPoints(documentLayout.width), height: twipsToPoints(documentLayout.height), top: twipsToPoints(documentLayout.margins.top), bottom: twipsToPoints(documentLayout.margins.bottom), left: twipsToPoints(documentLayout.margins.left), right: twipsToPoints(documentLayout.margins.right) } as const;
-export type PdfPicture = { png: Uint8Array; width: number; height: number };
-export type PdfAssets = { formula?: (source: string, display: boolean, fontSize: number) => Promise<PdfPicture>; diagram?: DiagramRenderer; resolveImage?: ExportImageResolver; readImage?: ExportImageReader };
+export type PdfPicture = { png: Uint8Array; width: number; height: number; alt?: string };
+export type PdfAssets = { formula?: (source: string, display: boolean, fontSize: number) => Promise<PdfPicture>; diagram?: DiagramRenderer; tikz?: DiagramRenderer; resolveImage?: ExportImageResolver; readImage?: ExportImageReader };
 type Inline = { text: string; bold?: boolean; italic?: boolean; strike?: boolean; code?: boolean; href?: string; color?: string; picture?: PdfPicture; font?: string };
 type Part = Inline & { width: number; size: number; font: string };
 type Line = { parts: Part[]; width: number; height: number; text: string };
@@ -97,6 +99,16 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
   const images = await prepareExportImages(context, assets.resolveImage, assets.readImage);
   const { default: PDFDocument } = await import('pdfkit');
   const doc = new PDFDocument({ autoFirstPage: false, font: null as never, compress: true, info: { Title: settings.title || 'یادداشت من', Author: 'ParsiWord', Creator: 'ParsiWord', Producer: 'ParsiWord / PDFKit' } });
+  // PDFKit only caches string image sources. Reopening a Buffer for every
+  // occurrence decodes and embeds it again, bypassing our per-resource budget.
+  // Its openImage/image object API is present in the pinned runtime but absent
+  // from @types/pdfkit; keep that compatibility boundary local to this export.
+  type OpenPicture = { width: number; height: number };
+  const imageDocument = doc as typeof doc & {
+    openImage(source: Buffer): OpenPicture;
+    image(source: OpenPicture, x: number, y: number, options: { width: number; height: number }): typeof doc;
+  };
+  const embeddedPictures = new WeakMap<Uint8Array, OpenPicture>();
   const chunks: Uint8Array[] = [];
   const finished = new Promise<Uint8Array>((resolve, reject) => {
     doc.on('data', (chunk: Uint8Array) => chunks.push(chunk));
@@ -117,7 +129,7 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
   const pictures = new Map<string, Promise<PdfPicture>>();
   let formulaQueue: Promise<void> = Promise.resolve(), decodedPixels = 0, imageBytes = 0;
   const accountPicture = (image: PdfPicture) => {
-    if (!Number.isFinite(image.width) || !Number.isFinite(image.height) || image.width <= 0 || image.height <= 0) throw new RichContentError('PDF_IMAGE_INVALID');
+    if (!image.png.byteLength || !Number.isFinite(image.width) || !Number.isFinite(image.height) || image.width <= 0 || image.height <= 0) throw new RichContentError('PDF_IMAGE_INVALID');
     if (image.png.length >= 24) {
       const view = new DataView(image.png.buffer, image.png.byteOffset, image.png.byteLength);
       const width = view.getUint32(16), height = view.getUint32(20);
@@ -138,6 +150,17 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
       if (pictures.size > 32) pictures.delete(pictures.keys().next().value!);
     }
     return pictures.get(key)!;
+  };
+  const diagramPictures = new Map<string, Promise<PdfPicture>>();
+  const diagramPicture = (source: string, tikz: boolean) => {
+    const key = `${tikz ? 'tikz' : 'mermaid'}\0${source}`;
+    if (!diagramPictures.has(key)) {
+      const renderer = tikz ? assets.tikz || renderTikz : assets.diagram || renderMermaid;
+      diagramPictures.set(key, renderer(source).then(diagram => accountPicture({ png: diagram.png,
+        width: diagram.width * 72 / 96, height: diagram.height * 72 / 96,
+        alt: `${tikz ? 'TikZ' : 'Mermaid'} diagram\n${source}` })));
+    }
+    return diagramPictures.get(key)!;
   };
   // Account each resource once, including repeated reference images. Markdown
   // intrinsic raster dimensions use 96dpi; PDF layout uses physical points.
@@ -213,7 +236,14 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
     for (const run of pdfVisualRuns(line.parts, direction)) {
       const part = run.value;
       if (part.picture) {
-        doc.image(Buffer.from(part.picture.png), left, top, { width: part.picture.width, height: part.picture.height });
+        const drawImage = () => {
+          const picture = part.picture!;
+          let embedded = embeddedPictures.get(picture.png);
+          if (!embedded) { embedded = imageDocument.openImage(Buffer.from(picture.png)); embeddedPictures.set(picture.png, embedded); }
+          imageDocument.image(embedded, left, top, { width: picture.width, height: picture.height });
+        };
+        if (part.picture.alt) doc.addStructure(doc.struct('Figure', { alt: part.picture.alt }, drawImage));
+        else drawImage();
         if (part.href) doc.link(left, top, part.picture.width, part.picture.height, part.href);
         left += part.picture.width; continue;
       }
@@ -357,9 +387,8 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
         case 'math': await paragraph([{ text: '\ufffc', picture: await picture(node.value, true) }], { indent, force: 'ltr', align: 'center' }); break;
         case 'code': {
           if (mathLanguage(node.lang)) { await paragraph([{ text: '\ufffc', picture: await picture(node.value, true) }], { indent, force: 'ltr', align: 'center' }); break; }
-          if (node.lang?.toLowerCase() === 'mermaid') {
-            const diagram = await (assets.diagram || renderMermaid)(node.value);
-            await paragraph([{ text: '\ufffc', picture: accountPicture({ png: diagram.png, width: diagram.width * 72 / 96, height: diagram.height * 72 / 96 }) }], { indent, force: 'ltr', align: 'center' }); break;
+          if (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang)) {
+            await paragraph([{ text: '\ufffc', picture: await diagramPicture(node.value, isTikzLanguage(node.lang)) }], { indent, force: 'ltr', align: 'center' }); break;
           }
           const highlighted = highlightCode(node.value, node.lang);
           await paragraph([{ text: highlighted.label, code: true, bold: true }], { size: 8, indent, force: 'ltr', fill: '#e7edeb', before: 8, after: 0, keepNext: true });

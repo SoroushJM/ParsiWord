@@ -1,13 +1,18 @@
 import { useLocale } from './locale';
-import { useContext, useEffect, useId, useMemo, useState } from 'react';
+import { useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { CodeBlock } from '@tiptap/extension-code-block';
 import { ListItem } from '@tiptap/extension-list';
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react';
 import { Plugin, PluginKey, type Transaction, type EditorState } from '@tiptap/pm/state';
+import { closeHistory } from '@tiptap/pm/history';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { MathView, MermaidView } from './RichPreview';
+import { TikzView } from './TikzPreview';
+import { isTikzLanguage } from './tikz-language';
+import { replaceTikzSource } from './tikz-edit';
+import { errorMessages } from './errors';
 import { highlightCode } from './code-highlight';
 import { mathLanguage } from './rich-content';
 import { paragraphDirection, type Direction } from './document-model';
@@ -19,16 +24,73 @@ import { ImageResolverContext } from './image-resource';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-function CodeBlockView({ node, editor }: NodeViewProps) {
+function TikzCodeBlockView({ node, editor, getPos }: NodeViewProps) {
+  const { t, dir } = useLocale();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(node.textContent);
+  const [error, setError] = useState('');
+  const openedSource = useRef(node.textContent);
+  const sourceId = useId();
+  const setOpen = (open: boolean) => {
+    if (open) {
+      openedSource.current = node.textContent;
+      setDraft(node.textContent);
+      setError('');
+    }
+    setEditing(open);
+  };
+  const confirm = () => {
+    if (editor.isDestroyed || !editor.isEditable) return;
+    const position = getPos();
+    const transaction = typeof position === 'number' ? replaceTikzSource(editor.state, position, draft, openedSource.current) : null;
+    if (!transaction) { setError(t('کد این نمودار تغییر کرده است؛ پنجره را دوباره باز کن.')); return; }
+    const value = draft.replace(/\r\n?/g, '\n');
+    if (value !== openedSource.current) {
+      editor.view.dispatch(transaction);
+      // The Markdown length filter can reject this transaction. Keep the draft
+      // open in that case, rather than pretending its changes were accepted.
+      if (editor.state.doc.nodeAt(position!)?.textContent !== value) { setError(t(errorMessages.FILE_TOO_LARGE)); return; }
+      editor.view.dispatch(closeHistory(editor.state.tr));
+    }
+    setEditing(false);
+  };
+  return <NodeViewWrapper className="rich-source-block rich-tikz-block" dir="ltr" contentEditable={false} data-language="tikz">
+    <TikzView source={node.textContent} />
+    {/* Keep ProseMirror's content DOM stable while the drawing is displayed.
+        All body edits are committed through the existing source ledger. */}
+    <pre hidden aria-hidden="true"><NodeViewContent<'code'> as="code" /></pre>
+    {editor.isEditable && <Dialog open={editing} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm">{t('ویرایش نمودار TikZ')}</Button></DialogTrigger>
+      <DialogContent dir={dir} className="max-h-[90dvh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{t('ویرایش نمودار TikZ')}</DialogTitle><DialogDescription>{t('کد TikZ را ویرایش کن؛ پس از تأیید، تصویر و Markdown به‌روز می‌شوند.')}</DialogDescription></DialogHeader>
+        <FieldGroup>
+          <Field data-invalid={!!error}>
+            <FieldLabel htmlFor={sourceId}>{t('کد TikZ')}</FieldLabel>
+            <Textarea id={sourceId} dir="ltr" aria-label={t('کد TikZ')} aria-invalid={!!error} aria-describedby={error ? `${sourceId}-error` : undefined} className="min-h-48 max-h-[60vh] border-[0.0625rem] font-mono" value={draft} onChange={event => { setDraft(event.target.value); setError(''); }} />
+            {error && <FieldError id={`${sourceId}-error`}>{error}</FieldError>}
+          </Field>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" onClick={confirm}>{t('تأیید')}</Button>
+            <Button type="button" variant="outline" onClick={() => setEditing(false)}>{t('انصراف')}</Button>
+          </div>
+        </FieldGroup>
+      </DialogContent>
+    </Dialog>}
+  </NodeViewWrapper>;
+}
+
+function CodeBlockView(props: NodeViewProps) {
+  const { node, editor } = props;
   const { t } = useLocale();
   const language = String(node.attrs.language || '');
   const diagram = language.toLowerCase() === 'mermaid';
   const math = mathLanguage(language);
   const source = node.textContent;
   const code = useMemo(() => highlightCode(source, language), [source, language]);
+  if (isTikzLanguage(language)) return <TikzCodeBlockView {...props} />;
   return <NodeViewWrapper className={diagram || math ? 'rich-source-block' : 'code-block'} dir="ltr" data-language={code.language || ''}>
     {diagram || math ? <>
       <div contentEditable={false}>{diagram ? <MermaidView source={node.textContent} /> : <MathView source={node.textContent} display />}</div>
@@ -43,7 +105,7 @@ export const RichCodeBlock = CodeBlock.extend({
   addProseMirrorPlugins() {
     const key = new PluginKey<DecorationSet>('richCodeHighlight');
     const syntax = (node: ProseMirrorNode, pos: number) => {
-      if (node.type.name !== 'codeBlock' || mathLanguage(node.attrs.language) || String(node.attrs.language).toLowerCase() === 'mermaid') return [];
+      if (node.type.name !== 'codeBlock' || mathLanguage(node.attrs.language) || isTikzLanguage(node.attrs.language) || String(node.attrs.language).toLowerCase() === 'mermaid') return [];
       const decorations: Decoration[] = [];
       let offset = pos + 1;
       highlightCode(node.textContent, node.attrs.language).lines.forEach((line, index) => {

@@ -1,6 +1,7 @@
 import { languagePath, useLocale } from './locale';
 import { memo } from 'react';
-import { ArrowDownToLine, Bold, BookOpen, Check, ChevronDown, Code2, FileCode2, FilePlus2, Files, FileText, FileType2, FolderOpen, Heading2, Italic, Languages, List, Monitor, Moon, Settings2, Sun, Undo2 } from 'lucide-react';
+import { ArrowDownToLine, Bold, BookOpen, Check, ChevronDown, Code2, FileCode2, FilePlus2, Files, FileText, FileType2, FolderOpen, Heading2, Italic, Languages, List, Monitor, Moon, Settings2, Shapes, Sun, Undo2 } from 'lucide-react';
+import { tikzSampleInsertion } from './tikz-language';
 import { isThemePreference, type DisplayThemeControls } from './display-theme';
 import type { ExportSettings } from './document-model';
 import { FontPicker } from './FontPicker';
@@ -110,13 +111,14 @@ export const MobileViewSwitch = memo(function MobileViewSwitch({ view, onSelect 
 
 export const SourceToolbar = memo(function SourceToolbar({ canRestore, onWrap, onRestore, readOnly = false }: { canRestore: boolean; onWrap: (before: string, after?: string) => void; onRestore: () => void; readOnly?: boolean }) {
   const { t } = useLocale();
-  return (<fieldset disabled={readOnly} className="format-toolbar" role="toolbar" aria-label={t("ابزار قالب‌بندی")}>
+  return (<fieldset disabled={readOnly} className="format-toolbar overflow-x-auto" role="toolbar" aria-label={t("ابزار قالب‌بندی")}>
                 <Button variant="ghost" size="icon" title={t("تیتر")} aria-label={t("درج تیتر")} onClick={() => onWrap('## ')}><Heading2 data-icon="inline-start" /></Button>
                 <Button variant="ghost" size="icon" title={t("پررنگ")} aria-label={t("درج متن پررنگ")} onClick={() => onWrap('**', '**')}><Bold data-icon="inline-start" /></Button>
                 <Button variant="ghost" size="icon" title={t("مورب")} aria-label={t("درج متن مورب")} onClick={() => onWrap('*', '*')}><Italic data-icon="inline-start" /></Button>
                 <Separator orientation="vertical" className="mx-2 h-4" />
                 <Button variant="ghost" size="icon" title={t("فهرست")} aria-label={t("درج فهرست")} onClick={() => onWrap('- ')}><List data-icon="inline-start" /></Button>
                 <Button variant="ghost" size="icon" title={t("کد")} aria-label={t("درج کد")} onClick={() => onWrap('`', '`')}><Code2 data-icon="inline-start" /></Button>
+                <Button variant="ghost" size="icon" title={t('درج شکل TikZ')} aria-label={t('درج شکل TikZ')} onClick={() => onWrap(tikzSampleInsertion, '')}><Shapes data-icon="inline-start" /></Button>
                 {canRestore && <Button variant="ghost" size="sm" className="ms-auto" onClick={onRestore}><Undo2 data-icon="inline-start" /> {t("متن قبلی")}</Button>}
               </fieldset>);
 });

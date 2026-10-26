@@ -1,0 +1,83 @@
+ParsiWord offline TikZ runtime — third-party notices
+==================================================
+
+This directory contains a pinned distribution of @rod2ik/tikzjax 1.6.0,
+not a new implementation of TeX or the TikZ language. The TeX worker runs
+locally. ParsiWord adds a restricted asset transport, serial scheduling,
+timeouts and sanitized, self-contained SVG font outlines.
+
+TikZJax: Jim Fowler, Glenn Rice, Rodrigo Schwencke and contributors.
+License: GNU GPL version 3 or later; see LICENSE-GPL-3.0.txt.
+Exact source: https://github.com/rod2ik/tikzjax/tree/8228128a03112efd735309bdaa292cca5a3500df
+Published package: https://registry.npmjs.org/@rod2ik/tikzjax/-/tikzjax-1.6.0.tgz
+Package integrity:
+sha512-JQoRqIK3gB8mPAovZ2nZuifVGti51BPgYwo8sUgtjWz/1htI/sVkMOFzoy3qy6VQFcAn1lZZjsYhTVw3lUwdgQ==
+
+Corresponding source archives, build recipes and modification details are
+available alongside ParsiWord's source, without requiring an account:
+https://github.com/SoroushJM/ParsiWord/tree/main/third-party/tikz
+The source archive filenames contain the exact upstream revisions.
+
+Web2js / TeX WebAssembly runtime
+------------------------------
+Web2js: Jim Fowler, Glenn Rice, Rodrigo Schwencke and contributors.
+Its package declares GPL-3.0; the upstream LICENSE.md additionally offers
+Apache-2.0. We retain the GPL terms and the original upstream notice.
+Source: https://github.com/rod2ik/web2js/tree/41a84ed7199e694a74c519fbde5a93e7ca5be76c
+The packaged tex.wasm.gz matches that revision's dist/tex.wasm.gz:
+SHA256 f2ff86f07aa35522c5a39f67eb4f42b675e9c207456f0c6b238fb6908548186a
+
+The preloaded core is the known-good published CDN runtime selected by
+TikZJax's npm workflow, rather than a newly generated local TeX format:
+https://github.com/rod2ik/cdn/tree/0937b0722b5385b61d7f45265342a769d2640d0a/tikzjax
+core.dump.gz SHA256:
+d554a06d2d508fd9b504626ead2f77f68a62bb7bc56efe52957ca72d1a5cb67b
+The Web2js source archive contains the compiler, runtime, build scripts,
+unmodified tex.web / etex.ch and the preloading recipe. Regenerating a
+core against another installed TeX Live release changes its binary data.
+
+TeX and e-TeX retain Donald E. Knuth's and Peter Breitenlohner / NTS team's
+copyrights and unmodified-source conditions. Their notices are reproduced
+in licenses/TeX-and-eTeX.txt; full originals are in the Web2js source archive.
+
+TeX packages and formats
+-----------------------
+The compressed tex_files assets are complete, unmodified TeX source files
+with their own copyright and license headers. Their .gz.bin suffix avoids
+HTTP Content-Encoding decompression; the underlying gzip bytes are intact.
+The preload includes LaTeX, standalone, xcolor and PGF/TikZ. LaTeX and most
+support packages use LPPL; PGF code offers GPL-2.0 or LPPL-1.3c; pgfplots
+uses GPL-3.0-or-later. Other included packages retain their individual
+headers. See licenses/LPPL-1.3c.txt, licenses/PGF-LICENSE.txt and the full
+GPL text. Complete source distributions and documentation:
+https://www.latex-project.org/get/
+https://ctan.org/pkg/pgf
+https://ctan.org/pkg/pgfplots
+https://ctan.org/pkg/standalone
+https://ctan.org/pkg/xcolor
+
+Mathematical fonts / generated outlines
+---------------------------------------
+BaKoMa-CM and BaKoMa-AMS fonts are copyright 1994, 1995 Basil K. Malyshev.
+Their license permits use, embedding and modified redistribution; the full
+copyright, author and permission notice is in licenses/BaKoMa-Fonts.txt.
+Original fonts: https://ctan.org/tex-archive/fonts/cm/ps-type1/bakoma
+TikZJax converts original OTF files to WOFF2. ParsiWord's vendor script
+uses fontkit 2.0.4 to derive glyph outlines and advances from those WOFF2
+files. Generated glyphs/*.json.gz.bin are modified font representations;
+the font outlines themselves are not relicensed as ParsiWord code.
+
+Bundled JavaScript
+------------------
+@rod2ik/dvi2html 0.0.7-beta7: MIT, copyright Mitch Anderson and contributors.
+Source: https://github.com/rod2ik/dvi2html/tree/5c7ee7365f9f94feea772e2ac48d97479049cfec
+buffer, base64-js, pako, process, stream-browserify, threads, observable-fns,
+is-observable, callsites, debug, ms, events, readable-stream, string_decoder,
+safe-buffer, inherits and util-deprecate: MIT. ieee754: BSD-3-Clause.
+Full upstream license texts are retained in licenses/. The worker's own
+preserved run-tex.js.LICENSE.txt contains its original bundled notices.
+Exact JavaScript dependency resolutions are in the TikZJax source archive's
+yarn.lock. Some listed dependencies may be eliminated by upstream bundling.
+
+No warranty is provided by these authors. Please retain all notices when
+redistributing the runtime or its generated mathematical font assets.

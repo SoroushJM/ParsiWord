@@ -10,6 +10,8 @@ export default defineConfig({
   resolve: { alias: { '@': file('../../packages/core/src') } }, clearScreen: false,
   build: {
     outDir: file('../../dist'), emptyOutDir: true, target: ['chrome87', 'safari16.4'],
+    // Keep every KaTeX font local instead of creating CSP-blocked data URLs.
+    assetsInlineLimit: path => /\.(?:woff2?|ttf|otf)$/i.test(path) ? false : undefined,
     rolldownOptions: { input: { main: file('./index.html'), en: file('./en/index.html') } },
   },
   server: { port: 1420, strictPort: true, host: host || false,

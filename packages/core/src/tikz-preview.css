@@ -1,0 +1,4 @@
+.tikz-diagram { max-inline-size: 100%; }
+/* TikZ's default black ink needs the same paper in every application theme. */
+.tikz-canvas { max-inline-size: 100%; margin-inline: auto; background: #fff; }
+.tikz-canvas > svg { display: block; inline-size: 100%; max-inline-size: 100%; block-size: auto; }

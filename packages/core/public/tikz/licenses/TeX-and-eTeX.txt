@@ -1,0 +1,29 @@
+% This program is copyright (C) 1982 by D. E. Knuth; all rights are reserved.
+% Unlimited copying and redistribution of this file are permitted as long
+% as this file is not modified. Modifications are permitted, but only if
+% the resulting file is not named tex.web. (The WEB system provides
+% for alterations via an auxiliary file; the master file should stay intact.)
+% See Appendix H of the WEB manual for hints on how to install this program.
+% And see Appendix A of the TRIP manual for details about how to validate it.
+
+% TeX is a trademark of the American Mathematical Society.
+% METAFONT is a trademark of Addison-Wesley Publishing Company.
+
+% This is etex.ch, a
+% WEB change file containing code for various features extending TeX;
+% to be applied to tex.web in order to define the
+% e-TeX program.
+
+% e-TeX is copyright (C) 1999-2012 by P. Breitenlohner (1994,98 by the NTS
+% team); all rights are reserved. Copying of this file is authorized only if
+% (1) you are P. Breitenlohner, or if (2) you make absolutely no changes to
+% your copy. (Programs such as TIE allow the application of several change
+% files to tex.web; the master files tex.web and etex.ch should stay intact.)
+
+% See etex_gen.tex for hints on how to install this program.
+% And see etripman.tex for details about how to validate it.
+
+% The TeX program is copyright (C) 1982 by D. E. Knuth.
+% TeX is a trademark of the American Mathematical Society.
+% e-TeX and NTS are trademarks of the NTS group.
+

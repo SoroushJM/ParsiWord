@@ -58,8 +58,11 @@ jobs:
       - run: pnpm run check:architecture
       - run: pnpm test
       - run: pnpm run build
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install --with-deps chromium webkit
       - run: pnpm run test:ui --project chromium
+      - run: pnpm run test:ui tests/tikz.spec.ts --project webkit --workers 1
+        env:
+          PW_WEBKIT: '1'
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -91,4 +94,6 @@ jobs:
             artifacts/vscode-test/*.png
             artifacts/vscode-test/local-images-*.docx
             artifacts/vscode-test/local-images-*.pdf
+            artifacts/vscode-test/tikz-*.docx
+            artifacts/vscode-test/tikz-*.pdf
           if-no-files-found: warn

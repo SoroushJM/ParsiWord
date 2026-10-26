@@ -23,6 +23,7 @@ const markdown = '# عنوان فارسی\n\nمتن فارسی و English SEARCH
 await writeFile(resolve(fixture, 'sample.md'), markdown);
 await writeFile(resolve(fixture, 'other.md'), '# Other\n\nLinked document.\n');
 await writeFile(resolve(fixture, 'crlf.md'), '# Windows\r\n\r\nمتن اصلی\r\n');
+await writeFile(resolve(fixture, 'tikz.md'), 'TIKZ_NATIVE_SEARCHABLE متن فارسی با $x^2$.\n\n' + await readFile(resolve(root, 'examples/tikz-geometry.md'), 'utf8'));
 await writeFile(resolve(fixture, 'nested folder/assets/diagram.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><circle cx="80" cy="50" r="40" fill="none" stroke="green"/><path d="M80 50L120 50M80 50L80 10" stroke="blue"/></svg>');
 await writeFile(resolve(fixture, 'image export/assets/circle.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><circle cx="80" cy="50" r="40" fill="none" stroke="green"/><path d="M80 50L120 50M80 50L80 10" stroke="blue"/></svg>');
 await writeFile(resolve(fixture, 'image export/assets/sample image.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAYElEQVR4nO3QMQEAIAgAMOIYw9PABKIJxuBgxwos6r6edG6NCgECBAgQIECAAAECBAgQIECAAAECBAgQIGBTQL6edLJGCRAgQIAAAQIECBAgQIAAAQIECBAgQIAAAYsCPgHNzcMN6g4/AAAAAElFTkSuQmCC', 'base64'));
@@ -51,8 +52,25 @@ await runTests({
 if (!process.env.PARSIWORD_TEST_THEME_WITNESS) {
 const reportPath=resolve(artifact,'results.json');
 const report=JSON.parse(await readFile(reportPath,'utf8'));
-if (process.env.PARSIWORD_TEST_FOCUS && process.env.PARSIWORD_TEST_FOCUS !== 'image-export') process.exit(0);
+if (process.env.PARSIWORD_TEST_FOCUS && !['image-export', 'tikz'].includes(process.env.PARSIWORD_TEST_FOCUS)) process.exit(0);
 const { getDocument, OPS }=await import('pdfjs-dist/legacy/build/pdf.mjs');
+if (report.tikzExports) {
+  const tikzPdf = await getDocument({ data: new Uint8Array(await readFile(report.tikzExports.pdf)), useSystemFonts: false, disableFontFace: true, isEvalSupported: false }).promise;
+  let imageCount = 0, text = '', structure = '';
+  try {
+    for (let number = 1; number <= tikzPdf.numPages; number++) {
+      const page = await tikzPdf.getPage(number), operators = await page.getOperatorList();
+      imageCount += operators.fnArray.filter(value => value === OPS.paintImageXObject).length;
+      text += (await page.getTextContent()).items.filter(item => 'str' in item).map(item => item.str).join(' ');
+      structure += JSON.stringify(await page.getStructTree());
+    }
+    if (imageCount !== 5) throw Error(`Expected TikZ drawing and four formula images in native PDF, got ${imageCount}`);
+    if (!text.includes('TIKZ_NATIVE_SEARCHABLE') || !structure.includes('coordinate')) throw Error('TikZ PDF lost searchable text or original drawing source alt metadata');
+  } finally { await tikzPdf.destroy(); }
+  report.results.push('Actual TikZ PDF parsed outside Electron: five real image operations, source alt structure and searchable text are present');
+  report.tikzPdf = { imageCount, searchableText: true, sourceAlt: true };
+  console.log('PASS Actual exported TikZ PDF contains geometry, formulas, source alt metadata and searchable text');
+}
 if (report.imageExports) {
   const imagesPdf=await getDocument({data:new Uint8Array(await readFile(report.imageExports.pdf)),useSystemFonts:false,disableFontFace:true,isEvalSupported:false}).promise;
   const imageOperators=new Set([OPS.paintImageXObject,OPS.paintInlineImageXObject,OPS.paintImageXObjectRepeat]);
@@ -72,7 +90,7 @@ if (report.imageExports) {
   report.imageExportPdf={imageCount,searchableText:true};
   console.log('PASS Actual exported local-image PDF contains both image paint operations and searchable text');
 }
-if (process.env.PARSIWORD_TEST_FOCUS === 'image-export') {
+if (['image-export', 'tikz'].includes(process.env.PARSIWORD_TEST_FOCUS)) {
   await writeFile(reportPath,JSON.stringify(report,null,2));
   process.exit(0);
 }

@@ -6,7 +6,7 @@
 right-to-left Markdown for Persian, Arabic and mixed RTL/LTR documents. Work in
 Markdown source or edit the rendered preview directly; both views stay in sync.
 ParsiWord also exports to Word (DOCX) and PDF, with embedded fonts, LaTeX equations,
-Mermaid diagrams and syntax highlighting. The interface is available in English
+Mermaid diagrams, [TikZ geometry drawings](docs/tikz.md) and syntax highlighting. The interface is available in English
 and Persian. Document conversion runs on your device, without uploading your text
 to a server. The web app is free to use in a modern browser.
 
@@ -14,6 +14,11 @@ to a server. The web app is free to use in a modern browser.
 پیش‌نمایش قابل ویرایش را کنار هم می‌گذارد؛ برای نوشتن فارسی و عربی در کنار
 انگلیسی، عددها، کد و فرمول. رابط فارسی و انگلیسی دارد و تغییر زبان، متن،
 جهت سند و پیش‌نویس را حفظ می‌کند. خروجی Word و PDF هم روی دستگاه ساخته می‌شود.
+
+برای طراحی سؤال هندسه، شکل را داخل بلوک `tikz` بنویس؛ موتور واقعی TeX/PGF روی
+دستگاه آن را رسم می‌کند و تصویرش در Word/PDF هم جاسازی می‌شود. ویرایش کد شکل از
+پیش‌نمایش، در همان تاریخچهٔ سند ثبت می‌شود. [راهنما و محدودیت‌های TikZ](docs/tikz.md)
+و [نمونهٔ دایره و دو شعاع](examples/tikz-geometry.md).
 
 [نسخهٔ ۰.۴.۷ و دانلود APK](docs/releases/0.4.7.md) برای تبدیل Markdown به Word و PDF روی دستگاه، با رابط فارسی، جهت متن
 فارسی/انگلیسی، فرمول LaTeX و نمودار Mermaid. کنترل‌های نمونه و مقایسه از رابط
@@ -30,7 +35,7 @@ to a server. The web app is free to use in a modern browser.
 | وب و اپ پارسی‌ورد | `apps/parsiword` | سایت دوزبانه، پیش‌نویس و پروژه‌های Tauri دسکتاپ/موبایل |
 
 `pnpm run dev`، `pnpm run build` و فرمان‌های ساخت اپ از ریشه اجرا می‌شوند.
-برای اکستنشن: `pnpm run package:vscode`؛ بسته در `artifacts/parsiword-vscode-0.1.3.vsix` قرار می‌گیرد.
+برای اکستنشن: `pnpm run package:vscode`؛ بسته در `artifacts/parsiword-vscode-0.1.5.vsix` قرار می‌گیرد.
 آزمون واقعی VS Code: `pnpm run test:vscode`، با پروفایل و مخزن آزمایشی مستقل.
 [راهنمای اکستنشن](apps/vscode/README.md) · [نقشهٔ راه و معیارهای پذیرش](docs/architecture-roadmap.md) · [نتایج آزمون میزبان](docs/validation/vscode-session-validation.md).
 

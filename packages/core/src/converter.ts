@@ -3,6 +3,8 @@ import { bundledFont, codeRunFont, mathFont } from './font-assets';
 import { wordMath } from './math';
 import { mathLanguage, RichContentError } from './rich-content';
 import { renderMermaid, type Diagram, type DiagramRenderer } from './diagrams';
+import { renderTikz } from './tikz';
+import { isTikzLanguage } from './tikz-language';
 import { Buffer } from 'buffer';
 import type { FontBundle } from './fonts';
 import { wordDirectionSpans } from './word-direction';
@@ -224,13 +226,15 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
       case 'math': return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER, spacing: { before: 160, after: 160 } })];
       case 'code': {
         if (mathLanguage(node.lang)) return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER })];
-        if (node.lang?.toLowerCase() === 'mermaid') {
-          const diagram = diagrams.get(node.value);
-          if (!diagram) throw new RichContentError('DIAGRAM_NOT_READY');
-          const scale = Math.min(1, 620 / diagram.width, 760 / diagram.height);
-          return [new Paragraph({ bidirectional: false, alignment: AlignmentType.CENTER, children: [new ImageRun({
-            type: 'png', data: diagram.png, transformation: { width: Math.max(1, Math.round(diagram.width * scale)), height: Math.max(1, Math.round(diagram.height * scale)) },
-            altText: { name: 'Mermaid', title: 'Mermaid diagram', description: node.value },
+        if (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang)) {
+          const tikz = isTikzLanguage(node.lang), name = tikz ? 'TikZ' : 'Mermaid';
+          const diagram = diagrams.get(tikz ? `tikz\0${node.value}` : node.value);
+          if (!diagram || !diagram.png.byteLength || !Number.isFinite(diagram.width) || !Number.isFinite(diagram.height) || diagram.width <= 0 || diagram.height <= 0 || availableWidth <= 0) throw new RichContentError('DIAGRAM_NOT_READY');
+          const scale = Math.min(1, 620 / diagram.width, 760 / diagram.height, availableWidth / 15 / diagram.width, imageHeight / diagram.height);
+          return [new Paragraph({ bidirectional: false, alignment: AlignmentType.CENTER,
+            spacing: { ...documentLayout.paragraph, lineRule: LineRuleType.AT_LEAST }, children: [new ImageRun({
+            type: 'png', data: diagram.png, transformation: { width: diagram.width * scale, height: diagram.height * scale },
+            altText: { name, title: `${name} diagram`, description: node.value },
           })] })];
         }
         const code = highlightCode(node.value, node.lang);
@@ -286,21 +290,36 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
   return document;
 }
 
-export async function exportWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid, resolveImage?: ExportImageResolver, readImage?: ExportImageReader): Promise<Uint8Array> {
-  return exportPreparedWord(markdownContext(markdown), settings, fonts, renderer, resolveImage, readImage);
+export async function exportWord(markdown: string, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid, resolveImage?: ExportImageResolver, readImage?: ExportImageReader, tikzRenderer: DiagramRenderer = renderTikz): Promise<Uint8Array> {
+  return exportPreparedWord(markdownContext(markdown), settings, fonts, renderer, resolveImage, readImage, tikzRenderer);
 }
 
 /** One operation owns its source, parsed tree and font/image/diagram inputs. */
-export async function exportPreparedWord(context: MarkdownContext, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid, resolveImage?: ExportImageResolver, readImage?: ExportImageReader): Promise<Uint8Array> {
+export async function exportPreparedWord(context: MarkdownContext, settings: ExportSettings, fonts: FontBundle[] = [], renderer: DiagramRenderer = renderMermaid, resolveImage?: ExportImageResolver, readImage?: ExportImageReader, tikzRenderer: DiagramRenderer = renderTikz): Promise<Uint8Array> {
   settings = { ...settings };
   const diagrams = new Map<string, Diagram>();
+  let decodedPixels = 0, imageBytes = 0;
+  const accountPicture = (picture: { png: Uint8Array }, code: 'TIKZ_TOO_LARGE' | 'DIAGRAM_TOO_LARGE' | 'IMAGE_EXPORT_TOO_LARGE') => {
+    imageBytes += picture.png.byteLength;
+    if (picture.png.byteLength >= 24) {
+      const view = new DataView(picture.png.buffer, picture.png.byteOffset, picture.png.byteLength);
+      decodedPixels += view.getUint32(16) * view.getUint32(20);
+    }
+    if (decodedPixels > 24_000_000 || imageBytes > 32 * 1024 * 1024) throw new RichContentError(code);
+  };
   async function prepare(node: { type: string; lang?: string | null; value?: string; children?: readonly unknown[] }): Promise<void> {
-    if (node.type === 'code' && node.lang?.toLowerCase() === 'mermaid' && node.value !== undefined && !diagrams.has(node.value)) {
-      diagrams.set(node.value, await renderer(node.value));
+    if (node.type === 'code' && node.value !== undefined && (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang))) {
+      const tikz = isTikzLanguage(node.lang), key = tikz ? `tikz\0${node.value}` : node.value;
+      if (!diagrams.has(key)) {
+        const diagram = await (tikz ? tikzRenderer : renderer)(node.value);
+        accountPicture(diagram, tikz ? 'TIKZ_TOO_LARGE' : 'DIAGRAM_TOO_LARGE');
+        diagrams.set(key, diagram);
+      }
     }
     if (node.children) for (const child of node.children) await prepare(child as Parameters<typeof prepare>[0]);
   }
   const images = await prepareExportImages(context, resolveImage, readImage);
+  for (const image of images.values()) accountPicture(image, 'IMAGE_EXPORT_TOO_LARGE');
   await prepare(context.root);
   return new Uint8Array(await Packer.toArrayBuffer(createPreparedWord(context, settings, fonts, diagrams, images)));
 }

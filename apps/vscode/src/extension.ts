@@ -289,7 +289,7 @@ export function activate(context: vscode.ExtensionContext) {
       const entry = manifest['index.html'];
       const nonce = randomBytes(24).toString('base64');
       const escape = (value: string) => value.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
-      const csp = `default-src 'none'; img-src ${panel.webview.cspSource} https: data: blob:; font-src ${panel.webview.cspSource} blob:; style-src ${panel.webview.cspSource} 'unsafe-inline'; script-src ${panel.webview.cspSource} 'nonce-${nonce}'; connect-src ${panel.webview.cspSource}; worker-src ${panel.webview.cspSource} blob:;`;
+      const csp = `default-src 'none'; img-src ${panel.webview.cspSource} https: data: blob:; font-src ${panel.webview.cspSource} blob:; style-src ${panel.webview.cspSource} 'unsafe-inline'; script-src ${panel.webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}'; connect-src ${panel.webview.cspSource}; worker-src ${panel.webview.cspSource} blob:;`;
       panel.webview.html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(csp)}"><meta name="viewport" content="width=device-width, initial-scale=1.0">${(entry.css ?? []).map((file: string) => `<link rel="stylesheet" href="${escape(assetRoot + '/' + file)}">`).join('')}<title>ParsiWord</title></head><body><div id="root" role="status">Loading ParsiWord…</div><script nonce="${nonce}" type="module" src="${escape(assetRoot + '/' + entry.file)}"></script></body></html>`;
       const disposables = [
         panel.onDidChangeViewState(() => { if (panel.active) active = session; scheduleComparisons(); }),

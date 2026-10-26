@@ -164,3 +164,20 @@ Its Word ZIP, code colors, five equations, two diagrams and all six complete
 embedded font files were verified. Phone installation, Windows OS execution and Apple builds remain subject
 to the same host limitations as before. No emulator or Android x86 build was
 used. Downloads: [0.4.4](releases/0.4.4.md).
+
+## Shared TikZ implementation
+
+The website, VS Code extension and Tauri application sources now share a local
+TikZJax e-TeX/PGF worker, bundled TikZ/PGFPlots libraries and self-contained
+label outlines. Word and PDF exports use the same renderer. TikZ requires
+Chromium/WebView 97+ under the native CSP, or Safari 16.4+; the rest of the app's
+browser baseline is unchanged. The worker's core and job peak at roughly
+312.5 MiB before other app/browser memory. Persian question text works outside
+drawings; the bundled e-TeX engine cannot typeset ordinary Unicode Persian
+labels inside TikZ nodes. See [usage and limits](tikz.md).
+
+Existing published Android/desktop binaries do not acquire this feature from a
+website deployment. They need a rebuild from these sources. Browser/mobile
+viewport checks and VS Code execution do not establish native Android, iOS,
+Windows Tauri, macOS or Linux execution; the current validation record belongs
+in [the TikZ report](validation/tikz.md).

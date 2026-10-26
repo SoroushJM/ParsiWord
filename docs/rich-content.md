@@ -1,4 +1,9 @@
-# LaTeX and Mermaid
+# LaTeX, Mermaid and TikZ
+
+[TikZ geometry drawings](tikz.md) use fenced `tikz` or `tikzpicture` blocks.
+They run through a bundled TeX/PGF worker across every host, appear in the
+editable preview, and embed in Word/PDF with their source metadata. This is
+separate from the KaTeX math fences described below.
 
 Ordinary code blocks also support [offline syntax highlighting](code-highlighting.md)
 for the 36 common highlight.js grammars. Preview and Word share tokens and colors;

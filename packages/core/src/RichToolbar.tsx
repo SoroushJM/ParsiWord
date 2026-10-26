@@ -3,7 +3,8 @@ import { editorHost } from './host';
 import { memo, useId, useState, type ReactNode } from 'react';
 import { useEditorState, type Editor } from '@tiptap/react';
 import { closeHistory } from '@tiptap/pm/history';
-import { Bold, Italic, Strikethrough, List, ListOrdered, Quote, Code2, SquareCode, Undo2, Redo2, Link2, Table2, Sigma, RemoveFormatting, IndentIncrease, IndentDecrease, Type } from 'lucide-react';
+import { Bold, Italic, Strikethrough, List, ListOrdered, Quote, Code2, SquareCode, Undo2, Redo2, Link2, Table2, Sigma, Shapes, RemoveFormatting, IndentIncrease, IndentDecrease, Type } from 'lucide-react';
+import { insertTikzSample } from './tikz-edit';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { Input } from '@/components/ui/input';
@@ -90,6 +91,7 @@ export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false 
         onMouseDown={event => event.preventDefault()} onClick={() => { setUrl(editor.getAttributes('link').href || ''); setLinkOpen(value => !value); }}><Link2 data-icon="inline-start" /></Button>
       <FormatButton label={t("درج جدول")} action={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 data-icon="inline-start" /></FormatButton>
       <FormatButton label={t("درج فرمول")} action={() => editor.chain().focus().insertContent({ type: 'mathInline', attrs: { source: 'x^2' } }).run()}><Sigma data-icon="inline-start" /></FormatButton>
+      <FormatButton label={t('درج شکل TikZ')} action={() => editor.chain().focus().command(({ tr }) => { insertTikzSample(tr); return true; }).run()}><Shapes data-icon="inline-start" /></FormatButton>
       <FormatButton label={t("پاک کردن قالب‌بندی")} action={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}><RemoveFormatting data-icon="inline-start" /></FormatButton>
       <FormatButton label={t("واگرد")} disabled={editorHost().kind !== 'vscode' && !state.canUndo} action={() => { if (editorHost().kind === 'vscode') editorHost().command?.('undo'); else editor.chain().focus().undo().run(); }}><Undo2 data-icon="inline-start" /></FormatButton>
       <FormatButton label={t("انجام دوباره")} disabled={editorHost().kind !== 'vscode' && !state.canRedo} action={() => { if (editorHost().kind === 'vscode') editorHost().command?.('redo'); else editor.chain().focus().redo().run(); }}><Redo2 data-icon="inline-start" /></FormatButton>

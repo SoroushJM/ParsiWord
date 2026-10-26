@@ -1,5 +1,7 @@
 import hljs from 'highlight.js/lib/common';
+import latex from 'highlight.js/lib/languages/latex';
 import { DOMParser, type Element, type Node } from '@xmldom/xmldom';
+import { isTikzLanguage } from './tikz-language';
 
 export type CodeToken = { text: string; color: string; bold?: boolean; italic?: boolean; scope?: string };
 export type HighlightedCode = { language?: string; label: string; lines: CodeToken[][] };
@@ -25,11 +27,15 @@ export const supportedCodeLanguages = hljs.listLanguages().map(id => ({
 const aliases = new Map(supportedCodeLanguages.flatMap(language =>
   [language.id, ...language.aliases].map(alias => [alias.toLowerCase(), language] as const)));
 const cache = new Map<string, HighlightedCode>();
+// Keep diagram syntax separate from the existing general-purpose code catalog.
+const tikzSyntax = hljs.newInstance();
+tikzSyntax.registerLanguage('latex', latex);
 
 /** One tokenization supplies both React text nodes and editable Word runs. */
 export function highlightCode(source: string, language?: string | null): HighlightedCode {
   const requested = (language || '').trim().toLowerCase();
-  const grammar = aliases.get(requested);
+  const drawing = isTikzLanguage(requested);
+  const grammar = drawing ? { id: 'latex', name: 'TikZ' } : aliases.get(requested);
   const label = grammar?.name || requested || 'Code';
   const plain = (): HighlightedCode => ({ language: grammar?.id, label,
     lines: source.split('\n').map(text => [{ text, color: baseColor }]),
@@ -41,7 +47,7 @@ export function highlightCode(source: string, language?: string | null): Highlig
   const cached = cache.get(key);
   if (cached) return cached;
   try {
-    const html = hljs.highlight(source, { language: grammar.id, ignoreIllegals: true }).value;
+    const html = (drawing ? tikzSyntax : hljs).highlight(source, { language: grammar.id, ignoreIllegals: true }).value;
     const root = new DOMParser().parseFromString(`<code>${html}</code>`, 'application/xml').documentElement;
     if (!root) return plain();
     const tokens: CodeToken[] = [];
