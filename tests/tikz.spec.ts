@@ -23,6 +23,47 @@ test('English nested route loads its own local TikZ assets', async ({ page }) =>
   expect(failures).toEqual([]);
 });
 
+test('a slow cold TikZ download finishes without using the TeX compilation deadline', async ({ page }) => {
+  test.setTimeout(90_000);
+  let coreRequests = 0, responseReleased = false;
+  let notifyRequested!: () => void;
+  const requested = new Promise<void>(resolve => { notifyRequested = resolve; });
+  await page.route('**/tikz/core.dump.gz.bin', async route => {
+    coreRequests++;
+    const response = await route.fetch();
+    notifyRequested();
+    // The real Pages failure was a valid engine snapshot download that crossed
+    // the 20-second execution deadline. Retain the real compressed bytes and engine.
+    await new Promise(resolve => setTimeout(resolve, 21_000));
+    if (page.isClosed()) return;
+    responseReleased = true;
+    await route.fulfill({ response });
+  });
+  await page.addInitScript(markdown => localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown, settings: {} })), geometry);
+  await page.goto('/');
+  await page.locator('[data-mobile-view="preview"]').click();
+  await requested;
+  await expect(page.getByRole('status').filter({ hasText: 'TikZ' })).toBeVisible();
+  await page.locator('[data-mobile-view="edit"]').click();
+  const input = page.locator('#markdown-source');
+  const added = '\n\nRESPONSIVE_DURING_TIKZ_DOWNLOAD';
+  await input.press('Control+End');
+  await page.keyboard.insertText(added);
+  await expect(input).toHaveValue(geometry + added);
+  expect(responseReleased).toBe(false);
+  await page.locator('[data-mobile-view="preview"]').click();
+  await Promise.race([
+    page.locator('.tikz-diagram svg').waitFor({ state: 'visible', timeout: 65_000 }),
+    page.getByRole('alert').filter({ hasText: 'TikZ' }).first().waitFor({ state: 'visible', timeout: 65_000 }).then(async () => {
+      throw new Error(`The valid delayed TikZ download failed: ${await page.getByRole('alert').filter({ hasText: 'TikZ' }).first().innerText()}`);
+    }),
+  ]);
+  expect(responseReleased).toBe(true);
+  expect(coreRequests).toBe(1);
+  expect(await page.locator('.tikz-diagram svg path').count()).toBeGreaterThan(12);
+  await expect(input).toHaveValue(geometry + added);
+});
+
 test('source and rich insertion controls preserve the selected prose and create a real drawing', async ({ page }) => {
   test.setTimeout(90_000);
   await page.addInitScript(() => localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown: 'SELECTED_PROSE', settings: {} })));

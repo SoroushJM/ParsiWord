@@ -35,24 +35,80 @@ describe('bounded real TikZ worker lifecycle', () => {
     await Promise.allSettled(jobs);
     await expect(renderTikz('y')).rejects.toMatchObject({ code: 'TIKZ_UNAVAILABLE' });
   });
-  it('terminates an unresponsive worker and creates a fresh worker for retry', async () => {
+  it('bounds worker initialization at twenty seconds and creates a fresh worker for retry', async () => {
     vi.useFakeTimers();
     const workers: { terminate: ReturnType<typeof vi.fn> }[] = [];
     vi.stubGlobal('Worker', class { terminate = vi.fn(); constructor() { workers.push(this); } });
     vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(url.endsWith('manifest.json') ? JSON.stringify({ files: { 'tex.wasm.gz.bin': '', 'core.dump.gz.bin': '' } }) : '/* pinned worker */')));
     const { renderTikz } = await import('./tikz');
     const first = renderTikz('\\draw (0,0)--(1,1);');
-    const rejection = expect(first).rejects.toMatchObject({ code: 'TIKZ_TIMEOUT' });
+    const rejection = expect(first).rejects.toMatchObject({ code: 'TIKZ_LOAD_TIMEOUT' });
     await vi.advanceTimersByTimeAsync(20_010); await rejection;
     expect(workers).toHaveLength(1); expect(workers[0].terminate).toHaveBeenCalled();
     const second = renderTikz('\\draw (0,0)--(1,1);');
-    const retry = expect(second).rejects.toMatchObject({ code: 'TIKZ_TIMEOUT' });
+    const retry = expect(second).rejects.toMatchObject({ code: 'TIKZ_LOAD_TIMEOUT' });
     await vi.advanceTimersByTimeAsync(20_010); await retry;
     expect(workers).toHaveLength(2); expect(workers[1].terminate).toHaveBeenCalled();
+  });
+  it('aborts stalled bootstrap downloads after sixty seconds before creating a worker', async () => {
+    vi.useFakeTimers();
+    const signals: AbortSignal[] = [], Worker = vi.fn();
+    vi.stubGlobal('Worker', Worker);
+    vi.stubGlobal('fetch', vi.fn((_url: string, options: RequestInit) => {
+      const signal = options.signal!; signals.push(signal);
+      return new Promise<Response>((_resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }));
+    }));
+    const { renderTikz } = await import('./tikz');
+    const result = expect(renderTikz('\\draw (0,0)--(1,1);')).rejects.toMatchObject({ code: 'TIKZ_LOAD_TIMEOUT' });
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(signals).toHaveLength(2); expect(signals.every(signal => !signal.aborted)).toBe(true);
+    await vi.advanceTimersByTimeAsync(1); await result;
+    expect(signals.every(signal => signal.aborted)).toBe(true);
+    expect(Worker).not.toHaveBeenCalled();
+  });
+  it('counts bootstrap time toward one ninety-second engine-load deadline', async () => {
+    vi.useFakeTimers();
+    const fixture = waitingWorker(false);
+    vi.stubGlobal('fetch', vi.fn((url: string) => new Promise<Response>(resolve => setTimeout(() => resolve(new Response(url.endsWith('manifest.json') ? JSON.stringify({ files: {} }) : '/* pinned worker */')), 50_000))));
+    const { renderTikz } = await import('./tikz');
+    const result = expect(renderTikz('\\draw (0,0)--(1,1);')).rejects.toMatchObject({ code: 'TIKZ_LOAD_TIMEOUT' });
+    await vi.advanceTimersByTimeAsync(50_000);
+    expect(fixture.calls.map(call => call.method)).toEqual(['load']);
+    await vi.advanceTimersByTimeAsync(39_999);
+    expect(fixture.workers[0].terminate).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1); await result;
+    expect(fixture.workers[0].terminate).toHaveBeenCalled();
+  });
+  it('retains the twenty-second program deadline after the engine has initialized', async () => {
+    vi.useFakeTimers();
+    const fixture = waitingWorker(true);
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(url.endsWith('manifest.json') ? JSON.stringify({ files: {} }) : '/* pinned worker */')));
+    const { renderTikz } = await import('./tikz');
+    const result = expect(renderTikz('\\draw (0,0)--(1,1);')).rejects.toMatchObject({ code: 'TIKZ_TIMEOUT' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fixture.calls.map(call => call.method)).toEqual(['load', 'texify']);
+    await vi.advanceTimersByTimeAsync(19_999);
+    expect(fixture.workers[0].terminate).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1); await result;
+    expect(fixture.workers[0].terminate).toHaveBeenCalled();
   });
 });
 
 type BridgeMessage = { type: string; uid?: number; method?: string; id?: number; status?: number; bytes?: Uint8Array };
+/** A real lifecycle handshake, then a deliberately unresponsive load or program. */
+function waitingWorker(completeLoad: boolean) {
+  const calls: BridgeMessage[] = [], workers: { terminate: ReturnType<typeof vi.fn> }[] = [];
+  vi.stubGlobal('Worker', class {
+    onmessage?: (event: { data: unknown }) => void;
+    terminate = vi.fn();
+    constructor() { workers.push(this); queueMicrotask(() => this.onmessage?.({ data: { type: 'init' } })); }
+    postMessage(message: BridgeMessage) {
+      calls.push(message);
+      if (completeLoad && message.type === 'run' && message.method === 'load') queueMicrotask(() => this.onmessage?.({ data: { type: 'result', uid: message.uid, complete: true } }));
+    }
+  });
+  return { calls, workers };
+}
 function bridgeWorker(requestUrl: string | { id: number; url: string }[], read: (signal: AbortSignal) => Promise<Response>) {
   const replies: { message: BridgeMessage; transfer?: Transferable[] }[] = [];
   const workers: { terminate: ReturnType<typeof vi.fn> }[] = [];
@@ -133,7 +189,7 @@ describe('window-to-worker local resource bridge', () => {
     expect(fixture.replies[0].message).toMatchObject({ id: ids[ids.length - 1], status: 403 });
     expect(fixture.workers[0].terminate).toHaveBeenCalled();
   });
-  it('aborts in-flight local fetches and suppresses replies after the worker times out', async () => {
+  it('aborts stalled engine assets after sixty seconds and suppresses late worker replies', async () => {
     vi.useFakeTimers();
     let requestSignal: AbortSignal | undefined;
     const fixture = bridgeWorker('https://parsiword.test/assets/tikz/core.dump.gz', signal => {
@@ -141,10 +197,12 @@ describe('window-to-worker local resource bridge', () => {
       return new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }));
     });
     const { renderTikz } = await import('./tikz');
-    const result = expect(renderTikz('\\draw (0,0)--(1,1);')).rejects.toMatchObject({ code: 'TIKZ_TIMEOUT' });
+    const result = expect(renderTikz('\\draw (0,0)--(1,1);')).rejects.toMatchObject({ code: 'TIKZ_LOAD_TIMEOUT' });
     await vi.advanceTimersByTimeAsync(0);
     expect(requestSignal?.aborted).toBe(false);
-    await vi.advanceTimersByTimeAsync(20_010); await result;
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(requestSignal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1); await result;
     expect(requestSignal?.aborted).toBe(true);
     expect(fixture.workers[0].terminate).toHaveBeenCalled();
     expect(fixture.replies).toHaveLength(0);

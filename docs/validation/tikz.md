@@ -6,6 +6,30 @@ extension version 0.1.5. [Usage and engine limits](../tikz.md) and
 
 ## Executed locally
 
+The public Pages check after the theme/Android workflow publication exposed a
+cold-network initialization timeout: the valid 2,777,702-byte engine snapshot
+returned HTTP 200 but its download was aborted by the shared 20-second program
+deadline. The required Pages assets matched the local manifest and decompressed
+correctly. The fix separates bounded asset downloads (60 seconds), a single
+90-second engine bootstrap deadline, and the unchanged 20-second TeX execution
+deadline. Download timeout messages now identify loading/connection problems.
+The bootstrap deadline includes earlier fetches, and termination aborts pending
+downloads without late worker replies. Lazy TeX-library fetches during a running
+program still count toward that program's wall-clock execution deadline.
+
+The local browser regression holds the actual engine snapshot for 21 seconds.
+It failed with the original timeout and passed after the fix, including real
+SVG geometry, responsive editing during loading and exact Markdown retention.
+All eight Chrome TikZ cases passed, including actual Word/PDF exports, native
+CSP, PGFPlots and infinite-program timeout/recovery. All 1,219 unit tests in 39
+files passed, including new bootstrap-abort, shared-deadline and initialized
+program-timeout checks. The production build for `/ParsiWord/` also passed.
+Independent review found no blocking lifecycle or boundary regression. These
+tests ran locally; evidence is in `artifacts/tikz-slow-download-red.log`,
+`artifacts/tikz-slow-download-green-suite.log`,
+`artifacts/tikz-cold-load-unit.log`, `artifacts/tikz-cold-load-build.log` and
+`artifacts/theme-live-diagnostic.json`.
+
 The first-launch document now starts with a TikZ circle, two radii, a shaded
 sector and a chord question, followed by its solution, a Gaussian integral,
 a rotation matrix, gamma/beta identities and the Basel series. The original

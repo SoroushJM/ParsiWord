@@ -52,6 +52,13 @@ server, shell execution or automatic CTAN download. A fresh website visit still
 requires the site's application files; this feature does not install an offline
 copy of the entire website.
 
+Cold downloads have a separate bounded loading budget: up to 60 seconds per
+application asset and a 90-second deadline for the entire engine bootstrap.
+Once ready, each TeX program still has a 20-second execution limit. A slow
+engine download reports a loading/connection timeout rather than asking the
+writer to simplify a valid drawing. Loading remains asynchronous, so Markdown
+editing stays available while the engine arrives.
+
 This is the bundled e-TeX/TikZ distribution. External files/packages,
 XeLaTeX/LuaLaTeX, `fontspec`, `xepersian`, shell escape and externalization are
 unavailable. Ordinary Unicode Persian/Arabic text inside TikZ nodes is not

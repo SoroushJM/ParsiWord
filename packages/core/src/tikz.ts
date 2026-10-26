@@ -4,7 +4,9 @@ import { publicAsset } from './public-assets';
 import { prepareTikzSource } from './tikz-source';
 import { outlineTikzSvg, type TikzGlyphFont } from './tikz-svg';
 
-const jobTimeout = 20_000, idleTimeout = 10_000;
+// Cold website downloads need their own budget; the execution limit applies
+// once the engine is ready to execute the document's TeX program.
+const jobTimeout = 20_000, assetTimeout = 60_000, loadTimeout = 90_000, idleTimeout = 10_000;
 const sourceLimit = 50_000, cacheBudget = 8_000_000;
 const cache = new Map<string, Promise<Diagram>>();
 const inFlight = new Map<string, Promise<Diagram>>();
@@ -18,7 +20,7 @@ function asset(path: string) { return new URL(publicAsset(`tikz/${path}`), docum
 class TexWorker {
   private worker?: Worker;
   private serial = 0;
-  private pending?: { uid: number; resolve(value: unknown): void; reject(error: unknown): void; timer: ReturnType<typeof setTimeout> };
+  private pending?: { uid: number; resolve(value: unknown): void; reject(error: unknown): void; timeoutCode: 'TIKZ_TIMEOUT' | 'TIKZ_LOAD_TIMEOUT'; timer: ReturnType<typeof setTimeout> };
   private ready?: Promise<void>;
   private assets = new Map<string, string>();
   private assetRequests = new Map<number, { abort: AbortController; timer: ReturnType<typeof setTimeout> }>();
@@ -42,12 +44,14 @@ class TexWorker {
   }
   private async initialize() {
     let url: string | undefined;
+    const deadline = Date.now() + loadTimeout;
     const abort = new AbortController();
-    const fetchTimer = setTimeout(() => abort.abort(), jobTimeout);
+    const fetchTimer = setTimeout(() => abort.abort(), assetTimeout);
     try {
       const [codeResponse, manifestResponse] = await Promise.all([fetch(asset('run-tex.js'), { signal: abort.signal }), fetch(asset('manifest.json'), { signal: abort.signal })]);
       if (!codeResponse.ok || !manifestResponse.ok) throw new Error('Missing TikZ runtime');
       const [code, manifest] = await Promise.all([codeResponse.text(), manifestResponse.json() as Promise<{ files: Record<string, string> }>]);
+      clearTimeout(fetchTimer);
       const root = asset('');
       const allowed = Object.keys(manifest.files).filter(name => /^(?:tex\.wasm\.gz\.bin|core\.dump\.gz\.bin|tex_files\/[\w.-]+\.gz\.bin)$/.test(name)).map(name => [new URL(name.replace(/\.bin$/, ''), root).href, new URL(name, root).href]);
       this.assets = new Map(allowed.map(([virtual, actual]) => [virtual, actual]));
@@ -60,19 +64,20 @@ class TexWorker {
       url = URL.createObjectURL(new Blob([guard, code], { type: 'text/javascript' }));
       this.worker = new Worker(url);
       await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => { reject(new RichContentError('TIKZ_TIMEOUT')); this.terminate(); }, jobTimeout);
+        const timer = setTimeout(() => { reject(new RichContentError('TIKZ_LOAD_TIMEOUT')); this.terminate(); }, Math.min(jobTimeout, Math.max(1, deadline - Date.now())));
         this.worker!.onerror = () => { clearTimeout(timer); reject(new RichContentError('TIKZ_UNAVAILABLE')); this.fail(new RichContentError('TIKZ_UNAVAILABLE')); };
         this.worker!.onmessage = event => {
           if (event.data?.type === 'init') { clearTimeout(timer); resolve(); }
           else this.receive(event.data);
         };
       });
-      await this.call('load', [root.replace(/\/$/, '')]);
+      await this.call('load', [root.replace(/\/$/, '')], Math.max(1, deadline - Date.now()));
     } catch (cause) {
       this.terminate(); if (active === this) active = undefined;
       if (cause instanceof RichContentError) throw cause;
+      if (abort.signal.aborted) throw new RichContentError('TIKZ_LOAD_TIMEOUT', { cause });
       throw new RichContentError('TIKZ_UNAVAILABLE', { cause });
-    } finally { clearTimeout(fetchTimer); if (url) URL.revokeObjectURL(url); }
+    } finally { clearTimeout(fetchTimer); abort.abort(); if (url) URL.revokeObjectURL(url); }
   }
   private receive(message: unknown) {
     if (typeof message === 'string') {
@@ -102,7 +107,7 @@ class TexWorker {
     if (!actual || this.assetRequests.has(id) || this.assetRequests.size >= 8) {
       worker.postMessage({ type: 'parsiword-asset-response', id, status: 403, bytes: new Uint8Array() }); return;
     }
-    const abort = new AbortController(), timer = setTimeout(() => abort.abort(), jobTimeout);
+    const abort = new AbortController(), timer = setTimeout(() => abort.abort(), assetTimeout);
     this.assetRequests.set(id, { abort, timer });
     try {
       const response = await fetch(actual, { signal: abort.signal });
@@ -123,14 +128,18 @@ class TexWorker {
       }
       if (this.worker === worker && !abort.signal.aborted) worker.postMessage({ type: 'parsiword-asset-response', id, status: response.ok ? 200 : 404, bytes }, [bytes.buffer]);
     } catch {
-      if (this.worker === worker) worker.postMessage({ type: 'parsiword-asset-response', id, status: abort.signal.aborted ? 408 : 502, bytes: new Uint8Array() });
+      if (this.worker === worker) {
+        if (abort.signal.aborted) this.fail(new RichContentError(this.pending?.timeoutCode ?? 'TIKZ_UNAVAILABLE'));
+        else worker.postMessage({ type: 'parsiword-asset-response', id, status: 502, bytes: new Uint8Array() });
+      }
     } finally { clearTimeout(timer); this.assetRequests.delete(id); }
   }
-  private call(method: string, args: unknown[]): Promise<unknown> {
+  private call(method: 'load' | 'texify', args: unknown[], timeout = jobTimeout): Promise<unknown> {
     this.log = ''; this.fault = false;
     return new Promise((resolve, reject) => {
       const uid = ++this.serial;
-      this.pending = { uid, resolve, reject, timer: setTimeout(() => this.fail(new RichContentError('TIKZ_TIMEOUT')), jobTimeout) };
+      const timeoutCode = method === 'load' ? 'TIKZ_LOAD_TIMEOUT' : 'TIKZ_TIMEOUT';
+      this.pending = { uid, resolve, reject, timeoutCode, timer: setTimeout(() => this.fail(new RichContentError(timeoutCode)), timeout) };
       this.worker!.postMessage({ type: 'run', uid, method, args });
     });
   }
@@ -147,7 +156,7 @@ async function font(name: string): Promise<TikzGlyphFont> {
   let result = fontCache.get(name);
   if (!result) {
     result = (async () => {
-      const abort = new AbortController(), timer = setTimeout(() => abort.abort(), jobTimeout);
+      const abort = new AbortController(), timer = setTimeout(() => abort.abort(), assetTimeout);
       try {
         const response = await fetch(asset(`glyphs/${name}.json.gz.bin`), { signal: abort.signal });
         if (!response.ok || !response.body) throw new Error('Missing TikZ glyph font');
@@ -164,6 +173,9 @@ async function font(name: string): Promise<TikzGlyphFont> {
         const bytes = new Uint8Array(length); let offset = 0;
         for (const part of parts) { bytes.set(part, offset); offset += part.byteLength; }
         return JSON.parse(new TextDecoder().decode(bytes)) as TikzGlyphFont;
+      } catch (cause) {
+        if (abort.signal.aborted) throw new RichContentError('TIKZ_LOAD_TIMEOUT', { cause });
+        throw cause;
       } finally { clearTimeout(timer); }
     })();
     fontCache.set(name, result);
