@@ -1,6 +1,6 @@
 import { useLocale } from './locale';
 import { editorHost } from './host';
-import { memo, useState, type ReactNode } from 'react';
+import { memo, useId, useState, type ReactNode } from 'react';
 import { useEditorState, type Editor } from '@tiptap/react';
 import { closeHistory } from '@tiptap/pm/history';
 import { Bold, Italic, Strikethrough, List, ListOrdered, Quote, Code2, SquareCode, Undo2, Redo2, Link2, Table2, Sigma, RemoveFormatting, IndentIncrease, IndentDecrease, Type } from 'lucide-react';
@@ -27,6 +27,12 @@ function FormatButton({ label, disabled = false, action, children }: {
 
 export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false }: { editor: Editor; readOnly?: boolean }) {
   const { t, dir, number } = useLocale();
+  const toolbarId = useId();
+  const headingId = `${toolbarId}-heading`;
+  const headingValueId = `${toolbarId}-heading-value`;
+  const linkToolsId = `${toolbarId}-link-tools`;
+  const linkUrlId = `${toolbarId}-link-url`;
+  const linkErrorId = `${toolbarId}-link-error`;
   const [linkOpen, setLinkOpen] = useState(false);
   const [url, setUrl] = useState('');
   const [linkError, setLinkError] = useState('');
@@ -61,12 +67,12 @@ export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false 
         }
       }}>
       <FieldGroup className="rich-heading-field gap-0"><Field>
-        <FieldLabel className="sr-only" htmlFor="rich-heading">{t("سبک پاراگراف")}</FieldLabel>
+        <FieldLabel className="sr-only" htmlFor={headingId}>{t("سبک پاراگراف")}</FieldLabel>
         <Select dir={dir} value={state.heading} onValueChange={value => {
           historyBoundary();
           if (value === 'paragraph') editor.chain().focus().setParagraph().run();
           else editor.chain().focus().setHeading({ level: Number(value) as 1 | 2 | 3 | 4 | 5 | 6 }).run();
-        }}><SelectTrigger id="rich-heading" aria-label={t("سبک پاراگراف")} aria-describedby="rich-heading-value" title={`${t('سبک پاراگراف')}: ${headingLabel}`} className="rich-icon-control justify-center px-0 [&>svg:last-child]:hidden"><Type aria-hidden="true" /><span className="sr-only"><SelectValue id="rich-heading-value" /></span></SelectTrigger>
+        }}><SelectTrigger id={headingId} aria-label={t("سبک پاراگراف")} aria-describedby={headingValueId} title={`${t('سبک پاراگراف')}: ${headingLabel}`} className="rich-icon-control justify-center px-0 [&>svg:last-child]:hidden"><Type aria-hidden="true" /><span className="sr-only"><SelectValue id={headingValueId} /></span></SelectTrigger>
           <SelectContent><SelectGroup><SelectItem value="paragraph">{t("متن عادی")}</SelectItem>{[1, 2, 3, 4, 5, 6].map(level => <SelectItem value={String(level)} key={level}>{t('تیتر')} {number(level)}</SelectItem>)}</SelectGroup></SelectContent>
         </Select>
       </Field></FieldGroup>
@@ -80,7 +86,7 @@ export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false 
       <FormatToggle label={t("نقل‌قول")} active={state.blockquote} action={() => editor.chain().focus().toggleBlockquote().run()}><Quote data-icon="inline-start" /></FormatToggle>
       <FormatToggle label={t("کد درون متن")} active={state.code} action={() => editor.chain().focus().toggleCode().run()}><Code2 data-icon="inline-start" /></FormatToggle>
       <FormatToggle label={t("بلوک کد")} active={state.codeBlock} action={() => editor.chain().focus().toggleCodeBlock().run()}><SquareCode data-icon="inline-start" /></FormatToggle>
-      <Button type="button" variant="ghost" size="icon-lg" className="rich-icon-control" title={t("درج یا ویرایش پیوند")} aria-label={t("درج یا ویرایش پیوند")} aria-expanded={linkOpen} aria-controls="rich-link-tools"
+      <Button type="button" variant="ghost" size="icon-lg" className="rich-icon-control" title={t("درج یا ویرایش پیوند")} aria-label={t("درج یا ویرایش پیوند")} aria-expanded={linkOpen} aria-controls={linkToolsId}
         onMouseDown={event => event.preventDefault()} onClick={() => { setUrl(editor.getAttributes('link').href || ''); setLinkOpen(value => !value); }}><Link2 data-icon="inline-start" /></Button>
       <FormatButton label={t("درج جدول")} action={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><Table2 data-icon="inline-start" /></FormatButton>
       <FormatButton label={t("درج فرمول")} action={() => editor.chain().focus().insertContent({ type: 'mathInline', attrs: { source: 'x^2' } }).run()}><Sigma data-icon="inline-start" /></FormatButton>
@@ -95,12 +101,12 @@ export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false 
       <Button type="button" variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().deleteColumn().run()}>{t("حذف ستون")}</Button>
       <Button type="button" variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().deleteTable().run()}>{t("حذف جدول")}</Button>
     </div>}
-    {linkOpen && <FieldGroup id="rich-link-tools" className="rich-link-tools gap-2">
-      <Field data-invalid={!!linkError}><FieldLabel htmlFor="rich-link-url">{t("نشانی پیوند")}</FieldLabel>
-        <Input id="rich-link-url" dir="ltr" value={url} aria-invalid={!!linkError} aria-describedby={linkError ? 'rich-link-error' : undefined}
+    {linkOpen && <FieldGroup id={linkToolsId} className="rich-link-tools gap-2">
+      <Field data-invalid={!!linkError}><FieldLabel htmlFor={linkUrlId}>{t("نشانی پیوند")}</FieldLabel>
+        <Input id={linkUrlId} dir="ltr" value={url} aria-invalid={!!linkError} aria-describedby={linkError ? linkErrorId : undefined}
           onChange={event => { setUrl(event.target.value); setLinkError(''); }} placeholder="https://example.com"
           onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); setLink(); } if (event.key === 'Escape') setLinkOpen(false); }} />
-        {linkError && <FieldError id="rich-link-error">{linkError}</FieldError>}
+        {linkError && <FieldError id={linkErrorId}>{linkError}</FieldError>}
       </Field>
       <div className="flex flex-wrap gap-2"><Button type="button" size="sm" onClick={setLink}>{t("ثبت پیوند")}</Button><Button type="button" variant="outline" size="sm" onClick={() => setLinkOpen(false)}>{t("بستن")}</Button></div>
     </FieldGroup>}

@@ -139,7 +139,7 @@ test('raw source dialogs stay mounted through partial image and multi-block defi
   await raw.fill('[ref]: https://last.example');
   await expect(page.locator('.rich-document blockquote a')).toHaveAttribute('href', 'https://last.example');
   await page.getByRole('button', { name: 'تأیید', exact: true }).click();
-  await page.getByRole('button', { name: 'ویرایش نشانه‌گذاری', exact: true }).last().click();
+  await page.getByRole('button', { name: 'ویرایش تصویر', exact: true }).click();
   await raw.fill('![new](url'); await expect(raw).toHaveValue('![new](url');
   await raw.fill('temporary'); await expect(raw).toHaveValue('temporary');
   await page.getByRole('button', { name: 'تأیید', exact: true }).click();

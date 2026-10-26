@@ -7,7 +7,9 @@ import { isErrorCode, type ErrorCode } from './errors';
 
 const integer = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
 export function isDocumentComparison(value: unknown): value is DocumentComparison {
-  return isRecord(value) && (value.side === 'original' || value.side === 'modified') && typeof value.other === 'string' && typeof value.staged === 'boolean';
+  return isRecord(value) && (value.side === 'original' || value.side === 'modified') && typeof value.other === 'string' && typeof value.staged === 'boolean'
+    && (value.singleTab === undefined || typeof value.singleTab === 'boolean')
+    && (value.originalUri === undefined || typeof value.originalUri === 'string' && value.originalUri.length <= 8192);
 }
 export const isViewMode = (value: unknown): value is DocumentViewMode => typeof value === 'string' && ['combined', 'source', 'rendered'].includes(value);
 export const isHostCommand = (value: unknown): value is HostCommand => typeof value === 'string' && ['source', 'preview', 'diff', 'stagedDiff', 'save', 'undo', 'redo', 'new'].includes(value);
@@ -28,15 +30,15 @@ export function isSyncPending(value: unknown): value is SyncPending {
   return integer(change.start) && integer(change.end) && change.start <= change.end
     && typeof change.text === 'string';
 }
-export type ClientMessage = { type: 'ready' } | { type: 'edit' | 'draft'; edit: SyncEdit } | { type: 'pending'; pending: SyncPending }
-  | { type: 'focus'; focused: boolean }
+export type ClientMessage = { type: 'ready'; restoreComparison?: string } | { type: 'edit' | 'draft'; edit: SyncEdit } | { type: 'pending'; pending: SyncPending }
+  | { type: 'focus'; focused: boolean; comparisonSide?: 'original' | 'modified' }
   | { type: 'comparisonNavigate'; index: number }
   | { type: 'settings'; settings: ExportSettings } | { type: 'locale'; locale: 'fa' | 'en' }
-  | { type: 'request'; id: number; method: 'command' | 'open' | 'saveBytes' | 'font' | 'recover'; args: Record<string, unknown> };
+  | { type: 'request'; id: number; method: 'command' | 'open' | 'saveBytes' | 'font' | 'recover' | 'imageUri'; args: Record<string, unknown> };
 export function isClientMessage(value: unknown): value is ClientMessage {
   if (!isRecord(value)) return false;
-  if (value.type === 'ready') return true;
-  if (value.type === 'focus') return typeof value.focused === 'boolean';
+  if (value.type === 'ready') return value.restoreComparison === undefined || typeof value.restoreComparison === 'string' && value.restoreComparison.length <= 8192;
+  if (value.type === 'focus') return typeof value.focused === 'boolean' && (value.comparisonSide === undefined || value.comparisonSide === 'original' || value.comparisonSide === 'modified');
   if (value.type === 'comparisonNavigate') return integer(value.index);
   if (value.type === 'edit' || value.type === 'draft') return isSyncEdit(value.edit);
   if (value.type === 'pending') return isSyncPending(value.pending);
@@ -47,6 +49,7 @@ export function isClientMessage(value: unknown): value is ClientMessage {
   if (value.method === 'command') return isHostCommand(args.name);
   if (value.method === 'open') return true;
   if (value.method === 'font') return typeof args.url === 'string' && args.url.length <= 2048;
+  if (value.method === 'imageUri') return typeof args.source === 'string' && args.source.length <= 8192 && (args.baseUri === undefined || typeof args.baseUri === 'string' && args.baseUri.length <= 8192);
   if (value.method === 'recover') return typeof args.text === 'string';
   if (value.method === 'saveBytes') return typeof args.filename === 'string' && args.filename.length <= 512
     && typeof args.extension === 'string' && ['md', 'docx', 'pdf'].includes(args.extension) && Array.isArray(args.bytes) && args.bytes.length <= 64 * 1024 * 1024

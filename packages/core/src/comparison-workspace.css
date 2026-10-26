@@ -1,0 +1,55 @@
+.comparison-workspace {
+  --diff-insert-background: var(--vscode-diffEditor-insertedLineBackground, #9ccc2c22);
+  --diff-delete-background: var(--vscode-diffEditor-removedLineBackground, #ff000022);
+  --diff-insert-border: var(--vscode-gitDecoration-addedResourceForeground, #48985d);
+  --diff-delete-border: var(--vscode-gitDecoration-deletedResourceForeground, #d55a5a);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--background);
+  color: var(--foreground);
+}
+.comparison-counts [data-diff=insert] { background: var(--diff-insert-background); }
+.comparison-counts [data-diff=delete] { background: var(--diff-delete-background); }
+.comparison-editors { display: flex; direction: ltr; flex: 1; min-height: 0; }
+.comparison-side { height: 100%; min-width: 0; overflow: auto; overscroll-behavior: contain; border-inline-end: .0625rem solid var(--border); }
+.comparison-side[hidden] { display: none; }
+.comparison-workspace[data-layout=side-by-side] .comparison-side::after { content: ''; display: block; block-size: 100%; pointer-events: none; }
+.comparison-side > .app-shell { direction: inherit; }
+.comparison-revision { position: sticky; top: 0; z-index: 41; background: var(--background); padding: .25rem .75rem; border-block-end: .0625rem solid var(--border); font-size: .75rem; text-align: start; }
+.comparison-side .app-shell[data-embedded] > main { padding: 0; }
+.comparison-side .app-shell[data-embedded] :is(.intro, .document-heading, .document-host-controls, .editor-status, .page-footer, .mobile-view-switch, .pane-heading) { display: none; }
+.comparison-resize-handle { flex: none; width: .375rem; background: var(--background); border-inline: .0625rem solid var(--border); }
+.comparison-side .app-shell[data-embedded] .document-panel { border: 0; outline: 0; }
+.comparison-side .app-shell[data-embedded] .workspace { margin: 0; }
+.comparison-side .app-shell[data-embedded] :is(.format-toolbar, .rich-toolbar-container, .editor-search) { top: 1.75rem; }
+.comparison-workspace[data-layout=inline] .comparison-editors { display: none !important; }
+.comparison-workspace[data-layout=inline] :is([data-comparison-panel=original], .comparison-resize-handle) { display: none !important; }
+.comparison-workspace[data-layout=inline] [data-comparison-panel=modified] { flex: 1 !important; width: 100%; }
+.comparison-workspace[data-layout=inline][data-editing=true] .comparison-editors { display: flex !important; flex: 1; overflow: auto; }
+.comparison-workspace[data-layout=inline][data-editing=true] .comparison-side { height: 100%; }
+.comparison-inline { overflow: auto; flex: 1; min-height: 0; direction: inherit; }
+.comparison-part { position: relative; padding-inline-start: 1.5rem; border-inline-start: .1875rem solid transparent; }
+.comparison-part[data-diff=delete] { background: var(--diff-delete-background); border-inline-start-color: var(--diff-delete-border); }
+.comparison-part[data-diff=insert] { background: var(--diff-insert-background); border-inline-start-color: var(--diff-insert-border); }
+.comparison-part-label { position: absolute; inset-inline-start: .25rem; top: .125rem; font-family: monospace; }
+.comparison-source { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: .125rem .75rem; font: inherit; line-height: 1.6; unicode-bidi: plaintext; }
+.comparison-source :is([data-md-token=heading], [data-md-token=link], [data-md-token=table]) { color: var(--source-syntax-heading); }
+.comparison-source :is([data-md-token=marker], [data-md-token=escape], [data-md-token=quote], [data-md-token=strike]) { color: var(--muted-foreground); }
+.comparison-source :is([data-md-token=strong], [data-md-token=emphasis], [data-md-token=math]) { color: var(--source-syntax-emphasis); }
+.comparison-source [data-md-token=code] { color: var(--source-syntax-code); }
+.comparison-source [data-md-token=url] { color: var(--document-link); }
+.comparison-source :is([data-md-token=list], [data-md-token=html]) { color: var(--source-syntax-list); }
+.comparison-inline .editable-preview-content { padding: .25rem .75rem; }
+.comparison-inline :is(.preview-disclaimer, .rich-empty) { display: none; }
+.comparison-inline .rich-document { background: transparent; min-height: 0; }
+.comparison-side .app-shell { min-height: 0; }
+@media (max-width: 40rem) {
+  .comparison-toolbar { gap: .25rem; }
+  .comparison-toolbar [data-slot=toggle-group-item] { padding-inline: .375rem; }
+}
+@media (forced-colors: active) {
+  .comparison-part[data-diff=delete] { border-inline-start: .1875rem dashed CanvasText; }
+  .comparison-part[data-diff=insert] { border-inline-start: .1875rem solid Highlight; }
+}

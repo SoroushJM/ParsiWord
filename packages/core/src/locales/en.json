@@ -138,7 +138,7 @@
   "ذخیرهٔ خودکار در دسترس نیست": "Autosave unavailable",
   "ذخیره شد": "Saved",
   "در حال ذخیره…": "Saving…",
-  "متن تو از دستگاه خارج نمی‌شود. تبدیل آفلاین؛ اینترنت فقط برای دریافت فونت جدید.": "Your text stays on your device. Conversion runs locally; internet is only needed for new fonts.",
+  "متن تو روی دستگاه پردازش می‌شود. فونت‌های جدید و تصاویر آنلاین از اینترنت دریافت می‌شوند.": "Your text is processed on your device. New fonts and online images are fetched from the internet.",
   "ساخته‌شده برای نوشتن، به زبان خودت.": "Built for writing in your own language.",
   "نسخهٔ آزمایشی": "Preview version",
   "حجم فایل برای این نسخه بیش از حد بزرگ است.": "This file is too large for this version.",
@@ -174,5 +174,8 @@
   "تغییرهای هم‌زمان سند تداخل دارند. سند را دوباره باز کن.": "Concurrent document edits conflict. Reopen the document.",
   "تغییر سند پذیرفته نشد. سند را دوباره باز کن.": "The document change was rejected. Reopen the document.",
   "درخواست برنامه انجام نشد. دوباره امتحان کن.": "The app request failed. Try again.",
-  "آماده‌سازی فرمول یا نمودار انجام نشد. دوباره امتحان کن.": "Could not prepare an equation or diagram. Try again."
+  "آماده‌سازی فرمول یا نمودار انجام نشد. دوباره امتحان کن.": "Could not prepare an equation or diagram. Try again.",
+  "تصویر": "Image",
+  "ویرایش تصویر": "Edit image",
+  "تصویر بارگذاری نشد": "Image could not be loaded"
 }

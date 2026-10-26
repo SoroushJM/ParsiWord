@@ -1,5 +1,5 @@
 import { diffArrays, type ArrayChange } from 'diff';
-export type DocumentComparison = { side: 'original' | 'modified'; other: string; staged: boolean };
+export type DocumentComparison = { side: 'original' | 'modified'; other: string; staged: boolean; singleTab?: boolean; originalUri?: string };
 
 export type DiffRange = { start: number; end: number };
 export type DiffLine = { kind: 'insert' | 'delete'; words: DiffRange[] };

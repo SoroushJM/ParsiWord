@@ -7,6 +7,7 @@ import './markdown-source-editor.css';
 import type { DiffLine, DiffSide } from './markdown-diff';
 
 type Props = {
+  id?: string;
   editorRef: RefObject<HTMLTextAreaElement | null>;
   value: string;
   direction: 'auto' | 'ltr';
@@ -31,7 +32,7 @@ const SourceLine = memo(function SourceLine({ line, index, diff }: { line: Markd
 
 // The native textarea remains the input, selection and sizing surface. Color
 // spans are decorative: they never change font metrics or execute source HTML.
-export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorRef, value, direction, onChange, onFocus, onCompositionChange, diff, readOnly = false, searching = false }: Props) {
+export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ id = "markdown-source", editorRef, value, direction, onChange, onFocus, onCompositionChange, diff, readOnly = false, searching = false }: Props) {
   const { t } = useLocale();
   const paint = useRef<HTMLDivElement>(null);
   const surface = useRef<HTMLDivElement>(null);
@@ -101,7 +102,7 @@ export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ editorR
     <div ref={paint} className="markdown-source-highlight" dir={direction} aria-hidden="true">
       {lines?.map((line, index) => <SourceLine key={line.id} line={line} index={index} diff={diff?.lines.get(index)} />)}
     </div>
-    <Textarea id="markdown-source" ref={editorRef} className="markdown-editor rounded-none" aria-label={t("متن Markdown")} dir={direction}
+    <Textarea id={id} ref={editorRef} className="markdown-editor rounded-none" aria-label={t("متن Markdown")} dir={direction}
       value={value} readOnly={readOnly} onFocus={onFocus} onChange={event => onChange(event.target.value)}
       onCompositionStart={() => { if (surface.current) surface.current.dataset.highlighted = 'false'; setComposing(true); onCompositionChange?.(true); }}
       onCompositionEnd={() => { setComposing(false); onCompositionChange?.(false); }} placeholder={t("از اینجا شروع کن…")} spellCheck={false} maxLength={value.length > MAX_MARKDOWN_LENGTH ? undefined : MAX_MARKDOWN_LENGTH} />

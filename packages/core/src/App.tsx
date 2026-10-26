@@ -1,6 +1,7 @@
 import { useLocale } from './locale';
+import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { editorHost, type DocumentComparison } from './host';
+import { editorHost, type DocumentComparison, type EditorHost, type DocumentViewMode } from './host';
 import type { Editor } from '@tiptap/react';
 import { EditorSearch, type SearchRequest } from './EditorSearch';
 import { compareMarkdown } from './markdown-diff';
@@ -10,6 +11,7 @@ import { DocumentSession, type MutationOrigin } from './document-session';
 import { MAX_MARKDOWN_LENGTH } from './document-limits';
 import { Button } from '@/components/ui/button';
 import { EditablePreview } from './EditablePreview';
+import { LocalImageBaseControl, useLocalImageBase } from './LocalImageBase';
 import { MarkdownSourceEditor } from './MarkdownSourceEditor';
 import { WorkspacePanels } from './WorkspacePanels';
 import { BrandHeader, DocumentHeading, ExportSettingsDialog, IntroControls, MobileViewSwitch, SourceToolbar } from './AppControls';
@@ -33,13 +35,24 @@ import '@fontsource/vazirmatn/600.css';
 import '@fontsource/vazirmatn/700.css';
 import '@fontsource-variable/geist';
 
-function App() {
+function App({ host, mode, embedded = false, instanceId, controlsTarget, displaySettings }: { host?: EditorHost; mode?: DocumentViewMode; embedded?: boolean; instanceId?: string; controlsTarget?: HTMLElement | null; displaySettings?: ExportSettings } = {}) {
   const { t, dir, number, locale } = useLocale();
-  const platform = editorHost();
+  const platform = host ?? editorHost();
+  const localImages = useLocalImageBase(platform.kind === 'web');
+  const shell = useRef<HTMLDivElement>(null);
+  const elementId = (id: string) => instanceId ? `${id}-${instanceId}` : id;
   const displayTheme = useDisplayTheme(platform.kind);
   const [initial] = useState(() => platform.initial ?? { markdown: defaultDocument, settings: { ...defaultSettings, title: locale === 'en' ? 'My note' : defaultSettings.title } });
   const [session] = useState(() => new DocumentSession(initial.markdown, initial.settings));
   const { markdown, settings } = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  useLayoutEffect(() => {
+    if (!displaySettings) return;
+    session.update('title', displaySettings.title);
+    session.update('direction', displaySettings.direction);
+    session.update('fontFamily', displaySettings.fontFamily);
+    session.update('fontSize', displaySettings.fontSize);
+    session.update('alignmentOnly', displaySettings.alignmentOnly);
+  }, [displaySettings, session]);
   const [comparison, setComparison] = useState<DocumentComparison | undefined>(platform.comparison);
   const [changeIndex, setChangeIndex] = useState(0);
   const [search, setSearch] = useState<SearchRequest | null>(null);
@@ -48,7 +61,7 @@ function App() {
   const diff = useMemo(() => comparison ? comparison.side === 'original' ? compareMarkdown(markdown, comparison.other) : compareMarkdown(comparison.other, markdown) : undefined, [markdown, comparison]);
   const diffSide = comparison && diff?.[comparison.side];
   const oversized = markdown.length > MAX_MARKDOWN_LENGTH;
-  const viewMode = oversized ? 'source' : platform.kind === 'vscode' ? platform.initial?.viewMode ?? 'combined' : 'combined';
+  const viewMode = oversized ? 'source' : mode ?? (platform.kind === 'vscode' ? platform.initial?.viewMode ?? 'combined' : 'combined');
   const setMarkdown = useCallback((next: string | ((previous: string) => string), origin: Exclude<MutationOrigin, 'host'> = 'source') => {
     if (platform.readOnly) return false;
     const previous = session.getSnapshot().markdown;
@@ -92,7 +105,7 @@ function App() {
         target = blocks.find(block => Number(block.getAttribute('data-source-end')) > offset) ?? blocks[blocks.length - 1];
       } else {
         const line = markdown.slice(0, offset).split('\n').length - 1;
-        target = document.querySelector(`[data-source-line="${line}"]`) ?? editor.current ?? undefined;
+        target = shell.current?.querySelector(`[data-source-line="${line}"]`) ?? editor.current ?? undefined;
       }
       target?.scrollIntoView({ block: 'center', behavior: 'auto' });
     });
@@ -127,6 +140,9 @@ function App() {
     activateEditingView(view);
     selectView(view);
   }, [activateEditingView, selectView, session]);
+  useLayoutEffect(() => {
+    if (mode === 'source' || mode === 'rendered') { selectEditingView(mode === 'source' ? 'edit' : 'preview'); setSearch(null); }
+  }, [mode, selectEditingView]);
   const onSourceFocus = useCallback(() => activateEditingView('edit'), [activateEditingView]);
   const onPreviewFocus = useCallback(() => activateEditingView('preview'), [activateEditingView]);
   useEffect(() => platform.subscribeEditorAction?.(action => {
@@ -308,14 +324,15 @@ function App() {
   const onExportMarkdown = useCallback(() => { void convert('md'); }, [convert]);
   const onWrap = wrap;
 
+  const documentHeading = <DocumentHeading instanceId={instanceId} hostControlled={platform.kind === 'vscode'} title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} onExportPdf={onExportPdf} onExportMarkdown={onExportMarkdown} />;
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/u).length : 0;
 
   return (
-    <div className="app-shell" data-host={platform.kind} data-comparison={comparison?.side} onKeyDownCapture={event => {
+    <div ref={shell} className="app-shell" data-document-title={settings.title} data-embedded={embedded || undefined} data-host={platform.kind} data-comparison={comparison?.side} onKeyDownCapture={event => {
       if (platform.kind !== 'vscode' || event.nativeEvent.isComposing || !(event.ctrlKey || event.metaKey)) return;
       const key = event.key.toLowerCase();
       const command = key === 's' ? 'save' : key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
-      const documentInput = (event.target as HTMLElement).closest('#markdown-source, .rich-document');
+      const documentInput = (event.target as HTMLElement).closest('.markdown-editor, .rich-document');
       if ((command === 'undo' || command === 'redo') && !documentInput && (event.target as HTMLElement).matches('input, textarea, [contenteditable="true"]')) {
         // Let ordinary form controls keep their browser history without the
         // outer VS Code webview forwarding Undo to the Markdown document.
@@ -324,10 +341,10 @@ function App() {
       }
       if (command && (command === 'save' || documentInput)) { event.preventDefault(); event.stopPropagation(); if (!readOnly) platform.command?.(command); }
     }}>
-      <BrandHeader theme={displayTheme} />
+      {!embedded && <BrandHeader theme={displayTheme} />}
 
       <main>
-        {platform.kind === 'vscode' && <nav className="host-actions" aria-label="VS Code">
+        {!embedded && platform.kind === 'vscode' && <nav className="host-actions" aria-label="VS Code">
           <Button variant="outline" onClick={() => { selectEditingView('preview'); platform.command?.('source'); }}>{locale === 'fa' ? 'منبع بومی VS Code' : 'VS Code source'}</Button>
           <Button variant="outline" onClick={() => platform.command?.('preview')}>{locale === 'fa' ? 'پیش‌نمایش VS Code' : 'VS Code preview'}</Button>
           <Button variant="outline" onClick={() => platform.command?.('diff')}>Git diff</Button>
@@ -336,33 +353,35 @@ function App() {
           <Button variant="ghost" disabled={readOnly} onClick={() => platform.command?.('undo')}>Undo</Button>
           <Button variant="ghost" disabled={readOnly} onClick={() => platform.command?.('redo')}>Redo</Button>
         </nav>}
-        {comparison && diff && <DiffToolbar comparison={comparison} diff={diff} index={changeIndex} onNavigate={index => platform.navigateComparison?.(index)} />}
-        {search && <EditorSearch request={search} markdown={markdown} source={editor} rich={richEditor} readOnly={readOnly} onChange={setMarkdown} onClose={() => setSearch(null)} />}
+        {!embedded && comparison && diff && <DiffToolbar comparison={comparison} diff={diff} index={changeIndex} onNavigate={index => platform.navigateComparison?.(index)} />}
+        {search && <EditorSearch request={search} markdown={markdown} source={editor} rich={richEditor} readOnly={readOnly} instanceId={instanceId} onChange={setMarkdown} onClose={() => setSearch(null)} />}
         <IntroControls direction={settings.direction} onDirectionChange={onDirectionChange} />
 
         <div className="workspace">
           <section className="document-panel" aria-label={t("ویرایش سند")}>
-            <DocumentHeading title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} onExportPdf={onExportPdf} onExportMarkdown={onExportMarkdown} />
+            {controlsTarget ? createPortal(documentHeading, controlsTarget) : documentHeading}
+            {platform.kind === 'web' && <LocalImageBaseControl model={localImages} />}
 
             {oversized && <div role="alert" className="p-4 text-sm">{locale === 'en' ? 'The complete recovered document exceeds the editing limit. It is preserved here: save a Markdown copy or delete text to return below 500,000 characters. Rich preview is paused.' : 'متن بازیابی‌شده کامل حفظ شده و از حد ویرایش بیشتر است. یک نسخهٔ Markdown ذخیره کن یا با حذف متن آن را به زیر ۵۰۰ هزار نویسه برسان. پیش‌نمایش موقتاً متوقف است.'}</div>}
             <div className="live-workspace" data-view={mobileView} data-mode={viewMode}>
             <MobileViewSwitch view={mobileView} onSelect={selectEditingView} />
             <WorkspacePanels
+              instanceId={instanceId}
               combined={viewMode === 'combined'}
               direction={dir}
               label={locale === 'en' ? 'Resize editor and preview' : 'تغییر عرض ویرایشگر و پیش‌نمایش'}
               source={
-                <section id="edit-panel" className="editing-pane" aria-labelledby="edit-heading" onPointerDownCapture={onSourceFocus}>
-                  <div className="pane-heading"><h2 id="edit-heading"><Code2 size="1.0625rem" /> {t("ویرایش متن")}</h2><span>Markdown</span></div>
+                <section id={elementId("edit-panel")} className="editing-pane" aria-labelledby={elementId("edit-heading")} onPointerDownCapture={onSourceFocus}>
+                  <div className="pane-heading"><h2 id={elementId("edit-heading")}><Code2 size="1.0625rem" /> {t("ویرایش متن")}</h2><span>Markdown</span></div>
                   <SourceToolbar readOnly={readOnly} canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
-                  <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor="markdown-source" className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} diff={diffSide} readOnly={readOnly} searching={!!search} /></Field></FieldGroup>
+                  <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor={elementId("markdown-source")} className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor id={elementId("markdown-source")} editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} diff={diffSide} readOnly={readOnly} searching={!!search} /></Field></FieldGroup>
                 </section>
               }
               preview={
-                <section id="preview-pane" className="preview-pane" aria-labelledby="preview-heading">
-                  <div className="pane-heading"><h2 id="preview-heading"><BookOpen size="1.0625rem" /> {t("پیش‌نمایش")}</h2></div>
-                  <div ref={preview} id="preview-panel" className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus} onPointerDownCapture={onPreviewFocus}>
-                    {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} diff={diffSide} readOnly={readOnly} onEditor={setRichEditor} />}
+                <section id={elementId("preview-pane")} className="preview-pane" aria-labelledby={elementId("preview-heading")}>
+                  <div className="pane-heading"><h2 id={elementId("preview-heading")}><BookOpen size="1.0625rem" /> {t("پیش‌نمایش")}</h2></div>
+                  <div ref={preview} id={elementId("preview-panel")} className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus} onPointerDownCapture={onPreviewFocus}>
+                    {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} diff={diffSide} readOnly={readOnly} resolveImage={platform.resolveImage ?? localImages.resolveImage} showReadOnlyToolbar={embedded} onEditor={setRichEditor} />}
                   </div>
                 </section>
               }
@@ -373,7 +392,7 @@ function App() {
           </section>
 
         </div>
-        <div className="privacy-note workspace-privacy"><ShieldCheck size="1rem" /><span>{t("متن تو از دستگاه خارج نمی‌شود. تبدیل آفلاین؛ اینترنت فقط برای دریافت فونت جدید.")}</span></div>
+        <div className="privacy-note workspace-privacy"><ShieldCheck size="1rem" /><span>{t("متن تو روی دستگاه پردازش می‌شود. فونت‌های جدید و تصاویر آنلاین از اینترنت دریافت می‌شوند.")}</span></div>
         <section className="product-explanation" aria-labelledby="why-parsiword">
           <h2 id="why-parsiword">{t('چرا پارسی‌ورد؟')}</h2>
           <p>{t('دیدن و ویرایش Markdown راست‌به‌چپ نباید سخت باشد. پارسی‌ورد منبع Markdown و پیش‌نمایش قابل ویرایش را کنار هم می‌گذارد تا متن فارسی و عربی، واژه‌های انگلیسی، عددها و فرمول‌ها را در جهت مناسب بخوانی و ویرایش کنی.')}</p>
@@ -398,9 +417,9 @@ function App() {
         e.target.value = '';
       }} />
 
-      <Toaster dir={dir} position="bottom-center" theme={displayTheme.resolvedTheme} closeButton
+      {(!embedded || instanceId === 'modified') && <Toaster dir={dir} position="bottom-center" theme={displayTheme.resolvedTheme} closeButton
         offset={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0rem))', left: '1.5rem', right: '1.5rem' }}
-        mobileOffset={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0rem))', left: '1rem', right: '1rem' }} />
+        mobileOffset={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0rem))', left: '1rem', right: '1rem' }} />}
       <ExportSettingsDialog settings={settings} sheet={sheet} onSheetChange={setSheet} onUpdate={update} />
     </div>
   );

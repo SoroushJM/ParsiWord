@@ -223,7 +223,7 @@ body.vscode-shell {
   padding: 0 0.75rem 0.75rem;
 }
 .vscode-shell .rich-toolbar-container {
-  margin: 0 -0.75rem 0.75rem;
+  margin: 0 -0.75rem 1.25rem;
 }
 .vscode-shell .format-toolbar,
 .vscode-shell .rich-format-toolbar {
@@ -235,8 +235,12 @@ body.vscode-shell {
   scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
 }
 .vscode-shell .rich-format-toolbar {
-  padding-bottom: 0.125rem;
+  padding-bottom: 0;
   scroll-padding-inline: 0.125rem;
+}
+.vscode-shell .editing-pane .markdown-editor {
+  border: 0;
+  padding: 1.25rem 0.75rem;
 }
 .vscode-shell .rich-format-toolbar :is(button, [tabindex]) {
   scroll-margin-inline: 0.125rem;

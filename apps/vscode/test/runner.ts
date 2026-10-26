@@ -86,6 +86,8 @@ export async function run() {
     const errors: string[]=[];
     page.on('pageerror',error=>errors.push(String(error)));
     await expect(frame.locator('#markdown-source')).toHaveValue(initial);
+    await expect(frame.locator('.document-name, .document-tools, #document-title')).toHaveCount(0);
+    await expect(frame.locator('.document-host-controls')).toBeVisible();
     await expect(frame.locator('.katex').first()).toBeVisible();
     await expect(frame.locator('.mermaid-diagram svg').first()).toBeVisible({timeout:30000});
     await expect(frame.locator('.rich-document table')).toBeVisible();
@@ -316,10 +318,10 @@ export async function run() {
     await until(()=>document.getText(),text=>text.includes('DISK_CHANGE'),'external file change');
     for(const f of frames) await expect(f.locator('#markdown-source')).toHaveValue(multi+'\nDISK_CHANGE\n');
     record('Two custom views stay synchronized with each other and external disk changes');
-    const modeTitle = await frames[0].locator('#document-title').inputValue();
+    const modeTitle = await frames[0].locator('.app-shell').getAttribute('data-document-title');
     const findMode = async (mode: string) => until(async () => {
       for (const p of browser!.contexts().flatMap(c => c.pages())) for (const f of p.frames()) {
-        try { if (await f.locator(`.live-workspace[data-mode="${mode}"]`).count() && await f.locator('#document-title').inputValue() === modeTitle) return f; }
+        try { if (await f.locator(`.live-workspace[data-mode="${mode}"]`).count() && await f.locator('.app-shell').getAttribute('data-document-title') === modeTitle) return f; }
         catch { /* A replaced webview frame may detach during reopening. */ }
       }
       return undefined;
@@ -447,7 +449,7 @@ export async function run() {
     await vscode.commands.executeCommand('parsiword.open',windowsUri);
     const windowsDocument=await vscode.workspace.openTextDocument(windowsUri);
     const windowsFrame=await until(async()=>{
-      for(const p of browser!.contexts().flatMap(c=>c.pages())) for(const f of p.frames()) if(await f.locator('#document-title').count() && await f.locator('#document-title').inputValue()==='crlf') return f;
+      for(const p of browser!.contexts().flatMap(c=>c.pages())) for(const f of p.frames()) if(await f.locator('.app-shell').count() && await f.locator('.app-shell').getAttribute('data-document-title')==='crlf') return f;
       return undefined;
     },value=>!!value,'CRLF webview') as Frame;
     let changedRange=Infinity;
@@ -466,7 +468,7 @@ export async function run() {
       await vscode.commands.executeCommand('vscode.openWith', captureUri, mode === 'combined' ? 'parsiword.markdown' : `parsiword.markdown.${mode}`, { viewColumn: vscode.ViewColumn.One });
       const captureFrame = await until(async () => {
         for (const p of browser!.contexts().flatMap(c => c.pages())) for (const f of p.frames()) {
-          try { if (await f.locator('#document-title').count() && await f.locator('#document-title').inputValue() === `capture-${mode}`) return f; } catch { /* Detached old view. */ }
+          try { if (await f.locator('.app-shell').count() && await f.locator('.app-shell').getAttribute('data-document-title') === `capture-${mode}`) return f; } catch { /* Detached old view. */ }
         }
         return undefined;
       }, value => !!value, `narrow ${mode} frame`) as Frame;

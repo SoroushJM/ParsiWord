@@ -1,5 +1,5 @@
 .editor-search { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; flex-wrap: wrap; gap: .25rem; margin: 0; padding: .375rem .75rem; border-bottom: .0625rem solid var(--border); background: var(--card); color: var(--foreground); }
 .editor-search-fields { flex: 1 1 12rem; max-width: 28rem; gap: .25rem; }
 .editor-search .search-count { min-width: 3rem; font: inherit; }
-::highlight(parsiword-find) { background-color: var(--vscode-editor-findMatchHighlightBackground, #ea5c0055); }
-::highlight(parsiword-find-current) { background-color: var(--vscode-editor-findMatchBackground, #ffd90088); text-decoration: underline; }
+::highlight(parsiword-find), ::highlight(parsiword-find-original), ::highlight(parsiword-find-modified) { background-color: var(--vscode-editor-findMatchHighlightBackground, #ea5c0055); }
+::highlight(parsiword-find-current), ::highlight(parsiword-find-original-current), ::highlight(parsiword-find-modified-current) { background-color: var(--vscode-editor-findMatchBackground, #ffd90088); text-decoration: underline; }

@@ -2,15 +2,17 @@ import '@parsiword/core/styles.css';
 import './vscode.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { EditorApp as App, LocaleProvider, translate } from '@parsiword/core/ui';
-import { configureHost, DocumentSync, isHostMessage, ParsiWordError, errorMessage, type DocumentSnapshot, type DocumentComparison, type EditorAction } from '@parsiword/core/host';
+import { EditorApp as App, ComparisonWorkspace, LocaleProvider, translate } from '@parsiword/core/ui';
+import { configureHost, DocumentSync, isHostMessage, ParsiWordError, errorMessage, type DocumentSnapshot, type DocumentComparison, type EditorAction, type EditorHost, isRecord } from '@parsiword/core/host';
 import { toast } from 'sonner';
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void; getState(): unknown; setState(value: unknown): void };
 const api = acquireVsCodeApi();
 // A retained webview can receive real input before panel.active reflects its
 // editor group. Route document actions to the view that actually has focus.
-const reportFocus = () => api.postMessage({ type: 'focus', focused: true });
+let comparisonSide: 'original' | 'modified' = 'modified';
+const reportFocus = () => api.postMessage({ type: 'focus', focused: true, comparisonSide });
+const focusSide = (side: 'original' | 'modified') => { comparisonSide = side; reportFocus(); };
 document.addEventListener('focusin', reportFocus);
 document.addEventListener('pointerdown', reportFocus);
 window.addEventListener('focus', reportFocus);
@@ -44,6 +46,7 @@ window.addEventListener('message', event => {
     if (operation) { clearTimeout(operation.timer); pending.delete(message.id); if (message.error || message.errorCode) operation.reject(new ParsiWordError(message.errorCode ?? 'HOST_REQUEST_FAILED')); else operation.resolve(message.result); }
   } else if (message.type === 'comparison') {
     comparison = message.comparison ?? undefined;
+    if (comparison?.singleTab && comparison.originalUri) api.setState({ comparisonOriginal: comparison.originalUri });
     for (const listener of comparisonListeners) listener(comparison);
   } else if (message.type === 'comparisonNavigate') {
     for (const listener of navigationListeners) listener(message.index);
@@ -60,7 +63,7 @@ window.addEventListener('message', event => {
       text => { void request('recover', { text }).catch(showError); },
       pending => api.postMessage({ type: 'pending', pending }),
       edit => api.postMessage({ type: 'draft', edit }));
-    configureHost({
+    const host: EditorHost = {
       kind: 'vscode', version: message.version, locale: message.locale,
       readOnly: message.readOnly, comparison,
       subscribeComparison: listener => { comparisonListeners.add(listener); listener(comparison); return () => { comparisonListeners.delete(listener); }; },
@@ -74,6 +77,7 @@ window.addEventListener('message', event => {
       subscribeDocument: listener => { listeners.add(listener); return () => { listeners.delete(listener); }; },
       settingsChanged: settings => api.postMessage({ type: 'settings', settings }),
       localeChanged: locale => api.postMessage({ type: 'locale', locale }),
+      resolveImage: source => request<string | null>('imageUri', { source }),
       fontResource: async url => Uint8Array.from(await request<number[]>('font', { url })),
       saveBytes: async (bytes, filename, format) => {
         await sync.drain();
@@ -82,8 +86,12 @@ window.addEventListener('message', event => {
       },
       openMarkdown: () => request<null>('open', {}),
       command: name => { void sync.drain().then(() => request('command', { name })).catch(showError); },
-    });
-    root.render(<React.StrictMode><LocaleProvider><App /></LocaleProvider></React.StrictMode>);
+    };
+    configureHost(host);
+    const originalImage = (source: string) => request<string | null>('imageUri', { source, baseUri: comparison?.originalUri });
+    if (comparison?.singleTab && comparison.originalUri) api.setState({ comparisonOriginal: comparison.originalUri });
+    root.render(<React.StrictMode><LocaleProvider>{comparison?.singleTab ? <ComparisonWorkspace host={host} resolveOriginalImage={originalImage} onFocusSide={focusSide} /> : <App />}</LocaleProvider></React.StrictMode>);
   }
 });
-api.postMessage({ type: 'ready' });
+const state = api.getState();
+api.postMessage({ type: 'ready', restoreComparison: isRecord(state) && typeof state.comparisonOriginal === 'string' ? state.comparisonOriginal : undefined });

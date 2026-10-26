@@ -52,4 +52,62 @@ describe('runtime host protocol', () => {
       expect(isHostMessage({ type: 'comparisonNavigate', index })).toBe(false);
     }
   });
+  it('bounds comparison restoration metadata before accepting a ready message', () => {
+    for (const restoreComparison of [undefined, 'git:/workspace/readme.md?ref=HEAD', 'a'.repeat(8192)]) {
+      expect(isClientMessage({ type: 'ready', restoreComparison })).toBe(true);
+    }
+    for (const restoreComparison of [null, true, 1, [], {}, 'a'.repeat(8193)]) {
+      expect(isClientMessage({ type: 'ready', restoreComparison })).toBe(false);
+    }
+  });
+  it('accepts only an explicit original or modified comparison focus side', () => {
+    for (const focused of [true, false]) {
+      for (const comparisonSide of [undefined, 'original', 'modified']) {
+        expect(isClientMessage({ type: 'focus', focused, comparisonSide })).toBe(true);
+      }
+    }
+    for (const comparisonSide of [null, true, 0, 'both', ['modified'], {}]) {
+      expect(isClientMessage({ type: 'focus', focused: true, comparisonSide })).toBe(false);
+    }
+    expect(isClientMessage({ type: 'focus', comparisonSide: 'modified' })).toBe(false);
+  });
+  it('validates single-tab comparison metadata consistently for init and updates', () => {
+    const init = { type: 'init', snapshot: { text: '', version: 1, dirty: false }, client: 'client', settings: defaultSettings, assetRoot: '', locale: 'en', version: '1', viewMode: 'source' };
+    const comparison = { side: 'modified', other: 'original source', staged: false };
+    const accepts = (metadata: unknown) => [
+      isHostMessage({ type: 'comparison', comparison: metadata }),
+      isHostMessage({ ...init, comparison: metadata }),
+    ];
+    for (const singleTab of [undefined, true, false]) {
+      for (const originalUri of [undefined, 'git:/workspace/readme.md?ref=HEAD', 'a'.repeat(8192)]) {
+        expect(accepts({ ...comparison, singleTab, originalUri })).toEqual([true, true]);
+      }
+    }
+    for (const singleTab of [null, 0, 'true', [], {}]) {
+      expect(accepts({ ...comparison, singleTab })).toEqual([false, false]);
+    }
+    for (const originalUri of [null, 0, true, [], {}, 'a'.repeat(8193)]) {
+      expect(accepts({ ...comparison, singleTab: true, originalUri })).toEqual([false, false]);
+    }
+  });
+  it('bounds image URI requests and optional document bases without coercing values', () => {
+    const request = { type: 'request', id: 1, method: 'imageUri' };
+    for (const source of ['./assets/a%20b.svg', 'https://example.com/a.png', 'a'.repeat(8192)]) {
+      for (const baseUri of [undefined, 'file:///workspace/readme.md', 'a'.repeat(8192)]) {
+        expect(isClientMessage({ ...request, args: { source, baseUri } })).toBe(true);
+      }
+    }
+    for (const source of [undefined, null, 0, true, [], {}, 'a'.repeat(8193)]) {
+      expect(isClientMessage({ ...request, args: { source } })).toBe(false);
+    }
+    for (const baseUri of [null, 0, true, [], {}, 'a'.repeat(8193)]) {
+      expect(isClientMessage({ ...request, args: { source: './image.svg', baseUri } })).toBe(false);
+    }
+    for (const args of [undefined, null, [], './image.svg']) {
+      expect(isClientMessage({ ...request, args })).toBe(false);
+    }
+    for (const id of [-1, 0.5, '1', Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(isClientMessage({ ...request, id, args: { source: './image.svg' } })).toBe(false);
+    }
+  });
 });

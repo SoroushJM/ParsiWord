@@ -13,6 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import './editable-preview.css';
 import type { DiffSide } from './markdown-diff';
+import { browserImageUrl, markdownImage } from './markdown-image';
+import './markdown-image.css';
+import { ImageResolverContext } from './image-resource';
 
 type Props = {
   markdown: string; direction: Direction; fontFamily: string; fontSize: number;
@@ -20,11 +23,14 @@ type Props = {
   onCompositionChange?: (composing: boolean) => void;
   onRejected?: (code: 'FILE_TOO_LARGE') => void;
   readOnly?: boolean;
+  showReadOnlyToolbar?: boolean;
+  inheritedDefinitions?: ReadonlyMap<string, { url?: string; title?: string | null }>;
   diff?: DiffSide;
   onEditor?: (editor: Editor | null) => void;
+  resolveImage?: (source: string) => Promise<string | null>;
 };
 
-export const EditablePreview = memo(function EditablePreview({ markdown, direction, fontFamily, fontSize, onChange, onStartWriting, onCompositionChange, onRejected, readOnly = false, diff, onEditor }: Props) {
+export const EditablePreview = memo(function EditablePreview({ markdown, direction, fontFamily, fontSize, onChange, onStartWriting, onCompositionChange, onRejected, readOnly = false, diff, onEditor, resolveImage, inheritedDefinitions, showReadOnlyToolbar = false }: Props) {
   const { t } = useLocale();
   const onChangeRef = useRef(onChange);
   const applied = useRef(markdown);
@@ -38,14 +44,16 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
   const compositionChange = useRef(onCompositionChange);
   const rejected = useRef(onRejected);
   const cachedEditor = useRef<Editor | null>(null);
+  const imageResolver = useRef(resolveImage);
   const externalPositions = useRef<SourcePosition[] | null>(null);
-  const [initial] = useState(() => parseRichMarkdown(markdown));
+  const [initial] = useState(() => parseRichMarkdown(markdown, inheritedDefinitions));
   onChangeRef.current = onChange;
   compositionChange.current = onCompositionChange;
   rejected.current = onRejected;
   directionRef.current = direction;
   diffRef.current = diff;
   latestMarkdown.current = markdown;
+  imageResolver.current = resolveImage;
   const documentSnapshot = useCallback((doc: ProseMirrorNode) => ledger.current.snapshot(doc), []);
   const sourcePositions = useCallback((doc: ProseMirrorNode) => externalPositions.current || (cachedEditor.current ? documentSnapshot(doc).positions : initial.positions), [documentSnapshot, initial.positions]);
   const preserveSources = useCallback((editor: Editor, value: string, parsed: ReturnType<typeof parseRichMarkdown>) => {
@@ -64,7 +72,10 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
       StarterKit.configure({ codeBlock: false, listItem: false, underline: false, trailingNode: false,
         link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'preview-link' } } }),
       RichCodeBlock, RichListItem, TableKit.configure({ table: { resizable: false, renderWrapper: true } }),
-      MathInline, MathBlock, RawInline, RawBlock, ReferenceMetadata.configure({ refresh: state => ledger.current.refreshReferences(state) }),
+      MathInline, MathBlock, RawInline.configure({
+        resolveImage: source => imageResolver.current ? imageResolver.current(source) : Promise.resolve(browserImageUrl(source)),
+        describeImage: source => markdownImage(source, cachedEditor.current ? ledger.current.snapshot(cachedEditor.current.state.doc).definitions : initial.definitions),
+      }), RawBlock, ReferenceMetadata.configure({ refresh: state => ledger.current.refreshReferences(state) }),
       MarkdownLengthLimit.configure({ snapshot: (transaction, state) => {
         if (cachedEditor.current === null) ledger.current.reset(transaction.before, source.current, initial.positions, initial.definitions);
         return { previous: ledger.current.snapshot(transaction.before).text, next: ledger.current.prepare(transaction, state).text };
@@ -138,10 +149,10 @@ export const EditablePreview = memo(function EditablePreview({ markdown, directi
   useEffect(() => { onEditor?.(editor); return () => onEditor?.(null); }, [editor, onEditor]);
 
   return <>
-    {editor && !readOnly && <RichToolbar editor={editor} />}
-    <article className="editable-preview-content" data-empty={!markdown.trim()}><EditorContent editor={editor} />
+    {editor && (!readOnly || showReadOnlyToolbar) && <RichToolbar editor={editor} readOnly={readOnly} />}
+    <ImageResolverContext.Provider value={resolveImage}><article className="editable-preview-content" data-empty={!markdown.trim()}><EditorContent editor={editor} />
       {!markdown.trim() && <Empty className="rich-empty"><EmptyHeader><EmptyTitle>{t("هنوز چیزی ننوشته‌ای.")}</EmptyTitle><EmptyDescription>{t(readOnly ? 'برای نوشتن، ویرایش Markdown را باز کن.' : 'اینجا بنویس یا از ویرایش Markdown شروع کن.')}</EmptyDescription></EmptyHeader><EmptyContent><Button type="button" variant="outline" onClick={onStartWriting}>{t("شروع نوشتن")}</Button></EmptyContent></Empty>}
-    </article>
+    </article></ImageResolverContext.Provider>
     <p className="preview-disclaimer">{t(readOnly ? 'پیش‌نمایش متن است؛ صفحه‌بندی و نمایش نهایی را در Word بررسی کن.' : 'اینجا مستقیماً ویرایش کن؛ تغییرات در Markdown ذخیره می‌شوند. صفحه‌بندی نهایی را در Word بررسی کن.')}</p>
   </>;
 });

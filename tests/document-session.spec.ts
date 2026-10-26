@@ -2,6 +2,13 @@ import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import JSZip from 'jszip';
 
+async function pauseDisplayTimers(page: import('@playwright/test').Page) {
+  // The installed clock advances with wall time until paused. Freezing at the
+  // caller's current time races the protocol round trip and can target the past.
+  await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-01-01T01:00:00Z'));
+}
+
 test('switching editing panes flushes their display delays before the next edit', async ({ page }) => {
   await page.goto('/en');
   const source = page.locator('#markdown-source');
@@ -9,8 +16,7 @@ test('switching editing panes flushes their display delays before the next edit'
   await expect(page.locator('.rich-document p').first()).toHaveText('Previous paragraph');
   // Stop only display timers: the canonical input and React commits still run
   // in their native event tasks. Neither 200ms nor 120ms can conceal a race.
-  await page.clock.install();
-  await page.clock.pauseAt(new Date());
+  await pauseDisplayTimers(page);
   await source.fill('# Synchronization\n\nCurrent paragraph');
   await page.locator('[data-mobile-view="preview"]').click();
   const paragraph = page.locator('.rich-document p').first();
@@ -35,7 +41,7 @@ test('desktop rich toolbar receives current source before its same-click transac
   const source = page.locator('#markdown-source');
   await source.fill('# Synchronization\n\nPrevious paragraph');
   await expect(page.locator('.rich-document p').first()).toHaveText('Previous paragraph');
-  await page.clock.install(); await page.clock.pauseAt(new Date());
+  await pauseDisplayTimers(page);
   await source.fill('# Synchronization\n\nCurrent paragraph');
   // Pointer capture synchronizes before the toolbar's click focuses the rich
   // editor and creates its transaction in that same event handler.

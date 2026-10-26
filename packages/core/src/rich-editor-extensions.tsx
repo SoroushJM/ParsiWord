@@ -1,5 +1,5 @@
 import { useLocale } from './locale';
-import { useId, useMemo, useState } from 'react';
+import { useContext, useEffect, useId, useMemo, useState } from 'react';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import { CodeBlock } from '@tiptap/extension-code-block';
 import { ListItem } from '@tiptap/extension-list';
@@ -14,6 +14,8 @@ import { paragraphDirection, type Direction } from './document-model';
 import { canApplyMarkdown } from './document-limits';
 import { rawMarkdownLabel, type SourcePosition } from './rich-editor-markdown';
 import { changedBlock, type DiffSide } from './markdown-diff';
+import { browserImageUrl, markdownImage, type MarkdownImage } from './markdown-image';
+import { ImageResolverContext } from './image-resource';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -137,16 +139,49 @@ export const MathBlock = Node.create({
   addNodeView() { return ReactNodeViewRenderer(MathNodeView); },
 });
 
-function RawNodeView({ node, updateAttributes, editor }: NodeViewProps) {
+type ImageOptions = {
+  resolveImage?: (source: string) => Promise<string | null>;
+  describeImage: (source: string) => MarkdownImage | null;
+};
+
+function MarkdownImageView({ image, resolveImage }: { image: MarkdownImage; resolveImage?: ImageOptions['resolveImage'] }) {
+  const { t } = useLocale();
+  const contextResolver = useContext(ImageResolverContext);
+  const resolver = contextResolver ?? resolveImage;
+  const [state, setState] = useState<{ source: string; url: string | null; failed?: boolean }>({ source: '', url: null });
+  useEffect(() => {
+    let active = true;
+    const resolved = resolver ? Promise.resolve().then(() => resolver(image.url)) : Promise.resolve(browserImageUrl(image.url));
+    void resolved.then(url => { if (active) setState({ source: image.url, url, failed: !url }); })
+      .catch(() => { if (active) setState({ source: image.url, url: null, failed: true }); });
+    return () => { active = false; };
+  }, [image.url, resolver]);
+  if (state.source === image.url && state.url && !state.failed) return <img src={state.url} alt={image.alt} title={image.title || undefined} referrerPolicy="no-referrer" onLoad={event => {
+    const element = event.currentTarget;
+    // A viewBox-only SVG has an aspect ratio but no intrinsic CSS width. A
+    // percentage max-width inside the inline atom otherwise resolves to zero.
+    // Use the decoded image's natural width, bounded by the surrounding panel.
+    const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    element.style.inlineSize = `${element.naturalWidth / rootSize}rem`;
+  }} onError={() => setState(previous => ({ ...previous, failed: true }))} />;
+  const fallback = image.alt || t('تصویر');
+  return <span className="rich-image-fallback" role="img" aria-label={fallback}>{fallback}{state.source === image.url && state.failed && <span> — {t('تصویر بارگذاری نشد')}</span>}</span>;
+}
+
+function RawNodeView({ node, updateAttributes, editor, extension }: NodeViewProps) {
   const { t, dir } = useLocale();
   const [editing, setEditing] = useState(false);
   const sourceId = useId();
   const inline = node.type.name === 'rawInline';
-  const label = useMemo(() => rawMarkdownLabel(String(node.attrs.source || '')), [node.attrs.source]);
-  if (!editor.isEditable) return <NodeViewWrapper as={inline ? 'span' : 'div'} contentEditable={false}>{label}</NodeViewWrapper>;
-  return <NodeViewWrapper as={inline ? 'span' : 'div'} className={inline ? 'rich-raw-inline' : 'rich-raw-block'} contentEditable={false}>
+  const source = String(node.attrs.source || '');
+  const imageOptions = extension.options as ImageOptions;
+  const image = useMemo(() => inline ? imageOptions.describeImage(source) : null, [source, inline, node.attrs.image, imageOptions]);
+  const label = useMemo(() => rawMarkdownLabel(source), [source]);
+  const content = image ? <MarkdownImageView image={image} resolveImage={imageOptions.resolveImage} /> : label;
+  if (!editor.isEditable) return <NodeViewWrapper as={inline ? 'span' : 'div'} className={image ? 'rich-markdown-image' : undefined} contentEditable={false}>{content}</NodeViewWrapper>;
+  return <NodeViewWrapper as={inline ? 'span' : 'div'} className={image ? 'rich-raw-inline rich-markdown-image' : inline ? 'rich-raw-inline' : 'rich-raw-block'} contentEditable={false}>
     <Dialog open={editing} onOpenChange={setEditing}>
-      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="h-auto max-w-full whitespace-normal" aria-label={t("ویرایش نشانه‌گذاری")}>{label}</Button></DialogTrigger>
+      <DialogTrigger asChild><Button type="button" variant="ghost" size="sm" className="h-auto max-w-full whitespace-normal" aria-label={t(image ? 'ویرایش تصویر' : 'ویرایش نشانه‌گذاری')}>{content}</Button></DialogTrigger>
       <DialogContent dir={dir}>
         <DialogHeader><DialogTitle>{t("ویرایش نشانه‌گذاری")}</DialogTitle><DialogDescription>{t("نشانه‌گذاری این بخش در Markdown حفظ می‌شود.")}</DialogDescription></DialogHeader>
         <FieldGroup>
@@ -157,9 +192,10 @@ function RawNodeView({ node, updateAttributes, editor }: NodeViewProps) {
     </Dialog>
   </NodeViewWrapper>;
 }
-export const RawInline = Node.create({
+export const RawInline = Node.create<ImageOptions>({
   name: 'rawInline', group: 'inline', inline: true, atom: true,
-  addAttributes: () => ({ source: { default: '' }, label: { default: '' } }),
+  addOptions: () => ({ describeImage: source => markdownImage(source) }),
+  addAttributes: () => ({ source: { default: '' }, label: { default: '' }, image: { default: null, rendered: false } }),
   parseHTML: () => [{ tag: 'span[data-raw-markdown]' }],
   renderHTML: ({ HTMLAttributes }) => ['span', { 'data-raw-markdown': '', ...HTMLAttributes }],
   addNodeView() { return ReactNodeViewRenderer(RawNodeView); },

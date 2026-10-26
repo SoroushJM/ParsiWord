@@ -36,6 +36,11 @@
   color: HighlightText;
   background: Highlight;
 }
+@media (min-width: 56.25rem) {
+  .markdown-source-editor .markdown-editor {
+    border: 0;
+  }
+}
 /* Keep each logical line in its own inline formatting context. A single
    document-wide inline flow made textarea autosizing reflow all source lines
    on every key, even when React changed just one line. Preserve literal LF

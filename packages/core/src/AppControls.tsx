@@ -74,17 +74,18 @@ export const IntroControls = memo(function IntroControls({ direction, onDirectio
         </section>);
 });
 
-export const DocumentHeading = memo(function DocumentHeading({ title, busy, canExport, onTitleChange, onOpen, onNew, onSettings, onExport, onExportPdf, onExportMarkdown }: { title: string; busy: boolean; canExport: boolean; onTitleChange: (title: string) => void; onOpen: () => void; onNew: () => void; onSettings: () => void; onExport: () => void; onExportPdf: () => void; onExportMarkdown: () => void }) {
+export const DocumentHeading = memo(function DocumentHeading({ instanceId, hostControlled = false, title, busy, canExport, onTitleChange, onOpen, onNew, onSettings, onExport, onExportPdf, onExportMarkdown }: { instanceId?: string; hostControlled?: boolean; title: string; busy: boolean; canExport: boolean; onTitleChange: (title: string) => void; onOpen: () => void; onNew: () => void; onSettings: () => void; onExport: () => void; onExportPdf: () => void; onExportMarkdown: () => void }) {
+  const titleId = instanceId ? `document-title-${instanceId}` : 'document-title';
   const { t, dir } = useLocale();
-  return (<div className="document-heading">
-              <div className="document-name"><span className="file-icon"><FileText size="1.1875rem" /></span><FieldGroup className="gap-1"><Field className="gap-1"><FieldLabel htmlFor="document-title" className="sr-only">{t("نام سند")}</FieldLabel><Input id="document-title" value={title} onChange={e => onTitleChange(e.target.value)} maxLength={90} placeholder={t("نام سند")} /><span className="text-muted-foreground text-xs">{t("پیش‌نویس شخصی")}</span></Field></FieldGroup></div>
+  return (<div className={hostControlled ? 'document-host-controls flex items-center gap-1' : 'document-heading'}>
+              {!hostControlled && <><div className="document-name"><span className="file-icon"><FileText size="1.1875rem" /></span><FieldGroup className="gap-1"><Field className="gap-1"><FieldLabel htmlFor={titleId} className="sr-only">{t("نام سند")}</FieldLabel><Input id={titleId} value={title} onChange={e => onTitleChange(e.target.value)} maxLength={90} placeholder={t("نام سند")} /><span className="text-muted-foreground text-xs">{t("پیش‌نویس شخصی")}</span></Field></FieldGroup></div>
               <div className="document-tools">
                 <div className="document-actions"><Button variant="ghost" size="icon-lg" className="document-icon-control" title={t("باز کردن فایل")} aria-label={t("باز کردن فایل")} onClick={onOpen}><FolderOpen data-icon="inline-start" /></Button></div>
                 <Button variant="ghost" size="icon-lg" className="document-icon-control" title={t("یادداشت تازه")} aria-label={t("یادداشت تازه")} onClick={onNew}><FilePlus2 data-icon="inline-start" /></Button>
-              </div>
-              <div className="document-export">
+              </div></>}
+              <div className={hostControlled ? 'flex items-center gap-1' : 'document-export'}>
                 <Button variant="outline" size="icon" className="document-icon-control" aria-label={t("تنظیمات خروجی")} onClick={onSettings}><Settings2 data-icon="inline-start" /></Button>
-                <Button size="lg" className="document-export-button min-w-0 flex-1" onClick={onExport} disabled={busy || !canExport}>{busy ? <Spinner aria-label={t("در حال ساخت سند")} data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? t("در حال ساخت سند…") : t("ذخیرهٔ فایل Word")}</span></Button>
+                <Button size="lg" className={hostControlled ? 'document-export-button min-w-0' : 'document-export-button min-w-0 flex-1'} onClick={onExport} disabled={busy || !canExport}>{busy ? <Spinner aria-label={t("در حال ساخت سند")} data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? t("در حال ساخت سند…") : t("ذخیرهٔ فایل Word")}</span></Button>
                 <DropdownMenu dir={dir}>
                   <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="document-icon-control" aria-label={t("قالب‌های دیگر خروجی")} title={t("قالب‌های دیگر خروجی")} disabled={busy}><Files data-icon="inline-start" /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end" sideOffset={0} className="min-w-48">

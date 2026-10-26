@@ -1,0 +1,20 @@
+.rich-document .rich-markdown-image {
+  display: inline-block;
+  max-inline-size: 100%;
+  vertical-align: middle;
+  white-space: normal;
+}
+.rich-document .rich-markdown-image > button {
+  block-size: auto;
+  max-inline-size: 100%;
+  padding: 0.25rem;
+}
+.rich-document .rich-markdown-image img {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+.rich-document .rich-image-fallback {
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+}

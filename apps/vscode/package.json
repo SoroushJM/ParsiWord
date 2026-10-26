@@ -2,7 +2,7 @@
   "name": "parsiword-vscode",
   "displayName": "ParsiWord — RTL Markdown Editor",
   "description": "View and edit Persian, Arabic and mixed RTL/LTR Markdown, with editable preview, LaTeX, Mermaid and Word/PDF export.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "SoroushJM",
   "engines": {
     "vscode": "^1.100.0"
@@ -37,7 +37,8 @@
     "onCustomEditor:parsiword.markdown",
     "onCustomEditor:parsiword.markdown.source",
     "onCustomEditor:parsiword.markdown.rendered",
-    "onLanguage:markdown"
+    "onLanguage:markdown",
+    "onCustomEditor:parsiword.markdown.diff"
   ],
   "extensionDependencies": [
     "vscode.markdown-language-features"
@@ -62,13 +63,31 @@
       {
         "viewType": "parsiword.markdown.source",
         "displayName": "ParsiWord Markdown Source",
-        "selector": [{ "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}" }],
+        "selector": [
+          {
+            "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}"
+          }
+        ],
         "priority": "option"
       },
       {
         "viewType": "parsiword.markdown.rendered",
         "displayName": "ParsiWord Rendered Result",
-        "selector": [{ "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}" }],
+        "selector": [
+          {
+            "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}"
+          }
+        ],
+        "priority": "option"
+      },
+      {
+        "viewType": "parsiword.markdown.diff",
+        "displayName": "ParsiWord Git Comparison",
+        "selector": [
+          {
+            "filenamePattern": "*.{md,markdown,mdown,mkd,mkdn,mdwn,markdn,mdtxt,mdtext}"
+          }
+        ],
         "priority": "option"
       }
     ],
@@ -98,18 +117,56 @@
         "title": "ParsiWord: Git Diff (Staged)",
         "icon": "$(git-compare)"
       },
-      { "command": "parsiword.find", "title": "ParsiWord: Find in Document" },
-      { "command": "parsiword.replace", "title": "ParsiWord: Replace in Document" },
-      { "command": "parsiword.goToLine", "title": "ParsiWord: Go to Markdown Line" },
-      { "command": "parsiword.findNext", "title": "ParsiWord: Find Next" },
-      { "command": "parsiword.findPrevious", "title": "ParsiWord: Find Previous" }
+      {
+        "command": "parsiword.find",
+        "title": "ParsiWord: Find in Document"
+      },
+      {
+        "command": "parsiword.replace",
+        "title": "ParsiWord: Replace in Document"
+      },
+      {
+        "command": "parsiword.goToLine",
+        "title": "ParsiWord: Go to Markdown Line"
+      },
+      {
+        "command": "parsiword.findNext",
+        "title": "ParsiWord: Find Next"
+      },
+      {
+        "command": "parsiword.findPrevious",
+        "title": "ParsiWord: Find Previous"
+      }
     ],
     "keybindings": [
-      { "command": "parsiword.find", "key": "ctrl+f", "mac": "cmd+f", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" },
-      { "command": "parsiword.replace", "key": "ctrl+h", "mac": "alt+cmd+f", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" },
-      { "command": "parsiword.goToLine", "key": "ctrl+g", "mac": "ctrl+g", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" },
-      { "command": "parsiword.findNext", "key": "f3", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" },
-      { "command": "parsiword.findPrevious", "key": "shift+f3", "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/" }
+      {
+        "command": "parsiword.find",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/"
+      },
+      {
+        "command": "parsiword.replace",
+        "key": "ctrl+h",
+        "mac": "alt+cmd+f",
+        "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/"
+      },
+      {
+        "command": "parsiword.goToLine",
+        "key": "ctrl+g",
+        "mac": "ctrl+g",
+        "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/"
+      },
+      {
+        "command": "parsiword.findNext",
+        "key": "f3",
+        "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/"
+      },
+      {
+        "command": "parsiword.findPrevious",
+        "key": "shift+f3",
+        "when": "!inputFocus && !inQuickOpen && activeCustomEditorId =~ /^parsiword\\.markdown/"
+      }
     ],
     "menus": {
       "editor/title": [

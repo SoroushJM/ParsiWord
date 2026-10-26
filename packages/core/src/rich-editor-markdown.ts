@@ -59,7 +59,11 @@ export function parseRichMarkdown(source: string, inherited?: ReadonlyMap<string
           const definition = definitions.get(node.identifier || '');
           return definition ? inline(node.children, [...marks, { type: 'link', attrs: { href: definition.url, title: definition.title, reference: node.identifier } }]) : text(raw(node), marks);
         }
-        case 'image': return [{ type: 'rawInline', attrs: { source: raw(node), label: `تصویر: ${node.alt || 'بدون عنوان'} (خروجی تصویر پشتیبانی نمی‌شود)` }, marks }];
+        case 'image': case 'imageReference': {
+          const definition = node.type === 'image' ? node : definitions.get(node.identifier || '');
+          return [{ type: 'rawInline', attrs: { source: raw(node), label: `تصویر: ${node.alt || 'بدون عنوان'} (خروجی تصویر پشتیبانی نمی‌شود)`,
+            image: definition?.url ? { url: definition.url, alt: node.alt || '', title: definition.title || null } : null }, marks }];
+        }
         default: return [{ type: 'rawInline', attrs: { source: raw(node), label: raw(node) }, marks }];
       }
     });

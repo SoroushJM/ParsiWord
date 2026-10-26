@@ -13,6 +13,8 @@ export interface EditorHost {
   kind: 'web' | 'native' | 'vscode';
   version: string;
   asset?: (path: string) => string;
+  /** Resolve a Markdown image URL relative to this document's environment. */
+  resolveImage?: (source: string) => Promise<string | null>;
   nativeFonts?: boolean;
   fontResource?: (url: string) => Promise<Uint8Array>;
   saveBytes?: (bytes: Uint8Array, filename: string, format: SaveFormat) => Promise<boolean>;

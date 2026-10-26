@@ -1,0 +1,7 @@
+.local-image-base { margin-block: .5rem; padding: .5rem .75rem; border: .0625rem solid var(--border); border-radius: .5rem; background: var(--background); }
+.local-image-base > summary { cursor: pointer; font-size: .8125rem; color: var(--muted-foreground); }
+.local-image-base[open] > summary { margin-block-end: .75rem; }
+.local-image-base [data-slot=field-group] { gap: .75rem; }
+.local-image-base-actions > [role=status] { font-size: .8125rem; overflow-wrap: anywhere; }
+.local-image-base input:not([type=file]) { max-width: 28rem; }
+.local-image-base-file { display: none; }

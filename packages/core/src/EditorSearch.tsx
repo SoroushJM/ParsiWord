@@ -11,11 +11,14 @@ import { useLocale } from './locale';
 import './editor-search.css';
 
 export type SearchRequest = { action: EditorAction; sequence: number; rich: boolean };
-export function EditorSearch({ request, markdown, source, rich, readOnly, onChange, onClose }: {
-  request: SearchRequest; markdown: string; source: RefObject<HTMLTextAreaElement | null>; rich: Editor | null;
+export function EditorSearch({ request, markdown, source, rich, readOnly, onChange, onClose, instanceId }: {
+  instanceId?: string; request: SearchRequest; markdown: string; source: RefObject<HTMLTextAreaElement | null>; rich: Editor | null;
   readOnly: boolean; onChange: (text: string) => boolean; onClose: () => void;
 }) {
   const { locale, number } = useLocale();
+  const highlightName = instanceId ? `parsiword-find-${instanceId}` : 'parsiword-find';
+  const elementId = (id: string) => instanceId ? `${id}-${instanceId}` : id;
+  const sourceRoot = () => source.current?.closest('.app-shell') ?? document;
   const fa = locale === 'fa', isRich = request.rich && !!rich;
   const input = useRef<HTMLInputElement>(null);
   const anchor = useRef(isRich ? rich!.state.selection.from : source.current?.selectionStart ?? 0);
@@ -44,7 +47,7 @@ export function EditorSearch({ request, markdown, source, rich, readOnly, onChan
     } else if (source.current) {
       source.current.setSelectionRange(match.from, match.to);
       const line = source.current.value.slice(0, match.from).split('\n').length - 1;
-      document.querySelector(`[data-source-line="${line}"]`)?.scrollIntoView({ block: 'center' });
+      sourceRoot().querySelector(`[data-source-line="${line}"]`)?.scrollIntoView({ block: 'center' });
       if (focus) source.current.focus();
     }
   };
@@ -60,16 +63,16 @@ export function EditorSearch({ request, markdown, source, rich, readOnly, onChan
     if (!('Highlight' in window) || !CSS.highlights) return;
     const visibleMatches = matches.slice(0, 2000);
     if (current && activeIndex >= 2000) visibleMatches.push(current);
-    const root = document.querySelector('.markdown-source-highlight');
+    const root = sourceRoot().querySelector('.markdown-source-highlight');
     const ranges = isRich ? visibleMatches.flatMap(match => {
       try {
         const from = rich!.view.domAtPos(match.from), to = rich!.view.domAtPos(match.to), range = document.createRange(); range.setStart(from.node, from.offset); range.setEnd(to.node, to.offset); return [range];
       } catch { return []; }
     }) : root ? sourceRanges(root, visibleMatches) : [];
-    CSS.highlights.set('parsiword-find', new Highlight(...ranges));
+    CSS.highlights.set(highlightName, new Highlight(...ranges));
     const active = ranges[Math.min(activeIndex, 2000)];
-    CSS.highlights.set('parsiword-find-current', new Highlight(...(active ? [active] : [])));
-    return () => { CSS.highlights.delete('parsiword-find'); CSS.highlights.delete('parsiword-find-current'); };
+    CSS.highlights.set(`${highlightName}-current`, new Highlight(...(active ? [active] : [])));
+    return () => { CSS.highlights.delete(highlightName); CSS.highlights.delete(`${highlightName}-current`); };
   }, [matches, index, isRich, rich]);
   const close = () => { if (current) select(current, true); else if (isRich) rich!.commands.focus(); else source.current?.focus(); onClose(); };
   const replace = (all: boolean) => {
@@ -92,7 +95,7 @@ export function EditorSearch({ request, markdown, source, rich, readOnly, onChan
       const blocks = [...rich!.view.dom.querySelectorAll<HTMLElement>('[data-source-start]')];
       const block = blocks.find(element => Number(element.dataset.sourceEnd) > offset) ?? blocks[blocks.length - 1];
       if (block) { const pos = rich!.view.posAtDOM(block, 0); rich!.commands.setTextSelection(Math.min(pos, rich!.state.doc.content.size)); rich!.commands.focus(); block.scrollIntoView({ block: 'center' }); }
-    } else { source.current?.focus(); source.current?.setSelectionRange(offset, offset); document.querySelector(`[data-source-line="${markdown.slice(0, offset).split('\n').length - 1}"]`)?.scrollIntoView({ block: 'center' }); }
+    } else { source.current?.focus(); source.current?.setSelectionRange(offset, offset); sourceRoot().querySelector(`[data-source-line="${markdown.slice(0, offset).split('\n').length - 1}"]`)?.scrollIntoView({ block: 'center' }); }
     onClose();
   };
   return <section className="editor-search" role="search" aria-label={fa ? 'جست‌وجوی سند' : 'Document search'} onKeyDown={event => {
@@ -100,8 +103,8 @@ export function EditorSearch({ request, markdown, source, rich, readOnly, onChan
     if (event.key === 'Enter') { event.preventDefault(); if (goTo) jump(); else navigate(event.shiftKey ? -1 : 1); }
   }}>
     <FieldGroup className="editor-search-fields">
-      <Field orientation="horizontal"><FieldLabel className="sr-only" htmlFor="editor-find-query">{goTo ? fa ? 'خط:ستون' : 'Line:column' : fa ? 'جست‌وجو' : 'Find'}</FieldLabel><Input ref={input} id="editor-find-query" value={query} onChange={event => setQuery(event.target.value)} placeholder={goTo ? fa ? 'خط:ستون Markdown' : 'Markdown line:column' : fa ? 'جست‌وجو در سند' : 'Find in document'} /></Field>
-      {mode === 'replace' && <Field orientation="horizontal"><FieldLabel className="sr-only" htmlFor="editor-replace-text">{fa ? 'جایگزین' : 'Replace'}</FieldLabel><Input id="editor-replace-text" value={replacement} onChange={event => setReplacement(event.target.value)} disabled={readOnly} placeholder={fa ? 'جایگزین با' : 'Replace with'} /></Field>}
+      <Field orientation="horizontal"><FieldLabel className="sr-only" htmlFor={elementId("editor-find-query")}>{goTo ? fa ? 'خط:ستون' : 'Line:column' : fa ? 'جست‌وجو' : 'Find'}</FieldLabel><Input ref={input} id={elementId("editor-find-query")} value={query} onChange={event => setQuery(event.target.value)} placeholder={goTo ? fa ? 'خط:ستون Markdown' : 'Markdown line:column' : fa ? 'جست‌وجو در سند' : 'Find in document'} /></Field>
+      {mode === 'replace' && <Field orientation="horizontal"><FieldLabel className="sr-only" htmlFor={elementId("editor-replace-text")}>{fa ? 'جایگزین' : 'Replace'}</FieldLabel><Input id={elementId("editor-replace-text")} value={replacement} onChange={event => setReplacement(event.target.value)} disabled={readOnly} placeholder={fa ? 'جایگزین با' : 'Replace with'} /></Field>}
     </FieldGroup>
     {goTo ? <Button variant="outline" onClick={jump}>{fa ? 'رفتن' : 'Go'}</Button> : <>
       <Toggle size="sm" pressed={matchCase} onPressedChange={setMatchCase} aria-label={fa ? 'تطبیق بزرگی حروف' : 'Match case'}><CaseSensitive data-icon="inline-start" /></Toggle>

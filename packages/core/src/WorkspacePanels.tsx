@@ -9,7 +9,8 @@ function subscribeDesktop(onChange: () => void) {
 }
 const isDesktop = () => matchMedia(desktopQuery).matches;
 
-export function WorkspacePanels({ source, preview, combined, direction, label }: {
+export function WorkspacePanels({ source, preview, combined, direction, label, instanceId }: {
+  instanceId?: string;
   source: ReactNode;
   preview: ReactNode;
   combined: boolean;
@@ -23,7 +24,7 @@ export function WorkspacePanels({ source, preview, combined, direction, label }:
   // rich editor's history survive switching between mobile and desktop.
   return (
     <ResizablePanelGroup
-      id="document-panes"
+      id={instanceId ? `document-panes-${instanceId}` : "document-panes"}
       className="workspace-panels"
       orientation="horizontal"
       dir={direction}
@@ -31,11 +32,11 @@ export function WorkspacePanels({ source, preview, combined, direction, label }:
       data-resizable={resizable}
       style={{ overflow: 'visible' }}
     >
-      <ResizablePanel id="source-pane-size" defaultSize="50%" minSize="20rem" style={{ overflow: 'visible' }}>
+      <ResizablePanel id={instanceId ? `source-pane-size-${instanceId}` : "source-pane-size"} defaultSize="50%" minSize="20rem" style={{ overflow: 'visible' }}>
         {source}
       </ResizablePanel>
       <ResizableHandle withHandle className="workspace-resize-handle" aria-label={label} title={label} />
-      <ResizablePanel id="preview-pane-size" defaultSize="50%" minSize="20rem" style={{ overflow: 'visible' }}>
+      <ResizablePanel id={instanceId ? `preview-pane-size-${instanceId}` : "preview-pane-size"} defaultSize="50%" minSize="20rem" style={{ overflow: 'visible' }}>
         {preview}
       </ResizablePanel>
     </ResizablePanelGroup>
