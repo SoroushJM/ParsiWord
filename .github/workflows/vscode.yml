@@ -91,6 +91,7 @@ jobs:
           path: |
             artifacts/*.vsix
             artifacts/vscode-test/results.json
+            artifacts/vscode-test/git-diff-failure.json
             artifacts/vscode-test/*.png
             artifacts/vscode-test/local-images-*.docx
             artifacts/vscode-test/local-images-*.pdf

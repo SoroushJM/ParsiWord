@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { expect, type Browser, type Frame } from '@playwright/test';
 
 type Diagnostics = { getOpenDocuments(): { uri: string; ready: boolean; visible: boolean; comparison?: string }[] };
@@ -311,7 +311,8 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
       await expect(frame.getByRole('dialog')).toHaveCount(0);
       await expect(input).toBeFocused();
       await input.press('Control+End');
-      await vscode.env.clipboard.writeText('INLINEEDIT'); await input.press('Control+v');
+      // Insert one native input transaction; clipboard behavior has its own suite.
+      await page.keyboard.insertText('INLINEEDIT');
       await until(() => doc.getText(), text => text.includes('INLINEEDIT'), `inline ${view} modified version edit`);
       await input.press('Control+z'); await until(() => doc.getText(), text => text === next, `inline ${view} native Undo`);
       await control(frame, 'Review changes').click();
@@ -380,7 +381,7 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     await expect(frame.getByRole('dialog')).toHaveCount(0);
     await expect(rich).toBeFocused();
     await rich.press('Control+End');
-    await vscode.env.clipboard.writeText('RICHDIFF'); await rich.press('Control+v');
+    await page.keyboard.insertText('RICHDIFF');
     await until(() => doc.getText(), text => text.includes('RICHDIFF'), 'rendered edit in unified comparison');
     await expect(original.locator('.rich-document')).not.toContainText('RICHDIFF');
     await rich.press('Control+z'); await until(() => doc.getText(), text => text === next, 'rendered comparison native undo');
@@ -404,7 +405,7 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     await expect(modified.locator('.markdown-editor')).toHaveValue(next);
     const reloadedSource = modified.locator('.markdown-editor');
     await reloadedSource.click(); await reloadedSource.press('Control+End');
-    await vscode.env.clipboard.writeText('AFTERRELOAD'); await reloadedSource.press('Control+v');
+    await page.keyboard.insertText('AFTERRELOAD');
     await until(() => doc.getText(), text => text.includes('AFTERRELOAD'), 'reloaded comparison native edit');
     await reloadedSource.press('Control+z'); await until(() => doc.getText(), text => text === next, 'reloaded comparison native Undo');
     record('Reloading the comparison webview restores both revision identities, one tab and the modified native history');
@@ -546,6 +547,14 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     await expect.poll(() => ordinaryImage.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
     record('Ordinary VS Code Markdown preview loads the same relative image after closing the comparison');
   } catch (error) {
+    await writeFile(join(artifact, 'git-diff-failure.json'), JSON.stringify({
+      error: String(error), sessions: api.getOpenDocuments(),
+      tabs: vscode.window.tabGroups.all.map(group => ({ column: group.viewColumn, tabs: group.tabs.map(tab => ({
+        label: tab.label, active: tab.isActive, input: tab.input instanceof vscode.TabInputCustom ? { type: 'custom', viewType: tab.input.viewType, uri: tab.input.uri.toString() }
+          : tab.input instanceof vscode.TabInputTextDiff ? { type: 'text-diff', original: tab.input.original.toString(), modified: tab.input.modified.toString() }
+            : { type: tab.input?.constructor.name },
+      })) })),
+    }, null, 2));
     await page.screenshot({ path: join(artifact, 'git-diff-failure.png') }).catch(() => {});
     throw error;
   } finally {

@@ -14,6 +14,7 @@ extension version 0.1.5. [Usage and engine limits](../tikz.md) and
 | Complete Chrome UI suite, after the resource relay fix | 72 passed, including all 7 real TikZ cases | `artifacts/tikz-browser-final.log` |
 | Production assets under a Pages subfolder | Persian and English routes passed with remote requests blocked; 11 local assets and 17 SVG paths per drawing, no horizontal overflow | `artifacts/tikz-production.json` |
 | Actual VS Code 1.143.1 webview | Real TeX/WASM rendering, native document Undo/Redo, Word and PDF exports passed | `artifacts/tikz-vscode-bridge.log`, `artifacts/vscode-test/results.json` |
+| Complete focused Git comparison suite after lifecycle fix | All 31 checks passed in actual VS Code, including source/rendered, both layouts, Undo/Redo, synchronized scrolling, reload and images | `artifacts/tikz-diff-lifecycle-final.log` |
 | VSIX build and installation | 0.1.5 installed with the VS Code CLI; all 655 packaged files match (ignoring VS Code's added package metadata); all 400 runtime manifest hashes match | `artifacts/tikz-install-verification.json` |
 | Visual inspection | Actual VS Code screenshot, mobile browser screenshot, extracted Word drawing and rendered PDF inspected | `artifacts/vscode-test/tikz-preview.png`, `artifacts/tikz-mobile-shape-final.png`, `artifacts/tikz-review/` |
 
@@ -55,6 +56,18 @@ were added. See `artifacts/shortcuts-clipboard-investigation.log` and
 The focused native TikZ suite subsequently passed in that same VS Code build.
 Do not describe the full native suite as locally passed. The workflow also runs
 the complete native suite on a fresh Windows GitHub runner, after browser checks.
+
+The first [GitHub run](https://github.com/SoroushJM/ParsiWord/actions/runs/40370133888)
+passed the complete Chromium suite, all seven WebKit TikZ cases and all native
+source/rendered shortcut checks, including real clipboard operations. It then
+exposed an automatic Git-comparison promotion race: overlapping refreshes could
+close the replacement comparison tab, leaving the workbench empty. Promotion is
+now deduplicated by modified URI and column, existing comparison tabs are not
+promoted, and the legacy tab's current input is rechecked before closing it.
+All 31 focused comparison checks passed locally after this fix. Comparison edit
+tests use real one-transaction browser text insertion; the dedicated clipboard
+shortcut tests retain their original strict OS assertions. Failure artifacts
+now include tab/session diagnostics. A subsequent full CI run validates the fix.
 
 ## Platform and publication limits
 

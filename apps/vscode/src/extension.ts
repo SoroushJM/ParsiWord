@@ -16,6 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
   const queues = new Map<string, Promise<void>>();
   const comparisonRequests = new Map<string, vscode.Uri>();
   const promotingTabs = new Set<vscode.Tab>();
+  const promotingComparisons = new Set<string>();
+  const isComparisonTab = (tab: vscode.Tab) => tab.input instanceof vscode.TabInputCustom && tab.input.viewType === comparisonViewType;
   let active: Session | undefined;
   let focused: Session | undefined;
   const current = (uri?: vscode.Uri) => uri ?? (active?.panel.active ? active.document.uri : vscode.window.activeTextEditor?.document.uri) ?? active?.document.uri;
@@ -116,8 +118,12 @@ export function activate(context: vscode.ExtensionContext) {
   // moving the tab moves the comparison as a whole. No proposed diff API or
   // hidden native editor is needed to route Undo to the real document.
   const openComparison = async (original: vscode.Uri, modified: vscode.Uri, column = vscode.window.tabGroups.activeTabGroup.viewColumn, legacyTab?: vscode.Tab) => {
-    if (legacyTab && promotingTabs.has(legacyTab)) return;
-    if (legacyTab) promotingTabs.add(legacyTab);
+    // Opening a replacement can activate its tab before the legacy panes are
+    // disposed. Deduplicate that automatic promotion by destination as well
+    // as Tab identity; an explicit user command must still run normally.
+    const promotionKey = JSON.stringify([modified.toString(), column]);
+    if (legacyTab && (isComparisonTab(legacyTab) || promotingTabs.has(legacyTab) || promotingComparisons.has(promotionKey))) return;
+    if (legacyTab) { promotingTabs.add(legacyTab); promotingComparisons.add(promotionKey); }
     try {
       const originalDocument = await vscode.workspace.openTextDocument(original);
       comparisonRequests.set(modified.toString(), original);
@@ -127,10 +133,12 @@ export function activate(context: vscode.ExtensionContext) {
         session.original = originalDocument;
         configureResources(session);
       }
-      if (legacyTab && vscode.window.tabGroups.all.some(group => group.tabs.includes(legacyTab))) await vscode.window.tabGroups.close(legacyTab, true);
+      // VS Code can retain a Tab object while replacing its input. Never
+      // close the new comparison if it inherited the legacy tab's identity.
+      if (legacyTab && !isComparisonTab(legacyTab) && vscode.window.tabGroups.all.some(group => group.tabs.includes(legacyTab))) await vscode.window.tabGroups.close(legacyTab, true);
     } finally {
       if (comparisonRequests.get(modified.toString()) === original) comparisonRequests.delete(modified.toString());
-      if (legacyTab) promotingTabs.delete(legacyTab);
+      if (legacyTab) { promotingTabs.delete(legacyTab); promotingComparisons.delete(promotionKey); }
       scheduleComparisons();
     }
   };
@@ -143,7 +151,7 @@ export function activate(context: vscode.ExtensionContext) {
           && other.document.uri.scheme === 'git' && (modified.document.uri.scheme === 'file' || (gitRef(other.document.uri) === 'HEAD' && gitRef(modified.document.uri) === '~')));
       if (original) {
         const tab = vscode.window.tabGroups.all.find(group => group.viewColumn === modified.panel.viewColumn)?.activeTab;
-        if (tab && !promotingTabs.has(tab)) {
+        if (tab && !isComparisonTab(tab) && !promotingTabs.has(tab)) {
           void openComparison(original.document.uri, modified.document.uri, modified.panel.viewColumn, tab).catch(error => { void vscode.window.showErrorMessage(`ParsiWord: ${String(error)}`); });
           return;
         }
