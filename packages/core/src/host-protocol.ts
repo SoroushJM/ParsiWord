@@ -12,7 +12,7 @@ export function isDocumentComparison(value: unknown): value is DocumentCompariso
     && (value.originalUri === undefined || typeof value.originalUri === 'string' && value.originalUri.length <= 8192);
 }
 export const isViewMode = (value: unknown): value is DocumentViewMode => typeof value === 'string' && ['combined', 'source', 'rendered'].includes(value);
-export const isHostCommand = (value: unknown): value is HostCommand => typeof value === 'string' && ['source', 'preview', 'diff', 'stagedDiff', 'save', 'undo', 'redo', 'new'].includes(value);
+export const isHostCommand = (value: unknown): value is HostCommand => typeof value === 'string' && ['source', 'preview', 'diff', 'stagedDiff', 'nativeDiff', 'nativeStagedDiff', 'save', 'undo', 'redo', 'new'].includes(value);
 export function isSyncSnapshot(value: unknown): value is SyncSnapshot {
   return isRecord(value) && typeof value.text === 'string' && integer(value.version) && typeof value.dirty === 'boolean'
     && (value.eol === undefined || value.eol === '\n' || value.eol === '\r\n')

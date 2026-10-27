@@ -12,6 +12,8 @@ The combined view is the default for Markdown files. **VS Code source** opens th
 
 All views share one TextDocument, native saving/backups and Undo/Redo. Ctrl+S, Ctrl+Z, Ctrl+Shift+Z and Ctrl+Y in ParsiWord are routed to that document. A retained editor keeps its selection and scroll; reopening as a different editor type starts a new view position.
 
+To review with the built-in editor, choose **VS Code Diff** / **مقایسه در VS Code** in the ParsiWord comparison toolbar. It opens the exact two revisions currently being compared, including a staged comparison, in VS Code's native text diff. The Command Palette also offers **ParsiWord: Open Git Diff in VS Code (Working Tree)** and **ParsiWord: Open Git Diff in VS Code (Staged)**. This is a per-request option; ParsiWord remains the default Markdown editor and comparison.
+
 Common keyboard shortcuts work inside ParsiWord's source and rendered editors (default Windows/Linux bindings):
 
 | Shortcut | Action |

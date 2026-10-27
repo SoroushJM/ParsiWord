@@ -183,6 +183,40 @@ test('real TeX output survives Word and PDF export with labels, editable text an
   await expect(page.locator('#markdown-source')).toHaveValue(markdown);
 });
 
+test('full XePersian exam documents explain the engine mismatch before loading TeX and recover to a drawing', async ({ page }) => {
+  test.setTimeout(90_000);
+  const exam = String.raw`\documentclass[12pt,a4paper]{article}
+\usepackage{tikz}
+\usepackage{xepersian}
+\settextfont{Vazirmatn}
+\begin{document}
+سؤال: طول وتر را به دست آورید.
+\begin{tikzpicture}\draw (0,0) circle (2);\end{tikzpicture}
+\end{document}`;
+  const markdown = fence(exam), requests: string[] = [];
+  page.on('request', request => { if (request.url().includes('/tikz/')) requests.push(request.url()); });
+  await page.addInitScript(markdown => localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown, settings: {} })), markdown);
+  for (const language of ['fa', 'en']) {
+    await page.goto(language === 'fa' ? '/' : '/en/');
+    await page.locator('[data-mobile-view="preview"]').click();
+    await expect(page.getByRole('alert').filter({ hasText: 'XeLaTeX' }).first()).toBeVisible();
+    await expect(page.locator('#markdown-source')).toHaveValue(markdown);
+    expect(requests).toEqual([]);
+    await page.locator('[data-mobile-view="edit"]').click();
+    const article = fence(String.raw`\documentclass{article}\begin{document}Question\end{document}`);
+    await page.locator('#markdown-source').fill(article);
+    await page.locator('[data-mobile-view="preview"]').click();
+    await expect(page.getByRole('alert').filter({ hasText: 'article' }).first()).toBeVisible();
+    await expect(page.locator('#markdown-source')).toHaveValue(article);
+    expect(requests).toEqual([]);
+  }
+  await page.locator('[data-mobile-view="edit"]').click();
+  await page.locator('#markdown-source').fill(fence(body));
+  await page.locator('[data-mobile-view="preview"]').click();
+  await expect(page.locator('.tikz-diagram svg')).toHaveCount(1, { timeout: 45_000 });
+  await expect(page.locator('#markdown-source')).toHaveValue(fence(body));
+});
+
 test('invalid TikZ fails explicitly and a corrected drawing renders without reloading the editor', async ({ page }) => {
   test.setTimeout(90_000);
   await page.addInitScript(() => localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown: '```tikz\n\\thisCommandDoesNotExist\n```', settings: {} })));

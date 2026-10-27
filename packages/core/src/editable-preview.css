@@ -1,8 +1,9 @@
 .rich-document {
-  min-height: 220px;
+  min-height: 13.75rem;
   outline: none;
   white-space: pre-wrap;
   caret-color: var(--document-caret);
+  text-align: start;
 }
 .rich-document:focus {
   outline: none;
@@ -39,7 +40,7 @@
 }
 .rich-document th,
 .rich-document td {
-  min-width: 60px;
+  min-width: 3.75rem;
   vertical-align: top;
   position: relative;
 }
@@ -61,18 +62,18 @@
   display: block;
 }
 .rich-document .ProseMirror-selectednode {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline: 0.125rem solid var(--ring);
+  outline-offset: 0.125rem;
 }
 .rich-source-details {
   margin: 0.4em 0 1em;
-  border: 1px solid var(--border);
-  border-radius: 7px;
+  border: 0.0625rem solid var(--border);
+  border-radius: 0.4375rem;
   overflow: hidden;
 }
 .rich-source-details summary {
-  padding: 6px 10px;
-  font-size: 11px;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.6875rem;
   color: var(--muted-foreground);
   direction: rtl;
   cursor: pointer;
@@ -105,9 +106,9 @@
   text-align: start;
 }
 .editable-preview-content[data-empty="true"] .rich-document {
-  min-height: 100px;
+  min-height: 6.25rem;
 }
 .rich-empty {
-  min-height: 80px;
+  min-height: 5rem;
   margin-top: 0;
 }

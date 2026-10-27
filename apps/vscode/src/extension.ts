@@ -233,7 +233,16 @@ export function activate(context: vscode.ExtensionContext) {
     const resource = current(uri);
     if (resource) await vscode.commands.executeCommand('markdown.showPreviewToSide', resource);
   };
-  const gitDiff = async (staged: boolean, uri?: vscode.Uri) => {
+  const nativeComparison = async (original: vscode.Uri, modified: vscode.Uri, column = vscode.window.tabGroups.activeTabGroup.viewColumn) => {
+    // Explicitly bypass Markdown's custom diff association for this request.
+    // Keep the actual revision URIs and native TextDocument (including dirty text).
+    const document = await vscode.workspace.openTextDocument(modified);
+    await preserveAll(document);
+    // VS Code's command converter accepts a boolean override (as used by its
+    // Git extension), then resolves it to the built-in text editor association.
+    await vscode.commands.executeCommand('vscode.diff', original, modified, `${basename(modified.path)} · VS Code Diff`, { viewColumn: column, preview: false, override: false });
+  };
+  const gitDiff = async (staged: boolean, uri?: vscode.Uri, native = false) => {
     let resource = current(uri);
     if (resource?.scheme === 'git') {
       try { resource = vscode.Uri.file(JSON.parse(resource.query).path); } catch { /* Invalid revision URI is rejected below. */ }
@@ -251,13 +260,19 @@ export function activate(context: vscode.ExtensionContext) {
     // virtual content and paths with spaces without invoking a shell.
     const left = api.toGitUri(original, staged ? 'HEAD' : '~');
     const right = staged ? api.toGitUri(resource, '~') : resource;
-    await openComparison(left, right);
+    if (native) await nativeComparison(left, right);
+    else await openComparison(left, right);
     scheduleComparisons();
   };
   const command = async (name: string, document: vscode.TextDocument, panel: vscode.WebviewPanel) => {
     if (name === 'source') return source(document.uri);
     if (name === 'preview') return nativePreview(document.uri);
     if (name === 'diff' || name === 'stagedDiff') return gitDiff(name === 'stagedDiff', document.uri);
+    if (name === 'nativeDiff' || name === 'nativeStagedDiff') {
+      const session = [...sessions].find(item => item.panel === panel);
+      if (session?.original) return nativeComparison(session.original.uri, document.uri, panel.viewColumn);
+      return gitDiff(name === 'nativeStagedDiff', document.uri, true);
+    }
     if (name === 'new') { const next = await vscode.workspace.openTextDocument({ language: 'markdown', content: '' }); return open(next.uri); }
     if (focused?.panel === panel && focused.original && focused.comparisonSide === 'original') return;
     if (readOnly(document)) return;
@@ -449,6 +464,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('parsiword.nativePreview', nativePreview),
     vscode.commands.registerCommand('parsiword.gitDiff', (uri?: vscode.Uri) => gitDiff(false, uri)),
     vscode.commands.registerCommand('parsiword.stagedDiff', (uri?: vscode.Uri) => gitDiff(true, uri)),
+    vscode.commands.registerCommand('parsiword.nativeDiff', (uri?: vscode.Uri) => gitDiff(false, uri, true)),
+    vscode.commands.registerCommand('parsiword.nativeStagedDiff', (uri?: vscode.Uri) => gitDiff(true, uri, true)),
     ...(['find', 'replace', 'goToLine', 'findNext', 'findPrevious'] as const).map(action => vscode.commands.registerCommand(`parsiword.${action}`, () => {
       const target = focused && sessions.has(focused) && focused.panel.visible && focused.ready ? focused : [...sessions].find(session => session.panel.active && session.ready);
       if (target) void target.panel.webview.postMessage({ type: 'editorAction', action });

@@ -100,8 +100,17 @@ const leadingPreamble = new Set(['usepackage', 'RequirePackage', 'usetikzlibrary
  * TeX execution/security limits remain the engine's responsibility. */
 export function prepareTikzSource(input: string): { source: string; options: TikzSourceOptions } {
   const commands = scan(input);
+  // Diagnose an engine mismatch before downloading a runtime that cannot run
+  // this document. scan skips comments, macro arguments and verbatim examples.
+  const unicodePackages = new Set(['xepersian', 'fontspec', 'unicode-math', 'polyglossia']);
+  const unicodeFontCommands = new Set(['settextfont', 'setlatintextfont', 'setmainfont', 'setsansfont', 'setmonofont']);
+  if (commands.some(command => unicodeFontCommands.has(command.name) ||
+    ['usepackage', 'RequirePackage'].includes(command.name) && command.arguments[0]?.replace(/%[^\r\n]*/g, '').split(',').some(name => unicodePackages.has(name.trim())))) {
+    throw new ParsiWordError('TIKZ_ENGINE_UNSUPPORTED');
+  }
   const classes = commands.filter(command => command.name === 'documentclass');
-  if (classes.length > 1 || classes.some(command => command.arguments.length !== 1 || command.arguments[0].trim() !== 'standalone')) return invalid();
+  if (classes.length > 1 || classes.some(command => command.arguments.length !== 1)) return invalid();
+  if (classes.some(command => command.arguments[0].trim() !== 'standalone')) throw new ParsiWordError('TIKZ_DOCUMENT_UNSUPPORTED');
   const starts = commands.filter(command => command.name === 'begin' && command.arguments[0]?.trim() === 'document');
   const ends = commands.filter(command => command.name === 'end' && command.arguments[0]?.trim() === 'document');
   let body: string, preamble: string;

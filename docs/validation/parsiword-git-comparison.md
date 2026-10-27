@@ -1,5 +1,10 @@
 # ParsiWord Git comparison validation
 
+Extension **0.1.6** adds optional built-in VS Code comparison and fixes RTL
+numbered-list indentation in ordinary and comparison previews. Its local
+checks and native-release workflow verification are recorded separately in
+[rtl-lists-and-native-releases.md](rtl-lists-and-native-releases.md).
+
 Date: 2026-10-26. Target extension: **0.1.2**. Test host: Windows, installed VS Code **1.143.1**; browser checks use installed Chrome.
 
 Follow-up: **0.1.3** adds real Word/PDF Markdown image embedding and fixes the CI rendered-Undo test's accidental click on an image. Its fresh full-suite evidence is recorded in [image-exports.md](image-exports.md); the 0.1.2 results below are retained as historical evidence.

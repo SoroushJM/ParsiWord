@@ -22,14 +22,44 @@ bundle targets both Chrome 87 and Safari 16.4. iOS deployment is 16.4 or newer.
   development team and signing provisioning; run `pnpm run ios:build` after
   configuring those outside the repository.
 
-The two manually triggered GitHub Actions workflows build Linux/Windows and the
-iOS simulator on their respective native runners. These files are prepared;
-they have not been executed from this local-only Git repository. No remote
-repository was created or pushed. Linux does not provide the iOS Tauri command
-or Xcode: no iOS binary has been built or runtime-tested here.
+The manually triggered desktop GitHub Actions workflow builds the selected
+platform on its native runner. Android ARM64 has a separate workflow; the iOS
+simulator workflow remains separate and does not publish an installable device
+package. Linux does not provide the iOS Tauri command or Xcode: no iOS binary
+has been built or runtime-tested here.
 
 The Android ABI restriction applies only to Android. A normal x86_64 Linux or
 Windows desktop build is a separate product and does not add x86 to the APK.
+
+## GitHub Actions native releases
+
+Run **Build and publish desktop apps** from the repository's Actions page. Its
+`platform` choice defaults to **Windows**, which builds the NSIS `.exe`
+installer. **Linux** builds `.deb` and `.AppImage`; **macOS** builds `.dmg`.
+Choose **all** only when all three native builds are wanted. Pushes and pull
+requests do not start these builds, and this publishing workflow does not run
+the unit/browser suites; those checks stay local to conserve Actions usage.
+
+Every successful platform build uploads its installer directly to a public
+GitHub **prerelease**, as well as retaining the workflow artifact for 14 days.
+Android's stable signed build uses the same release publisher. The release tag
+is `native-preview-v<package version>-<full source commit SHA>`, so independently
+requested Android and desktop builds from the exact same commit appear in one
+release. A different commit gets a different release even if `package.json`
+still has the same version. Build metadata records the source commit and file
+SHA-256 hashes; the publisher verifies that the tag resolves to that commit and
+fails if the expected installer types are absent. It does not reuse the old
+version-only releases or silently move their tags.
+
+The publisher uses the workflow's built-in GitHub token with `contents: write`
+restricted to the publishing build job. No personal access token is required.
+The resulting Windows installer is not Authenticode-signed, and the macOS
+package is not Apple-signed or notarized by this workflow. Building and uploading
+an installer do not establish successful installation or native UI execution.
+See [Android signing and packaging](android-packaging.md) for its stable key and
+certificate requirements. Native workflows were linted and their publisher
+tested locally when this release path was added; no native build was started
+solely to test the workflow.
 
 ## Recorded 0.3.0 validation
 

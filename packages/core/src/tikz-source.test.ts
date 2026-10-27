@@ -62,7 +62,6 @@ describe('TikZ engine source preparation', () => {
       .toBe(`\\begin{tikzpicture}\n${body}\n\\end{tikzpicture}`);
   });
   it.each([
-    '\\documentclass{article}\\begin{document}x\\end{document}',
     '\\documentclass{standalone}\\draw (0,0)--(1,0);',
     '\\begin{document}x', '\\end{document}',
     '\\begin{document}x\\end{document}trailing text',
@@ -75,5 +74,27 @@ describe('TikZ engine source preparation', () => {
     '\\begin{center}\\begin{tikzpicture}x\\end{tikzpicture}\\end{center}',
   ])('rejects unsupported or malformed wrapper rather than altering it silently: %s', source => {
     expect(() => prepareTikzSource(source)).toThrow(expect.objectContaining({ code: 'TIKZ_RENDER_FAILED' }));
+  });
+  it.each(['article', 'exam', 'report'])('explains unsupported whole-document layout: %s', name => {
+    expect(() => prepareTikzSource(`\\documentclass{${name}}\\begin{document}x\\end{document}`))
+      .toThrow(expect.objectContaining({ code: 'TIKZ_DOCUMENT_UNSUPPORTED' }));
+  });
+  it.each([
+    String.raw`\documentclass[12pt,a4paper]{article}\usepackage{tikz}\usepackage{xepersian}\settextfont{Vazirmatn}\begin{document}سؤال\end{document}`,
+    String.raw`\RequirePackage[no-math]{tikz, fontspec}`,
+    String.raw`\usepackage{unicode-math}`,
+    String.raw`\usepackage{polyglossia}`,
+    String.raw`\setmainfont{Example}`,
+    '\\usepackage{tikz,% comment\n xepersian}',
+  ])('explains XeLaTeX/LuaLaTeX engine requirements: %s', source => {
+    expect(() => prepareTikzSource(source)).toThrow(expect.objectContaining({ code: 'TIKZ_ENGINE_UNSUPPORTED' }));
+  });
+  it('does not diagnose engine packages written in comments, macros or verbatim examples', () => {
+    const source = String.raw`% \usepackage{xepersian}
+\newcommand{\example}{\usepackage{fontspec}}
+\begin{tikzpicture}
+\node {\verb|\settextfont{Example}|};
+\end{tikzpicture}`;
+    expect(prepareTikzSource(source).source).toContain('\\node');
   });
 });

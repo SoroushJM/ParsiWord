@@ -318,12 +318,17 @@ export function sourceAnnotations(getPositions: (doc: ProseMirrorNode) => Source
             'data-diff': changedBlock(diff, span?.start ?? end, span?.end ?? end) ?? '',
           }));
         });
-        state.doc.descendants((node, pos) => {
-          if (!['paragraph', 'heading', 'listItem', 'tableCell', 'tableHeader'].includes(node.type.name)) return;
-          let entry = directions.get(node);
+        state.doc.descendants((node, pos, parent) => {
+          // List padding belongs to the list container, while the marker follows
+          // its list item. Both must resolve direction from the same content.
+          if (!['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem', 'tableCell', 'tableHeader'].includes(node.type.name)) return;
+          // Markers stay on the container's side even when an individual item
+          // starts in another language. Its paragraph still has its own dir.
+          const directionNode = node.type.name === 'listItem' && parent ? parent : node;
+          let entry = directions.get(directionNode);
           if (!entry || entry.mode !== direction) {
-            entry = { mode: direction, direction: paragraphDirection(node.textContent, direction) };
-            directions.set(node, entry);
+            entry = { mode: direction, direction: paragraphDirection(directionNode.textContent, direction) };
+            directions.set(directionNode, entry);
           }
           decorations.push(Decoration.node(pos, pos + node.nodeSize, { dir: entry.direction }));
         });

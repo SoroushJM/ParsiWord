@@ -2,7 +2,7 @@
   "name": "parsiword-vscode",
   "displayName": "ParsiWord — RTL Markdown Editor",
   "description": "View and edit Persian, Arabic and mixed RTL/LTR Markdown, with editable preview, LaTeX, TikZ geometry, Mermaid and Word/PDF export.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "SoroushJM",
   "engines": {
     "vscode": "^1.100.0"
@@ -94,6 +94,16 @@
       }
     ],
     "commands": [
+      {
+        "command": "parsiword.nativeDiff",
+        "title": "ParsiWord: Open Git Diff in VS Code (Working Tree)",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "parsiword.nativeStagedDiff",
+        "title": "ParsiWord: Open Git Diff in VS Code (Staged)",
+        "icon": "$(git-compare)"
+      },
       {
         "command": "parsiword.open",
         "title": "ParsiWord: Open in ParsiWord",

@@ -1,14 +1,16 @@
 # Android distribution
 
-## Manual GitHub Actions build
+## Manual GitHub Actions build and automatic release
 
 The **Build Android ARM64 preview** workflow in
 [`.github/workflows/android.yml`](../.github/workflows/android.yml) is available
 through **Actions → Build Android ARM64 preview → Run workflow** after this file
 is on the repository's default branch. It has only `workflow_dispatch`; pushes
 and pull requests do not start Android builds. Adding the workflow does not run
-it. Unit, browser and device testing remain local; the workflow performs only
-the build and APK structural/signature verification, without an emulator.
+it. Once a requested stable-key build succeeds, the same workflow publishes
+its installable APK directly to GitHub Releases. Unit, browser and device
+testing remain local; the workflow performs the build, APK structural/signature
+verification and release publication, without an emulator.
 
 It uses Ubuntu 24.04, Node 24, the pnpm version from `package.json`, a frozen
 lockfile, Temurin JDK 17, Android SDK 36, build-tools 36.0.0 and pinned NDK r28c
@@ -29,8 +31,10 @@ Choose the signing mode explicitly when running it:
 - **`ephemeral`** generates a key for that run and deletes it at the
   end. No repository secrets are needed. The output is clearly named
   `ephemeral`; it cannot update an installed Preview APK signed with a
-  different key. To preserve an existing installation's data during updates,
-  use `stable` with the original Preview key.
+  different key. These builds are available only as temporary workflow
+  artifacts; they are never uploaded to GitHub Releases. To preserve an
+  existing installation's data during updates, use `stable` with the original
+  Preview key.
 - **`stable`** (default) restores an existing Preview key from the two repository
   **Actions secrets** below. Missing or malformed secrets stop the job before
   dependency installation with setup instructions. A wrong password or missing
@@ -69,14 +73,35 @@ later APKs can use this new stable identity for updates. Preserve both local
 private files and the repository secrets. Configuring the secrets did not run
 the Android workflow or build an APK.
 
-A successful run uploads one artifact containing the installable signed ARM64
-`.apk`, its `.verification.json` report, and `BUILD-INFO.md` with source commit,
-version code, signing mode, APK SHA256 and signing certificate SHA256. Artifacts
-expire after 14 days. Download and unzip the artifact to obtain the APK; this
-workflow does not publish a GitHub release or a Play Store listing. A stable
-key is necessary for update compatibility, along with the same application ID
-and suitable version code; compare the certificate with the previous APK.
-Physical installation, launch, keyboard and insets remain phone checks.
+A successful stable-key run publishes a visible GitHub **prerelease** with
+the installable signed ARM64 `.apk`, its verification report and Android build
+information. Download the APK directly from the release's **Assets** section;
+there is no need to download or unzip an Actions artifact. This remains an
+ARM64 **Preview** application, not a Play Store or production release.
+
+Android and Windows builds from the same source version and exact commit share
+the tag `native-preview-v<version>-<full-commit-SHA>`. The helper creates that
+tag at the built commit, verifies its target before reusing it, and adds the
+platform's assets. Concurrent builds can add their respective assets to the
+same release. Rerunning the same commit replaces that platform's assets; a
+different commit receives a different tag even if the version is unchanged.
+Verification and build-information assets use platform-specific names so
+Android and Windows do not overwrite each other's reports. Release notes link
+to the source commit and workflow run; Android build information includes
+version code, signing mode, APK SHA256 and signing certificate SHA256.
+
+The APK job grants its GitHub token `contents: write` for release publication;
+all signing material remains excluded from release assets. Publication failure
+fails the job instead of claiming that an artifact upload was a release.
+Both signing modes also upload one workflow artifact containing the APK,
+`.verification.json` and `BUILD-INFO.md`, retained for 14 days. These artifacts
+remain a fallback if publication fails, and are the only download path for
+ephemeral builds.
+
+A stable key is necessary for update compatibility, along with the same
+application ID and suitable version code; compare the certificate with the
+previous APK. Publishing does not raise the version code automatically. Physical
+installation, launch, keyboard and insets remain phone checks.
 
 The workflow and helper were validated locally without dispatching Actions.
 No new Android APK was built as part of this workflow setup: the current local

@@ -143,6 +143,7 @@ export function ComparisonWorkspace({ host, resolveOriginalImage, onFocusSide }:
       <Button variant="outline" disabled={host.readOnly} onClick={() => { focus('modified'); host.command?.('save'); }}>{fa ? 'ذخیره' : 'Save'}</Button>
       <Button variant="ghost" disabled={host.readOnly} onClick={() => { focus('modified'); host.command?.('undo'); }}>Undo</Button>
       <Button variant="ghost" disabled={host.readOnly} onClick={() => { focus('modified'); host.command?.('redo'); }}>Redo</Button>
+      {host.kind === 'vscode' && <Button variant="outline" aria-label={fa ? 'باز کردن مقایسه در VS Code' : 'Open comparison in VS Code'} onClick={() => host.command?.('nativeDiff')}>{fa ? 'مقایسه در VS Code' : 'VS Code Diff'}</Button>}
       {layout === 'inline' && <Button variant="outline" disabled={!editing && host.readOnly} aria-label={editing ? 'Review changes' : 'Edit current version'} onClick={() => { setEditing(value => !value); focus('modified'); }}><Pencil data-icon="inline-start" />{editing ? fa ? 'مرور تغییرات' : 'Review changes' : fa ? 'ویرایش نسخهٔ فعلی' : 'Edit current version'}</Button>}
       <Button variant="ghost" aria-label={fa ? 'English' : 'فارسی'} onClick={() => setLocale(fa ? 'en' : 'fa')}><Languages data-icon="inline-start" />{fa ? 'English' : 'فارسی'}</Button>
       <div ref={setControlsTarget} className="comparison-document-controls flex flex-none items-center" />

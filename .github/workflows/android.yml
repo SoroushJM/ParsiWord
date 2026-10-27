@@ -23,6 +23,8 @@ jobs:
     name: Signed ARM64 APK (${{ inputs.signing }})
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: write
     defaults:
       run:
         shell: bash
@@ -151,10 +153,12 @@ jobs:
               f"APK: {apk.name}",
               f"SHA256: {report['sha256']}",
               f"Certificate SHA256: {report['certificateSha256']}", '',
-              'Download and unzip the workflow artifact, then install the .apk on an ARM64 Android 7+ phone.',
+              ('Download and unzip the workflow artifact, then install the .apk on an ARM64 Android 7+ phone.'
+               if mode == 'ephemeral' else
+               'After successful publication, download the .apk directly from this commit\'s native Preview GitHub release and install it on an ARM64 Android 7+ phone. The workflow artifact is also available for 14 days.'),
               'The verification JSON checks signatures, ZIP/ELF alignment, architecture, release flags and current bundled frontend.',
               'Device installation and launch have not been tested by this workflow.', '',
-              ('This ephemeral key was generated for this run only and is not retained. This APK cannot update a Preview install signed with a different key.'
+              ('This ephemeral key was generated for this run only and is not retained. This APK cannot update a Preview install signed with a different key. Ephemeral builds are artifact-only and are never published to GitHub Releases.'
                if mode == 'ephemeral' else
                'This APK uses the configured stable Preview key. Compare its certificate with the previous APK before distributing it as an update.'), '',
           ])
@@ -173,6 +177,13 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
+
+      - name: Publish stable-key APK to GitHub Releases
+        if: inputs.signing == 'stable'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: node scripts/publish-native-release.mjs android
 
       - name: Remove signing material from the runner
         if: always()

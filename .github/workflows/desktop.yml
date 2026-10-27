@@ -1,30 +1,62 @@
-name: Build desktop apps
-on: workflow_dispatch
+name: Build and publish desktop apps
+
+# Build only when requested; unit/browser tests are run locally.
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Desktop installer to build and publish to GitHub Releases
+        required: true
+        default: Windows
+        type: choice
+        options: [Windows, Linux, macOS, all]
+
 permissions:
   contents: read
+
+concurrency:
+  group: desktop-release-${{ github.ref }}-${{ inputs.platform }}
+  cancel-in-progress: false
+
 jobs:
   desktop:
+    name: Build and release ${{ matrix.platform }}
+    permissions:
+      contents: write
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-15]
+        include: >-
+          ${{ fromJSON(
+            inputs.platform == 'all' && '[{"platform":"Windows","os":"windows-latest","build":"windows:build"},{"platform":"Linux","os":"ubuntu-22.04","build":"linux:build"},{"platform":"macOS","os":"macos-15","build":"macos:build"}]' ||
+            inputs.platform == 'Linux' && '[{"platform":"Linux","os":"ubuntu-22.04","build":"linux:build"}]' ||
+            inputs.platform == 'macOS' && '[{"platform":"macOS","os":"macos-15","build":"macos:build"}]' ||
+            '[{"platform":"Windows","os":"windows-latest","build":"windows:build"}]'
+          ) }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '24'
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/parsiword/src-tauri -> target
+          key: desktop-${{ runner.os }}
+          cache-on-failure: false
       - name: Linux prerequisites
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm run test:ui --project chromium
-      - run: pnpm run desktop:build
+      - name: Install locked JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build native installer
+        run: pnpm run ${{ matrix.build }}
         env:
           APPIMAGE_EXTRACT_AND_RUN: '1'
       - uses: actions/upload-artifact@v4
@@ -36,3 +68,10 @@ jobs:
             apps/parsiword/src-tauri/target/release/bundle/**/*.exe
             apps/parsiword/src-tauri/target/release/bundle/**/*.dmg
           if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Publish installer to the commit's native Preview release
+        run: node scripts/publish-native-release.mjs desktop
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

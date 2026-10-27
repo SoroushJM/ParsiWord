@@ -1,5 +1,6 @@
 import type { Diagram } from './diagrams';
 import { RichContentError } from './rich-content';
+import { ParsiWordError } from './errors';
 import { publicAsset } from './public-assets';
 import { prepareTikzSource } from './tikz-source';
 import { outlineTikzSvg, type TikzGlyphFont } from './tikz-svg';
@@ -214,6 +215,7 @@ async function render(source: string): Promise<Diagram> {
   } catch (cause) {
     active?.terminate(); active = undefined;
     if (cause instanceof RichContentError) throw cause;
+    if (cause instanceof ParsiWordError) throw new RichContentError(cause.code, { cause });
     throw new RichContentError('TIKZ_RENDER_FAILED', { cause });
   } finally {
     idle = setTimeout(() => { active?.terminate(); active = undefined; fontCache.clear(); }, idleTimeout);

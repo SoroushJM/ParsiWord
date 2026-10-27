@@ -66,6 +66,24 @@ supported by this engine; Persian question text outside the drawing works
 normally. Use mathematical/Latin point labels inside the drawing. Unsupported
 packages or labels produce a visible error.
 
+A complete Persian exam such as `\documentclass{article}` plus
+`\usepackage{xepersian}` is a different workload from a TikZ drawing.
+[XePersian](https://ctan.org/pkg/xepersian?lang=en) requires XeTeX or LuaTeX;
+[fontspec](https://ctan.org/pkg/fontspec) requires XeLaTeX or LuaLaTeX and
+their font support. Merely stripping `article` or downloading the bundled
+e-TeX runtime cannot supply those capabilities. ParsiWord now identifies
+these explicit engine dependencies before loading TeX and explains them in
+Persian/English. Other full-document classes receive a separate drawing-only
+message. Source is retained exactly; unsupported packages are never silently
+removed. This diagnosis does not add a XeLaTeX engine.
+
+For a supported Persian worksheet today, write the question, numbered steps,
+headings and formulas in Markdown, then put just its geometry in a `tikz`
+fence, as in the example above. Use mathematical/Latin labels inside the
+figure; the Persian text outside it uses the regular document font and RTL
+layout. Full XePersian documents and Persian labels inside figures would
+need an additional engine, font resources and platform/export validation.
+
 TikZ requires WebAssembly, workers and gzip decompression streams; under the
 native security policy it requires Chromium/WebView 97+ or Safari 16.4+.
 The rest of the app retains its older browser baseline. The engine is lazy,

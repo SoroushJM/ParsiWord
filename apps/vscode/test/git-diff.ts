@@ -531,6 +531,25 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     await expect(modified.locator('.markdown-editor')).toHaveValue(/EDITED_FROM_DIFF/);
     record('The ParsiWord Git diff command and Source Control use the same single-tab RTL comparison');
 
+    const exactOriginal = vscode.window.tabGroups.all.flatMap(group => group.tabs).find(tab => tab.isActive);
+    assert.ok(exactOriginal?.input instanceof vscode.TabInputCustom);
+    const unchanged = doc.getText();
+    await frame.getByRole('button', { name: 'Open comparison in VS Code', exact: true }).click();
+    const native = await until(() => vscode.window.tabGroups.all.flatMap(group => group.tabs).find(tab => tab.isActive)?.input,
+      input => input instanceof vscode.TabInputTextDiff, 'explicit built-in VS Code text diff');
+    assert.ok(native instanceof vscode.TabInputTextDiff);
+    assert.equal(native.modified.toString(), uri.toString());
+    assert.match(native.original.query, /"ref":"~"/);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    assert.ok(vscode.window.tabGroups.activeTabGroup.activeTab?.input instanceof vscode.TabInputTextDiff, 'Automatic promotion must not hijack the native option');
+    assert.equal(doc.getText(), unchanged);
+    await vscode.commands.executeCommand('parsiword.nativeStagedDiff', uri);
+    const stagedNative = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+    assert.ok(stagedNative instanceof vscode.TabInputTextDiff);
+    assert.match(stagedNative.original.query, /"ref":"HEAD"/);
+    assert.match(stagedNative.modified.query, /"ref":"~"/);
+    record('The optional VS Code Diff opens the actual built-in text diff for working-tree and staged revisions without replacing ParsiWord or rewriting Markdown');
+
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     await vscode.commands.executeCommand('vscode.open', uri);
     await until(() => api.getOpenDocuments(), docs => docs.some(item => item.visible && item.ready && item.uri === uri.toString() && !item.comparison), 'ordinary editor has no stale comparison');

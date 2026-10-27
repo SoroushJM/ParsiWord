@@ -2,7 +2,7 @@ import type { ExportSettings } from './document-model';
 
 export type DocumentSnapshot = { markdown: string; dirty: boolean };
 export type SaveFormat = { label: string; extension: string; mime: string };
-export type HostCommand = 'source' | 'preview' | 'diff' | 'stagedDiff' | 'save' | 'undo' | 'redo' | 'new';
+export type HostCommand = 'source' | 'preview' | 'diff' | 'stagedDiff' | 'nativeDiff' | 'nativeStagedDiff' | 'save' | 'undo' | 'redo' | 'new';
 export type DocumentViewMode = 'combined' | 'source' | 'rendered';
 export type EditorAction = 'find' | 'replace' | 'goToLine' | 'findNext' | 'findPrevious';
 export type { DocumentComparison } from './markdown-diff';

@@ -14,6 +14,7 @@ describe('runtime host protocol', () => {
     expect(isClientMessage({ type: 'focus', focused: 'true' })).toBe(false);
   });
   it('validates requests and settings before dispatch', () => {
+    for (const name of ['nativeDiff', 'nativeStagedDiff']) expect(isClientMessage({ type: 'request', id: 1, method: 'command', args: { name } })).toBe(true);
     expect(isClientMessage({ type: 'request', id: 1, method: 'command', args: { name: 'save' } })).toBe(true);
     for (const value of [null, { type: 'request', id: 1, method: 'unknown', args: {} }, { type: 'request', id: 1, method: 'command', args: { name: ['save'] } }, { type: 'request', id: 1, method: 'saveBytes', args: { filename: 'a.md', extension: 'md', bytes: [256] } }, { type: 'settings', settings: { ...defaultSettings, direction: 'sideways' } }]) expect(isClientMessage(value)).toBe(false);
     expect(isClientMessage({ type: 'settings', settings: defaultSettings })).toBe(true);
