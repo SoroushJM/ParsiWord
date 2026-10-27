@@ -96,3 +96,12 @@ The extension build and desktop packaging verify all four real runtime assets
 before packaging, so future checkout corruption fails before producing a
 broken installer. Native XePersian failures also retain the visible diagnostic
 and a screenshot before closing the webview.
+
+With runtime bytes preserved, Windows CI passed real XePersian rendering and
+Word/PDF export. Its next test exposed a separate harness assumption: only the
+initial CLI fixture commit had an author, while later VS Code Git API commits
+depended on a globally configured identity. The disposable fixture now sets its
+own local test name/email and disables commit signing locally. Masking the host
+global Git configuration reproduced the failure before this fix; the focused
+native RTL-list suite passed afterward, including normal/rendered comparisons
+in both interface languages. The user's Git configuration is not modified.

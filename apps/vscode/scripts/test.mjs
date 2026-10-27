@@ -36,8 +36,14 @@ const diagram = '\n![شرح تصویر](./assets/diagram.svg)\n';
 const scrollContent = '\n' + Array.from({ length: 24 }, (_, index) => `## بخش اسکرول ${index + 1}\n\nمتن مشترک فارسی و English paragraph ${index + 1} برای آزمایش اسکرول هماهنگ در دو سوی مقایسه. این پاراگراف بلند است تا با تغییر عرض ستون‌ها در چند خط بشکند و موقعیت یکسان محتوا را مستقل از درصد اسکرول بررسی کنیم.\n`).join('\n');
 await writeFile(resolve(fixture, 'nested folder/nested.md'), '# مقایسه فارسی و English\n\nمتن ORIGINAL برای مقایسه.\n\nاین بخش ثابت است و تغییری ندارد.\n' + diagram + scrollContent);
 const git = args => { const result = spawnSync('git', args, { cwd: fixture, encoding: 'utf8' }); if (result.status) throw Error(result.stderr); };
-git(['init','-b','main']); git(['add','.']);
-git(['-c','user.name=ParsiWord Test','-c','user.email=parsiword-test@example.invalid','commit','--allow-empty','-m','Integration fixture']);
+git(['init','-b','main']);
+// VS Code's Git API creates later fixture commits too. Keep their identity
+// local to this disposable repository, independent of the host configuration.
+git(['config','user.name','ParsiWord Test']);
+git(['config','user.email','parsiword-test@example.invalid']);
+git(['config','commit.gpgsign','false']);
+git(['add','.']);
+git(['commit','--allow-empty','-m','Integration fixture']);
 await writeFile(resolve(fixture, 'nested folder/nested.md'), '# مقایسه فارسی و English\n\nمتن STAGED برای مقایسه.\n\nاین بخش ثابت است و تغییری ندارد.\n' + diagram + scrollContent);
 git(['add','nested folder/nested.md']);
 const insertedLines = '\n' + Array.from({ length: 12 }, (_, index) => `خط افزودهٔ مستقل ${index + 1} فقط در نسخهٔ فعلی.`).join('\n') + '\n';
