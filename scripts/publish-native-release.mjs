@@ -1,4 +1,4 @@
-// Shared by manually requested native builds. No credentials or signing files
+// Shared by automatic and manually requested builds. No credentials or signing files
 // enter the staging directory, release notes, checksums, or uploaded assets.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -26,6 +26,10 @@ async function installers(root, directory, suffix) {
 }
 
 export async function nativeAssets(kind, root, env) {
+  if (kind === 'vscode') {
+    const version = requireValue(JSON.parse(await readFile(join(root, 'apps/vscode/package.json'), 'utf8')).version, /^\d+\.\d+\.\d+(?:-[\w.-]+)?$/, 'extension version');
+    return { platform: 'VSCode', files: [join(root, 'artifacts', `parsiword-vscode-${version}.vsix`)], version };
+  }
   if (kind === 'android') {
     if (env.SIGNING_MODE !== 'stable') throw Error('Only stable-key Android builds may be published to Releases.');
     const apk = resolve(root, requireValue(env.APK_PATH, /\.apk$/, 'APK_PATH'));
@@ -35,7 +39,7 @@ export async function nativeAssets(kind, root, env) {
       || report.debuggable !== false || report.testOnly !== false) throw Error('APK verification report does not match a verified ARM64 release APK.');
     return { platform: 'Android', files: [apk], reportPath, buildInfo: join(dirname(apk), 'BUILD-INFO.md'), certificate: report.certificateSha256 };
   }
-  if (kind !== 'desktop') throw Error('Choose android or desktop.');
+  if (kind !== 'desktop') throw Error('Choose android, desktop or vscode.');
   const definitions = { Windows: [['nsis', '.exe']], Linux: [['deb', '.deb'], ['appimage', '.AppImage']], macOS: [['dmg', '.dmg']] };
   const required = definitions[env.RUNNER_OS];
   if (!required) throw Error('Unsupported desktop runner.');
@@ -57,7 +61,7 @@ export async function publishNativeRelease({ kind, root = repositoryRoot, env = 
   const nativeVersion = JSON.parse(await readFile(join(root, 'apps/parsiword/src-tauri/tauri.conf.json'), 'utf8')).version;
   if (nativeVersion !== version) throw Error('Native and workspace versions disagree.');
   const assets = await nativeAssets(kind, root, env);
-  for (const path of assets.files) if (!(await stat(path)).isFile() || !(await stat(path)).size) throw Error('Installer is missing or empty.');
+  for (const path of assets.files) if (!(await stat(path)).isFile() || !(await stat(path)).size) throw Error('Release asset is missing or empty.');
   const tag = `native-preview-v${version}-${commit}`;
   const endpoint = `repos/${repository}/releases/tags/${tag}`;
   const run = async args => {
@@ -87,8 +91,9 @@ export async function publishNativeRelease({ kind, root = repositoryRoot, env = 
     const workflowUrl = `https://github.com/${repository}/actions/runs/${requireValue(env.GITHUB_RUN_ID, /^\d+$/, 'GITHUB_RUN_ID')}`;
     await writeFile(buildInfo, [
       `# ParsiWord ${assets.platform} Preview`, '', `Version: ${version}`, `Commit: ${commit}`, `Build: ${workflowUrl}`,
+      ...(assets.version ? [`VS Code extension version: ${assets.version}`] : []),
       ...(assets.certificate ? [`Certificate SHA256: ${assets.certificate}`] : []), '',
-      ...(assets.buildInfo ? [await readFile(assets.buildInfo, 'utf8')] : ['Native installer built by GitHub Actions. Device installation and launch are not established by packaging.']),
+      ...(assets.buildInfo ? [await readFile(assets.buildInfo, 'utf8')] : [kind === 'vscode' ? 'VS Code extension package built by GitHub Actions. Install the .vsix with Extensions: Install from VSIX.' : 'Native installer built by GitHub Actions. Device installation and launch are not established by packaging.']),
       '', '## Asset SHA256', '', ...identities, '',
     ].join('\n'));
     upload.push(buildInfo);
@@ -99,13 +104,14 @@ export async function publishNativeRelease({ kind, root = repositoryRoot, env = 
     if (!release) {
       const notes = join(staging, 'release-notes.md');
       await writeFile(notes, [
-        `Native Preview packages for ParsiWord ${version}.`, '', `Source commit: ${commit}`, '',
-        'Download installers directly from Assets. Each successful requested platform build adds its files to this release; an absent platform has not been published.',
+        `Preview packages for ParsiWord ${version}.`, '', `Source commit: ${commit}`, '',
+        'Download packages directly from Assets. Pushes to main build Android ARM64, Windows and the VS Code extension. Each successful platform build adds its files to this release; an absent platform has not been published.',
         'Platform BUILD-INFO and SHA256SUMS files identify each build and its downloads.', '',
         'Android: ARM64 Android 7+ Preview, signed with the configured stable Preview key. Older installations signed with a different key require reinstallation.',
         'Windows: NSIS installer, without a Windows publisher signing certificate. macOS builds are not notarized.', '',
+        'VS Code: download the .vsix, then run Extensions: Install from VSIX in VS Code.', '',
       ].join('\n'));
-      const created = await gh(['release', 'create', tag, '--repo', repository, '--target', commit, '--title', `ParsiWord ${version} Native Preview (${commit.slice(0, 12)})`, '--prerelease', '--latest=false', '--notes-file', notes]);
+      const created = await gh(['release', 'create', tag, '--repo', repository, '--target', commit, '--title', `ParsiWord ${version} Preview (${commit.slice(0, 12)})`, '--prerelease', '--latest=false', '--notes-file', notes]);
       // Another platform can create the same release between our GET and POST.
       release = await find();
       if (!release) throw Error(`Native release creation failed: ${created.stderr}`);

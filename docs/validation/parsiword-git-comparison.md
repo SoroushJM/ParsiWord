@@ -1,5 +1,20 @@
 # ParsiWord Git comparison validation
 
+Extension **0.1.7** exposes **RTL / LTR / Auto** in the shared comparison toolbar
+and replaces the large Word action with compact, direct **Word** and **PDF**
+buttons. Forced RTL/LTR now also applies to source text and inline source review;
+Auto retains independent paragraph detection. On 2026-10-27, the focused real
+VS Code 1.143.1 comparison suite passed **33 checks**, including all three
+directions in both content views and layouts, exact Markdown preservation, and
+the narrow webview. The source browser suite passed **8 tests**, including native
+caret/highlight wrapping in all three directions at narrow and desktop widths.
+The extension build and architecture check passed. Evidence:
+`artifacts/direction-toolbar-vscode.log`, `artifacts/direction-source-browser.log`,
+and `artifacts/vscode-test/git-diff-direction-toolbar-fa.png`.
+The packaged `artifacts/parsiword-vscode-0.1.7.vsix` was installed successfully;
+SHA-256 checks of the installed host, webview manifest, entry script and stylesheet
+match the tested build (`artifacts/direction-toolbar-installed-hashes.json`).
+
 Extension **0.1.6** adds optional built-in VS Code comparison and fixes RTL
 numbered-list indentation in ordinary and comparison previews. Its local
 checks and native-release workflow verification are recorded separately in

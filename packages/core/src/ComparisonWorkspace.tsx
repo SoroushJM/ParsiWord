@@ -20,10 +20,10 @@ type View = 'source' | 'rendered';
 type Layout = 'side-by-side' | 'inline';
 const ignore = () => {};
 
-function InlineSource({ text }: { text: string }) {
+function InlineSource({ text, direction }: { text: string; direction: ExportSettings['direction'] }) {
   const lines = useMemo(() => new MarkdownSourceHighlighter().highlight(text), [text]);
-  if (lines.length > 6000 || lines.reduce((total, line) => total + line.tokens.length, 0) > 20_000) return <pre className="comparison-source" dir="auto">{text}</pre>;
-  return <pre className="comparison-source" dir="auto">{lines.map(line => <span key={line.id}>{line.tokens.map((token, index) => <span key={index} data-md-token={token.kind}>{token.text}</span>)}{line.newline}</span>)}</pre>;
+  if (lines.length > 6000 || lines.reduce((total, line) => total + line.tokens.length, 0) > 20_000) return <pre className="comparison-source" dir={direction}>{text}</pre>;
+  return <pre className="comparison-source" dir={direction}>{lines.map(line => <span key={line.id}>{line.tokens.map((token, index) => <span key={index} data-md-token={token.kind}>{token.text}</span>)}{line.newline}</span>)}</pre>;
 }
 
 function reviewModel(before: string, after: string, view: View) {
@@ -43,7 +43,7 @@ function InlineReview({ model: { documents, parts }, view, host, originalImage, 
     {parts.map((part, index) => <section key={`${view}-${index}-${part.text}-${definitionKeys ? definitionKeys[part.kind === 'delete' ? 'original' : 'modified'] : ''}`} className="comparison-part" data-diff={part.kind === 'same' ? undefined : part.kind} data-inline-change={part.change < 0 ? undefined : part.change}
       aria-label={part.kind === 'same' ? undefined : part.kind === 'delete' ? fa ? 'حذف‌شده' : 'Removed' : fa ? 'اضافه‌شده' : 'Added'}>
       {part.kind !== 'same' && <span className="comparison-part-label" aria-hidden="true">{part.kind === 'delete' ? '−' : '+'}</span>}
-      {view === 'source' ? <InlineSource text={part.text} /> : <EditablePreview markdown={part.text} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize}
+      {view === 'source' ? <InlineSource text={part.text} direction={settings.direction} /> : <EditablePreview markdown={part.text} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize}
         inheritedDefinitions={part.kind === 'delete' ? documents!.original.definitions : documents!.modified.definitions}
         resolveImage={part.kind === 'delete' ? originalImage : host.resolveImage} readOnly onChange={ignore} onStartWriting={ignore} />}
     </section>)}

@@ -4,9 +4,9 @@ const mixedLine = 'متن فارسی با English (version **19**) و [پیون�
 const source = '# عنوان فارسی React 19\n\n**پررنگ** و *مورب* و ~~خط‌خورده~~ در متن.\n\nکد: `const n = 19;` و [پیوند](https://example.com).\n\n> نقل‌قول فارسی\n\n- مورد نخست\n- مورد دوم\n\n```typescript\n\tconst literal = "<img src=x onerror=alert(1)>";\n```\n\n<img src=x onerror="window.__markdownSourceExecuted=true">\n\n'
   + Array.from({ length: 8 }, (_, index) => `## بخش ${index}\n\n${mixedLine.repeat(7)}NATIVE_ALIGN_${index}\n\n`).join('') + '\tپایان  \n';
 
-async function openSource(page: Page, width: number, markdown = source) {
+async function openSource(page: Page, width: number, markdown = source, direction: 'auto' | 'rtl' | 'ltr' = 'auto') {
   await page.setViewportSize({ width, height: 851 });
-  await page.addInitScript(text => localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown: text, settings: { direction: 'auto' } })), markdown);
+  await page.addInitScript(({ text, direction }) => localStorage.setItem('parsiword-draft-v1', JSON.stringify({ markdown: text, settings: { direction } })), { text: markdown, direction });
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator('.markdown-source-editor')).toHaveAttribute('data-highlighted', 'true');
@@ -59,11 +59,12 @@ async function highlightedGlyphTop(page: Page, offset: number) {
   }, offset);
 }
 
-for (const width of [320, 1100]) {
-  test(`${width}px source colors preserve literal Markdown and native mixed-direction wrapping`, async ({ page }) => {
-    await openSource(page, width);
+for (const width of [320, 1100]) for (const direction of ['auto', 'rtl', 'ltr'] as const) {
+  test(`${width}px ${direction} source colors preserve literal Markdown and native mixed-direction wrapping`, async ({ page }) => {
+    await openSource(page, width, source, direction);
     const overlay = page.locator('.markdown-source-highlight');
     const editor = page.getByRole('textbox', { name: 'متن Markdown', exact: true });
+    await expect(editor).toHaveAttribute('dir', direction);
     await expect(overlay).toHaveAttribute('aria-hidden', 'true');
     expect(await overlay.textContent()).toBe(source);
     await expect(editor).toBeEditable();

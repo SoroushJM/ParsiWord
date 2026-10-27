@@ -124,6 +124,46 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
     record('Source Control opens one ParsiWord comparison tab with both RTL revisions, red/green lines and changed words');
     record('One shared document header aligns both source text starts; the comparison divider resizes with mouse and keyboard');
 
+    const directionControls = frame.locator('.comparison-document-controls .comparison-direction-controls');
+    const previousToolbarDirection = (await directionControls.locator('[data-state=on]').textContent())!.trim();
+    for (const format of ['Word', 'PDF']) {
+      const button = frame.locator('.comparison-document-controls').getByRole('button', { name: `Save ${format} file`, exact: true });
+      await expect(button).toBeVisible();
+      await expect(button).toHaveText(format);
+      const box = await button.boundingBox();
+      const rem = await frame.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+      assert.ok(box && box.width <= 4 * rem, `${format} export must remain a compact toolbar action`);
+    }
+    for (const view of ['source', 'rendered'] as const) for (const layout of ['side-by-side', 'inline'] as const) {
+      await setMode(frame, view, layout);
+      for (const [label, direction] of [['RTL', 'rtl'], ['LTR', 'ltr'], ['Auto', 'auto']] as const) {
+        await directionControls.getByText(label, { exact: true }).click();
+        await expect(directionControls.getByText(label, { exact: true })).toHaveAttribute('data-state', 'on');
+        const documents = layout === 'inline'
+          ? frame.locator(view === 'source' ? '.comparison-inline .comparison-source' : '.comparison-inline .rich-document')
+          : frame.locator(view === 'source' ? '.comparison-side .markdown-editor' : '.comparison-side .rich-document');
+        assert.ok(await documents.count() >= 2, 'Direction check must cover both comparison revisions');
+        await expect.poll(() => documents.evaluateAll(elements => elements.map(element => element.getAttribute('dir')))).toEqual(Array(await documents.count()).fill(direction));
+        if (view === 'source') {
+          await expect.poll(() => documents.evaluateAll(elements => elements.every(element => getComputedStyle(element).unicodeBidi === (element.getAttribute('dir') === 'auto' ? 'plaintext' : 'normal')))).toBe(true);
+          if (layout === 'side-by-side') {
+            const mirrors = frame.locator('.comparison-side .markdown-source-highlight');
+            await expect.poll(() => mirrors.evaluateAll((elements, direction) => elements.every(element => element.getAttribute('dir') === direction), direction)).toBe(true);
+            await expect.poll(() => mirrors.locator('[data-source-line]').evaluateAll((elements, direction) => elements.every(element => getComputedStyle(element).unicodeBidi === (direction === 'auto' ? 'plaintext' : 'normal')), direction)).toBe(true);
+          }
+        }
+        assert.equal(doc.getText(), before, 'Changing direction must not rewrite the native Markdown document');
+      }
+    }
+    await directionControls.getByText(previousToolbarDirection, { exact: true }).click();
+    await setMode(frame, 'source', 'side-by-side');
+    await expect(original.locator('.markdown-editor')).toHaveValue(revision);
+    await expect(modified.locator('.markdown-editor')).toHaveValue(before);
+    await control(frame, 'فارسی').click();
+    await page.screenshot({ path: join(artifact, 'git-diff-direction-toolbar-fa.png') });
+    await setEnglish(frame);
+    record('Visible RTL/LTR/Auto controls update both source and rendered revisions in side-by-side and inline layouts without rewriting Markdown; Word/PDF are compact direct actions');
+
     const originalSource = original.locator('.markdown-editor');
     await originalSource.click(); await originalSource.press('Control+h');
     await expect(original.locator('[id^=editor-find-query]')).toBeFocused();

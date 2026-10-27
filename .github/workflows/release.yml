@@ -1,0 +1,67 @@
+name: Release Android, Windows and VS Code
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Keep builds for different pushed commits independent. A later push must not
+# cancel one platform while the other platforms publish the earlier commit.
+concurrency:
+  group: release-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: Android ARM64 APK
+    permissions:
+      contents: write
+    uses: ./.github/workflows/android.yml
+    with:
+      signing: stable
+    secrets:
+      PARSIWORD_ANDROID_PREVIEW_KEYSTORE_BASE64: ${{ secrets.PARSIWORD_ANDROID_PREVIEW_KEYSTORE_BASE64 }}
+      PARSIWORD_ANDROID_PREVIEW_PASSWORD: ${{ secrets.PARSIWORD_ANDROID_PREVIEW_PASSWORD }}
+
+  windows:
+    name: Windows installer
+    permissions:
+      contents: write
+    uses: ./.github/workflows/desktop.yml
+    with:
+      platform: Windows
+
+  vscode:
+    name: VS Code extension
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install locked JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build and package the extension
+        run: pnpm run package:vscode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ParsiWord-VSCode-release
+          path: artifacts/*.vsix
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Publish VSIX to the same commit's Preview release
+        run: node scripts/publish-native-release.mjs vscode
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

@@ -50,6 +50,10 @@
   min-height: var(--source-line-height);
   unicode-bidi: plaintext;
 }
+.markdown-source-editor .markdown-editor:is([dir="rtl"], [dir="ltr"]),
+.markdown-source-highlight:is([dir="rtl"], [dir="ltr"]) [data-source-line] {
+  unicode-bidi: normal;
+}
 .markdown-source-highlight [data-md-token] {
   font: inherit;
   letter-spacing: inherit;

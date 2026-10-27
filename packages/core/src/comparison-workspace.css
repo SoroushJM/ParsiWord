@@ -35,6 +35,7 @@
 .comparison-part[data-diff=insert] { background: var(--diff-insert-background); border-inline-start-color: var(--diff-insert-border); }
 .comparison-part-label { position: absolute; inset-inline-start: .25rem; top: .125rem; font-family: monospace; }
 .comparison-source { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: .125rem .75rem; font: inherit; line-height: 1.6; unicode-bidi: plaintext; }
+.comparison-source:is([dir="rtl"], [dir="ltr"]) { unicode-bidi: normal; }
 .comparison-source :is([data-md-token=heading], [data-md-token=link], [data-md-token=table]) { color: var(--source-syntax-heading); }
 .comparison-source :is([data-md-token=marker], [data-md-token=escape], [data-md-token=quote], [data-md-token=strike]) { color: var(--muted-foreground); }
 .comparison-source :is([data-md-token=strong], [data-md-token=emphasis], [data-md-token=math]) { color: var(--source-syntax-emphasis); }

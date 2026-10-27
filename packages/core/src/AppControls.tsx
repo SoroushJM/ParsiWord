@@ -5,6 +5,7 @@ import { tikzSampleInsertion } from './tikz-language';
 import { isThemePreference, type DisplayThemeControls } from './display-theme';
 import type { ExportSettings } from './document-model';
 import { FontPicker } from './FontPicker';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
@@ -69,24 +70,32 @@ export const IntroControls = memo(function IntroControls({ direction, onDirectio
         </section>);
 });
 
-export const DocumentHeading = memo(function DocumentHeading({ instanceId, hostControlled = false, title, busy, canExport, onTitleChange, onOpen, onNew, onSettings, onExport, onExportPdf, onExportMarkdown }: { instanceId?: string; hostControlled?: boolean; title: string; busy: boolean; canExport: boolean; onTitleChange: (title: string) => void; onOpen: () => void; onNew: () => void; onSettings: () => void; onExport: () => void; onExportPdf: () => void; onExportMarkdown: () => void }) {
+export const DocumentHeading = memo(function DocumentHeading({ instanceId, hostControlled = false, compact = false, direction, title, busy, canExport, onDirectionChange, onTitleChange, onOpen, onNew, onSettings, onExport, onExportPdf, onExportMarkdown }: { instanceId?: string; hostControlled?: boolean; compact?: boolean; direction: ExportSettings['direction']; title: string; busy: boolean; canExport: boolean; onDirectionChange: (direction: ExportSettings['direction']) => void; onTitleChange: (title: string) => void; onOpen: () => void; onNew: () => void; onSettings: () => void; onExport: () => void; onExportPdf: () => void; onExportMarkdown: () => void }) {
   const titleId = instanceId ? `document-title-${instanceId}` : 'document-title';
   const { t, dir } = useLocale();
   return (<div className={hostControlled ? 'document-host-controls flex items-center gap-1' : 'document-heading'}>
+              {compact && <ToggleGroup type="single" variant="outline" size="sm" spacing={0} dir="ltr" value={direction}
+                onValueChange={value => { if (value === 'rtl' || value === 'ltr' || value === 'auto') onDirectionChange(value); }}
+                aria-label={t('جهت متن')} className="comparison-direction-controls">
+                <ToggleGroupItem value="rtl" aria-label={t('راست‌به‌چپ')} title={t('راست‌به‌چپ')}>RTL</ToggleGroupItem>
+                <ToggleGroupItem value="ltr" aria-label={t('چپ‌به‌راست')} title={t('چپ‌به‌راست')}>LTR</ToggleGroupItem>
+                <ToggleGroupItem value="auto" aria-label={t('جهت خودکار')} title={t('جهت خودکار')}>Auto</ToggleGroupItem>
+              </ToggleGroup>}
               {!hostControlled && <><div className="document-name"><span className="file-icon"><FileText size="1.1875rem" /></span><FieldGroup className="gap-1"><Field className="gap-1"><FieldLabel htmlFor={titleId} className="sr-only">{t("نام سند")}</FieldLabel><Input id={titleId} value={title} onChange={e => onTitleChange(e.target.value)} maxLength={90} placeholder={t("نام سند")} /><span className="text-muted-foreground text-xs">{t("پیش‌نویس شخصی")}</span></Field></FieldGroup></div>
               <div className="document-tools">
                 <div className="document-actions"><Button variant="ghost" size="icon-lg" className="document-icon-control" title={t("باز کردن فایل")} aria-label={t("باز کردن فایل")} onClick={onOpen}><FolderOpen data-icon="inline-start" /></Button></div>
                 <Button variant="ghost" size="icon-lg" className="document-icon-control" title={t("یادداشت تازه")} aria-label={t("یادداشت تازه")} onClick={onNew}><FilePlus2 data-icon="inline-start" /></Button>
               </div></>}
               <div className={hostControlled ? 'flex items-center gap-1' : 'document-export'}>
-                <Button variant="outline" size="icon" className="document-icon-control" aria-label={t("تنظیمات خروجی")} onClick={onSettings}><Settings2 data-icon="inline-start" /></Button>
-                <Button size="lg" className={hostControlled ? 'document-export-button min-w-0' : 'document-export-button min-w-0 flex-1'} onClick={onExport} disabled={busy || !canExport}>{busy ? <Spinner aria-label={t("در حال ساخت سند")} data-icon="inline-start" /> : <ArrowDownToLine data-icon="inline-start" />}<span>{busy ? t("در حال ساخت سند…") : t("ذخیرهٔ فایل Word")}</span></Button>
+                <Button variant="outline" size={compact ? 'icon-xs' : 'icon'} className={cn(!compact && 'document-icon-control')} aria-label={t("تنظیمات خروجی")} title={t("تنظیمات خروجی")} onClick={onSettings}><Settings2 data-icon="inline-start" /></Button>
+                <Button variant={compact ? 'outline' : 'default'} size={compact ? 'xs' : 'lg'} className={cn('document-export-button min-w-0', !hostControlled && 'flex-1')} aria-label={compact ? t('ذخیرهٔ فایل Word') : undefined} title={compact ? t('ذخیرهٔ فایل Word') : undefined} onClick={onExport} disabled={busy || !canExport}>{busy ? <Spinner aria-label={t("در حال ساخت سند")} data-icon="inline-start" /> : !compact && <ArrowDownToLine data-icon="inline-start" />}<span>{compact ? 'Word' : busy ? t("در حال ساخت سند…") : t("ذخیرهٔ فایل Word")}</span></Button>
+                {compact && <Button variant="outline" size="xs" aria-label={t('ذخیرهٔ فایل PDF')} title={t('ذخیرهٔ فایل PDF')} onClick={onExportPdf} disabled={busy || !canExport}>PDF</Button>}
                 <DropdownMenu dir={dir}>
-                  <DropdownMenuTrigger asChild><Button variant="outline" size="icon" className="document-icon-control" aria-label={t("قالب‌های دیگر خروجی")} title={t("قالب‌های دیگر خروجی")} disabled={busy}><Files data-icon="inline-start" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild><Button variant="outline" size={compact ? 'icon-xs' : 'icon'} className={cn(!compact && 'document-icon-control')} aria-label={t("قالب‌های دیگر خروجی")} title={t("قالب‌های دیگر خروجی")} disabled={busy}><Files data-icon="inline-start" /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end" sideOffset={0} className="min-w-48">
                     <DropdownMenuGroup>
                       <DropdownMenuLabel>{t("ذخیره در قالب")}</DropdownMenuLabel>
-                      <DropdownMenuItem className="export-menu-item" onSelect={onExportPdf} disabled={busy || !canExport}><FileType2 aria-hidden="true" />{t("ذخیرهٔ فایل PDF")}</DropdownMenuItem>
+                      {!compact && <DropdownMenuItem className="export-menu-item" onSelect={onExportPdf} disabled={busy || !canExport}><FileType2 aria-hidden="true" />{t("ذخیرهٔ فایل PDF")}</DropdownMenuItem>}
                       <DropdownMenuItem className="export-menu-item" onSelect={onExportMarkdown} disabled={busy}><FileCode2 aria-hidden="true" />{t("ذخیرهٔ فایل Markdown")}</DropdownMenuItem>
                     </DropdownMenuGroup>
                   </DropdownMenuContent>

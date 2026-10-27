@@ -46,11 +46,13 @@ Evidence: `artifacts/vscode-diff-0.1.6.log`.
 
 ## Publication workflow
 
-Android stable-key builds and requested desktop builds publish directly to
-a public GitHub prerelease after packaging succeeds. Workflows remain
-manual-only. The desktop choice defaults to Windows, with Linux, macOS and
-all available explicitly. Android remains ARM64-only; ephemeral-key APKs
-remain workflow artifacts.
+Follow-up on 2026-10-27: **Release Android, Windows and VS Code** now runs on
+every push to `main`, reusing the Android stable-key build and Windows desktop
+build alongside a VSIX packaging job. All three publish to the same commit's
+public GitHub prerelease. Both native workflows retain manual dispatch; Linux,
+macOS and all desktop platforms remain explicit manual choices. Android remains
+ARM64-only; ephemeral-key APKs remain workflow artifacts. Repository secret
+metadata reads confirmed that both stable Android signing secrets are configured.
 
 The publisher groups the exact same source commit under
 `native-preview-v<version>-<full commit SHA>`, checks the tag's actual commit,
@@ -58,11 +60,14 @@ uploads expected installer types and per-platform build/hash metadata, and
 fails on missing files, verification mismatches, permissions or upload
 errors. It copies only explicit public asset paths, never signing files.
 
-Ten local publisher tests use real temporary fixture bytes and an isolated
+Fourteen local publisher tests use real temporary fixture bytes and an isolated
 GitHub transport. They cover all desktop formats, shared-release creation
 races, existing releases, wrong tags, denied access, failed uploads, missing
-Linux formats, Android verification and ephemeral-key refusal. Actionlint
-passes both workflows. Local workflow fixtures check every platform matrix
+Linux formats, Android verification and ephemeral-key refusal. The added checks
+cover version-specific VSIX selection, rejection of stale/missing/empty packages,
+and concurrent publication of all three platforms with distinct asset names.
+Actionlint passes all workflows, including local reusable-workflow calls and
+their inputs/secrets. Local workflow fixtures check every platform matrix
 choice and seven Android signing/summary/cleanup cases, including actual
 keytool preflight. These checks do not establish a successful hosted native
 build, remote asset upload, or installation on a device.

@@ -453,6 +453,8 @@ function patchMappedBlock(previous: JSONContent, next: JSONContent, source: stri
 }
 
 export type RichSourceSnapshot = { doc: ProseMirrorNode; text: string; positions: SourcePosition[]; nodes: ProseMirrorNode[]; definitions: Definitions };
+export type LinkedRichRange = { from: number; to: number };
+type SelectionSpan = LinkedRichRange & SourcePosition;
 type HistoryBranch = { items: { forEach: (callback: (item: { selection?: object }) => void) => void } };
 type HistoryState = { done: HistoryBranch; undone: HistoryBranch };
 const historyPlugin = (state?: EditorState) => state?.plugins.find(plugin => {
@@ -477,6 +479,7 @@ export class RichSourceDocument {
   private snapshots = new WeakMap<ProseMirrorNode, RichSourceSnapshot>();
   private sources = new WeakMap<ProseMirrorNode, string>();
   private blockMaps = new WeakMap<ProseMirrorNode, BlockSourceMap>();
+  private selectionMaps = new WeakMap<ProseMirrorNode, { text: string; definitions: Definitions; spans: SelectionSpan[]; wrappers: SelectionSpan[] }>();
   private rawDefinitions = new WeakMap<ProseMirrorNode, Definitions>();
   private historySources = new WeakMap<object, RichSourceSnapshot>();
   private pendingHistory = new WeakMap<ProseMirrorNode, RichSourceSnapshot>();
@@ -485,12 +488,89 @@ export class RichSourceDocument {
     doc.forEach(node => nodes.push(node));
     this.sources = new WeakMap();
     this.blockMaps = new WeakMap();
+    this.selectionMaps = new WeakMap();
     nodes.forEach((node, index) => { const position = positions[index]; this.sources.set(node, position ? text.slice(position.start, position.end) : ''); });
     this.rawDefinitions = new WeakMap();
     this.current = { doc, text, positions: positions.length ? positions : [{ start: 0, end: 0 }], nodes, definitions };
     this.snapshots = new WeakMap([[doc, this.current]]);
     this.historySources = new WeakMap();
     this.pendingHistory = new WeakMap();
+  }
+  /** Build provenance only for touched blocks, and retain it across selection
+   * changes. Reuse the writer's encoded units for entities, escapes and edits. */
+  private selectionMap(node: ProseMirrorNode, text: string, definitions: Definitions) {
+    const cached = this.selectionMaps.get(node);
+    if (cached?.text === text && cached.definitions === definitions) return cached;
+    const spans: SelectionSpan[] = [], wrappers: SelectionSpan[] = [];
+    try {
+      const mapped = this.blockMaps.get(node);
+      const originals = mapped?.originals ?? astTextblocks(parseRichMarkdown(text, definitions).root);
+      const blocks: { node: ProseMirrorNode; from: number }[] = [];
+      if (node.isTextblock) blocks.push({ node, from: 1 });
+      else node.descendants((child, pos) => {
+        if (child.isTextblock) { blocks.push({ node: child, from: pos + 2 }); return false; }
+      });
+      if (blocks.length === originals.length) blocks.forEach((block, index) => {
+        const original = originals[index];
+        const map = original.type === 'code' ? codeMap(text, original) : mapped?.maps[index] ?? inlineMap(text, original, definitions);
+        let at = block.from;
+        const boundaries = [at];
+        for (const unit of map.units) {
+          const to = at + (['text', 'code'].includes(unit.kind) ? unit.text.length : 1);
+          spans.push({ from: at, to, start: unit.start, end: unit.end });
+          boundaries.push(to); at = to;
+        }
+        if ('wrappers' in map) for (const wrapper of map.wrappers) wrappers.push({
+          from: boundaries[wrapper.from], to: boundaries[wrapper.to], start: wrapper.start, end: wrapper.end,
+        });
+        // Markers, fences and indentation still identify their rendered block.
+        wrappers.push({ ...span(original), from: block.from, to: block.from + block.node.content.size });
+      });
+    } catch { /* Unsupported raw syntax falls back to its owning block. */ }
+    if (!spans.length) spans.push({ from: 0, to: node.nodeSize, start: 0, end: text.length });
+    const result = { text, definitions, spans, wrappers };
+    this.selectionMaps.set(node, result);
+    return result;
+  }
+  sourceRange(doc: ProseMirrorNode, from: number, to: number): SourcePosition | null {
+    if (from >= to) return null;
+    const snapshot = this.snapshot(doc);
+    let result: SourcePosition | null = null;
+    doc.forEach((node, pos, index) => {
+      if (pos >= to || pos + node.nodeSize <= from) return;
+      const block = snapshot.positions[index];
+      if (!block) return;
+      const map = this.selectionMap(node, snapshot.text.slice(block.start, block.end), snapshot.definitions);
+      const touched = map.spans.filter(unit => pos + unit.from < to && pos + unit.to > from);
+      for (const unit of touched) {
+        const start = block.start + unit.start, end = block.start + unit.end;
+        result = result ? { start: Math.min(result.start, start), end: Math.max(result.end, end) } : { start, end };
+      }
+    });
+    return result;
+  }
+  richRanges(doc: ProseMirrorNode, selection: SourcePosition): LinkedRichRange[] {
+    if (selection.start >= selection.end) return [];
+    const snapshot = this.snapshot(doc), ranges: LinkedRichRange[] = [];
+    doc.forEach((node, pos, index) => {
+      const block = snapshot.positions[index];
+      if (!block || block.start >= selection.end || block.end <= selection.start) return;
+      const map = this.selectionMap(node, snapshot.text.slice(block.start, block.end), snapshot.definitions);
+      const overlaps = (unit: SelectionSpan) => block.start + unit.start < selection.end && block.start + unit.end > selection.start;
+      const touched = map.spans.filter(overlaps);
+      // A URL/delimiter without visible characters belongs to its smallest
+      // inline wrapper. Never search for another occurrence of its label.
+      if (!touched.length) {
+        const wrapper = map.wrappers.filter(overlaps).sort((a, b) => (a.end - a.start) - (b.end - b.start))[0];
+        if (wrapper) touched.push(wrapper);
+      }
+      for (const unit of touched) {
+        const from = pos + unit.from, to = pos + unit.to, last = ranges[ranges.length - 1];
+        if (last && from <= last.to) last.to = Math.max(last.to, to);
+        else ranges.push({ from, to });
+      }
+    });
+    return ranges;
   }
   prepare(transaction: Transaction, state?: EditorState): RichSourceSnapshot {
     if (!this.current) throw new Error('RICH_SOURCE_NOT_INITIALIZED');

@@ -1,0 +1,20 @@
+::highlight(parsiword-linked-source),
+::highlight(parsiword-linked-preview),
+::highlight(parsiword-linked-source-original),
+::highlight(parsiword-linked-preview-original),
+::highlight(parsiword-linked-source-modified),
+::highlight(parsiword-linked-preview-modified) {
+  background-color: #2563eb;
+  color: #fff;
+}
+@media (forced-colors: active) {
+  ::highlight(parsiword-linked-source),
+  ::highlight(parsiword-linked-preview),
+  ::highlight(parsiword-linked-source-original),
+  ::highlight(parsiword-linked-preview-original),
+  ::highlight(parsiword-linked-source-modified),
+  ::highlight(parsiword-linked-preview-modified) {
+    background-color: Highlight;
+    color: HighlightText;
+  }
+}

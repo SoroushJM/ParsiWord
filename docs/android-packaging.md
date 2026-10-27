@@ -1,13 +1,14 @@
 # Android distribution
 
-## Manual GitHub Actions build and automatic release
+## Automatic release and manual GitHub Actions build
 
 The **Build Android ARM64 preview** workflow in
 [`.github/workflows/android.yml`](../.github/workflows/android.yml) is available
 through **Actions → Build Android ARM64 preview → Run workflow** after this file
-is on the repository's default branch. It has only `workflow_dispatch`; pushes
-and pull requests do not start Android builds. Adding the workflow does not run
-it. Once a requested stable-key build succeeds, the same workflow publishes
+is on the repository's default branch. It also exposes `workflow_call` for the
+**Release Android, Windows and VS Code** workflow, which runs on every push to
+`main` and calls this build with `signing: stable`. Pull requests and pushes to
+other branches do not start automatic Android builds. Once a stable-key build succeeds, the same workflow publishes
 its installable APK directly to GitHub Releases. Unit, browser and device
 testing remain local; the workflow performs the build, APK structural/signature
 verification and release publication, without an emulator.
@@ -19,7 +20,8 @@ The tracked native Android project is retained, including its ARM64 filters
 and Preview package settings; it is not regenerated. pnpm, Gradle dependencies
 and Rust build dependencies are cached, while signing material is kept in the
 runner's temporary directory outside the checkout and is never cached or
-uploaded. A newer manual run on the same branch cancels the previous run. The
+uploaded. Builds use commit-specific concurrency groups; a newer pushed commit
+does not cancel an older commit's APK build. The
 job is limited to 60 minutes and the native build step to 45 minutes.
 
 The tracked Android Gradle plugin is patched to 9.3.2, which fixes the
@@ -79,7 +81,7 @@ information. Download the APK directly from the release's **Assets** section;
 there is no need to download or unzip an Actions artifact. This remains an
 ARM64 **Preview** application, not a Play Store or production release.
 
-Android and Windows builds from the same source version and exact commit share
+Android, Windows and VS Code builds from the same source version and exact commit share
 the tag `native-preview-v<version>-<full-commit-SHA>`. The helper creates that
 tag at the built commit, verifies its target before reusing it, and adds the
 platform's assets. Concurrent builds can add their respective assets to the

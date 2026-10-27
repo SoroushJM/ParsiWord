@@ -16,6 +16,8 @@ import { MarkdownSourceEditor } from './MarkdownSourceEditor';
 import { WorkspacePanels } from './WorkspacePanels';
 import { BrandHeader, DocumentHeading, ExportSettingsDialog, IntroControls, MobileViewSwitch, SourceToolbar } from './AppControls';
 import { usePreviewScroll } from './use-preview-scroll';
+import { useLinkedSelection } from './use-linked-selection';
+import type { RichSourceDocument } from './rich-source';
 import { errorMessage, errorMessages } from './errors';
 import defaultDocument from './default-document.md?raw';
 
@@ -90,6 +92,11 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
   const [previous, setPrevious] = useState<string | null>(null);
   const editor = useRef<HTMLTextAreaElement>(null);
   const preview = useRef<HTMLDivElement>(null);
+  const richSource = useRef<RichSourceDocument | null>(null);
+  const onRichEditor = useCallback((editor: Editor | null, source?: RichSourceDocument) => {
+    richSource.current = editor ? source ?? null : null;
+    setRichEditor(editor);
+  }, []);
   const input = useRef<HTMLInputElement>(null);
   const { mobileView, selectView, activateView } = usePreviewScroll(editor, preview, markdown, previewMarkdown, viewMode);
   useEffect(() => platform.subscribeComparison?.(value => { setComparison(value); setChangeIndex(0); }), [platform]);
@@ -115,6 +122,7 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
   // its entire value on every rich keystroke makes WebView reshape all source.
   const sourceMarkdown = editingView === 'preview' && (mobileView === 'preview' || !matchMedia('(max-width: 56.1875rem)').matches)
     ? inactiveSource : markdown;
+  const linkedSelection = useLinkedSelection(editor, richEditor, richSource, markdown, sourceMarkdown, instanceId);
   useEffect(() => {
     if (editingView !== 'preview') return;
     const timer = setTimeout(() => setInactiveSource(markdown), 120);
@@ -324,7 +332,7 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
   const onExportMarkdown = useCallback(() => { void convert('md'); }, [convert]);
   const onWrap = wrap;
 
-  const documentHeading = <DocumentHeading instanceId={instanceId} hostControlled={platform.kind === 'vscode'} title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} onExportPdf={onExportPdf} onExportMarkdown={onExportMarkdown} />;
+  const documentHeading = <DocumentHeading instanceId={instanceId} hostControlled={platform.kind === 'vscode'} compact={embedded} direction={settings.direction} onDirectionChange={onDirectionChange} title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} onExportPdf={onExportPdf} onExportMarkdown={onExportMarkdown} />;
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/u).length : 0;
 
   return (
@@ -374,14 +382,14 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
                 <section id={elementId("edit-panel")} className="editing-pane" aria-labelledby={elementId("edit-heading")} onPointerDownCapture={onSourceFocus}>
                   <div className="pane-heading"><h2 id={elementId("edit-heading")}><Code2 size="1.0625rem" /> {t("ویرایش متن")}</h2><span>Markdown</span></div>
                   <SourceToolbar readOnly={readOnly} canRestore={previous !== null} onWrap={onWrap} onRestore={onRestore} />
-                  <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor={elementId("markdown-source")} className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor id={elementId("markdown-source")} editorRef={editor} value={sourceMarkdown} direction={settings.direction === 'ltr' ? 'ltr' : 'auto'} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} diff={diffSide} readOnly={readOnly} searching={!!search} /></Field></FieldGroup>
+                  <FieldGroup className="gap-0"><Field className="gap-0"><FieldLabel htmlFor={elementId("markdown-source")} className="sr-only">{t("متن Markdown")}</FieldLabel><MarkdownSourceEditor id={elementId("markdown-source")} editorRef={editor} value={sourceMarkdown} direction={settings.direction} onFocus={onSourceFocus} onChange={setMarkdown} onCompositionChange={onCompositionChange} diff={diffSide} readOnly={readOnly} searching={!!search} linkedSelection={linkedSelection} /></Field></FieldGroup>
                 </section>
               }
               preview={
                 <section id={elementId("preview-pane")} className="preview-pane" aria-labelledby={elementId("preview-heading")}>
                   <div className="pane-heading"><h2 id={elementId("preview-heading")}><BookOpen size="1.0625rem" /> {t("پیش‌نمایش")}</h2></div>
                   <div ref={preview} id={elementId("preview-panel")} className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus} onPointerDownCapture={onPreviewFocus}>
-                    {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} diff={diffSide} readOnly={readOnly} resolveImage={platform.resolveImage ?? localImages.resolveImage} showReadOnlyToolbar={embedded} onEditor={setRichEditor} />}
+                    {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} diff={diffSide} readOnly={readOnly} resolveImage={platform.resolveImage ?? localImages.resolveImage} showReadOnlyToolbar={embedded} onEditor={onRichEditor} />}
                   </div>
                 </section>
               }

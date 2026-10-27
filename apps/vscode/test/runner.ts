@@ -9,6 +9,7 @@ import { testShortcuts } from './shortcuts';
 import { testImageExports } from './image-export';
 import { testTikz } from './tikz';
 import { testRtlLists } from './rtl-lists';
+import { testLinkedSelection } from './linked-selection';
 
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds));
 async function until<T>(read: () => T | PromiseLike<T>, predicate: (value: T) => boolean, label: string): Promise<T> {
@@ -69,6 +70,11 @@ export async function run() {
     await vscode.commands.executeCommand('workbench.action.closeSidebar');
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${process.env.PARSIWORD_TEST_CDP}`);
     const pages = browser.contexts().flatMap(context=>context.pages());
+    if (process.env.PARSIWORD_TEST_FOCUS === 'linked-selection') {
+      await testLinkedSelection(browser, artifact, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
+      return;
+    }
     if (process.env.PARSIWORD_TEST_FOCUS === 'rtl-lists') {
       await testRtlLists(browser, artifact, record);
       await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
@@ -314,6 +320,7 @@ export async function run() {
     await vscode.commands.executeCommand('parsiword.nativePreview',uri);
     record('The built-in Markdown preview command remains usable');
     await testShortcuts(browser, artifact, record);
+    await testLinkedSelection(browser, artifact, record);
     await testGitDiff(browser, api, artifact, record);
     imageExports = await testImageExports(browser, api, artifact, record);
     tikzExports = await testTikz(browser, api, artifact, record);

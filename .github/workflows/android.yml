@@ -1,7 +1,19 @@
 name: Build Android ARM64 preview
 
-# Build only when requested; do not spend Actions minutes on pushes or PRs.
+# Reused by the main-branch release workflow; manual Preview builds remain available.
 on:
+  workflow_call:
+    inputs:
+      signing:
+        description: Android signing mode
+        required: false
+        default: stable
+        type: string
+    secrets:
+      PARSIWORD_ANDROID_PREVIEW_KEYSTORE_BASE64:
+        required: true
+      PARSIWORD_ANDROID_PREVIEW_PASSWORD:
+        required: true
   workflow_dispatch:
     inputs:
       signing:
@@ -15,8 +27,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-preview-${{ github.ref }}
-  cancel-in-progress: true
+  group: android-preview-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   apk:

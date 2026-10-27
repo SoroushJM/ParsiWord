@@ -92,4 +92,45 @@ describe('native release publication with real installer files and isolated GitH
     await put(f.root, f.env.APK_PATH, 'different bytes');
     await expect(nativeAssets('android', f.root, f.env)).rejects.toThrow('does not match');
   });
+
+  it('publishes the VSIX matching the extension version and records its independent version', async () => {
+    const f = await fixture();
+    await put(f.root, 'apps/vscode/package.json', JSON.stringify({ version: '0.1.7' }));
+    await put(f.root, 'artifacts/parsiword-vscode-0.1.6.vsix', 'stale package');
+    await put(f.root, 'artifacts/parsiword-vscode-0.1.7.vsix', 'current extension bytes');
+    const transport = api({ existing: true });
+    const result = await publishNativeRelease({ ...f, kind: 'vscode', gh: transport.gh });
+    expect(result).toMatchObject({ tag, assets: ['parsiword-vscode-0.1.7.vsix', 'ParsiWord-VSCode-BUILD-INFO.md', 'ParsiWord-VSCode-SHA256SUMS.txt'] });
+    expect(transport.captured[0].info).toContain('VS Code extension version: 0.1.7');
+    expect(transport.captured[0].sums).toContain(createHash('sha256').update('current extension bytes').digest('hex'));
+    expect(transport.gh.mock.calls.some(([args]) => args[0] === 'release' && args[1] === 'create')).toBe(false);
+  });
+
+  it.each([undefined, ''])('refuses a missing or empty current VSIX, even when a stale package exists: %j', async content => {
+    const f = await fixture();
+    await put(f.root, 'apps/vscode/package.json', JSON.stringify({ version: '0.1.7' }));
+    await put(f.root, 'artifacts/parsiword-vscode-0.1.6.vsix', 'stale package');
+    if (content !== undefined) await put(f.root, 'artifacts/parsiword-vscode-0.1.7.vsix', content);
+    const transport = api();
+    await expect(publishNativeRelease({ ...f, kind: 'vscode', gh: transport.gh })).rejects.toThrow();
+    expect(transport.gh).not.toHaveBeenCalled();
+  });
+
+  it('adds concurrent Android, Windows and VS Code builds to one commit release with distinct assets', async () => {
+    const f = await fixture();
+    await put(f.root, 'apps/parsiword/src-tauri/target/release/bundle/nsis/setup.exe');
+    await put(f.root, f.env.APK_PATH);
+    await put(f.root, 'android/output.verification.json', JSON.stringify({ sha256: createHash('sha256').update('fixture installer bytes').digest('hex'), architecture: 'arm64-v8a', signatureVerified: true, debuggable: false, testOnly: false, certificateSha256: 'c'.repeat(64) }));
+    await put(f.root, 'android/BUILD-INFO.md', 'Stable Preview fixture');
+    await put(f.root, 'apps/vscode/package.json', JSON.stringify({ version: '0.1.7' }));
+    await put(f.root, 'artifacts/parsiword-vscode-0.1.7.vsix');
+    const transport = api();
+    const results = await Promise.all(['android', 'desktop', 'vscode'].map(kind => publishNativeRelease({ ...f, kind, gh: transport.gh })));
+    expect(new Set(results.map(result => result.tag))).toEqual(new Set([tag]));
+    const names = results.flatMap(result => result.assets);
+    expect(names).toEqual(expect.arrayContaining(['output.apk', 'setup.exe', 'parsiword-vscode-0.1.7.vsix']));
+    expect(new Set(names).size).toBe(names.length);
+    expect(transport.captured).toHaveLength(3);
+    expect((await readdir(f.root)).some(name => name.startsWith('parsiword-native-release-'))).toBe(false);
+  });
 });

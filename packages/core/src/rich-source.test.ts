@@ -86,6 +86,9 @@ describe('precise rich source patches', () => {
 
 const schema = new Schema({ nodes: {
   doc: { content: 'block+' }, paragraph: { group: 'block', content: 'inline*' }, text: { group: 'inline' },
+  heading: { group: 'block', content: 'inline*', attrs: { level: { default: 1 } } },
+  table: { group: 'block', content: 'tableRow+' }, tableRow: { content: '(tableCell | tableHeader)+' },
+  tableCell: { content: 'paragraph+', attrs: { align: { default: null } } }, tableHeader: { content: 'paragraph+', attrs: { align: { default: null } } },
   hardBreak: { group: 'inline', inline: true },
   codeBlock: { group: 'block', content: 'text*', code: true, attrs: { language: { default: null }, meta: { default: null } } },
   rawBlock: { group: 'block', atom: true, attrs: { source: { default: '' } } },
@@ -108,6 +111,73 @@ function session(source: string, depth = 100) {
   const replace = (source: string) => { const parsed = parseRichMarkdown(source); state = replaceRichSourceState(state, parsed.document); ledger.reset(state.doc, source, parsed.positions, parsed.definitions); };
   return { ledger, get state() { return state; }, apply, replace };
 }
+describe('linked source and preview selection provenance', () => {
+  function selected(source: string, start: number, end: number) {
+    const current = session(source), doc = current.state.doc;
+    const ranges = current.ledger.richRanges(doc, { start, end });
+    return { current, ranges, text: ranges.map(range => doc.textBetween(range.from, range.to, '\n')).join('|') };
+  }
+  it.each([
+    ['# عنوان فارسی English', 'فارسی', 'فارسی'],
+    ['A &amp; \\*literal\\* **bold** 😀', '&amp;', '&'],
+    ['A &amp; \\*literal\\* **bold** 😀', '\\*literal\\*', '*literal*'],
+    ['A &amp; \\*literal\\* **bold** 😀', '😀', '😀'],
+    ['- first\r\n- **دوم** English', 'دوم', 'دوم'],
+    ['> first\r\n> second', 'second', 'second'],
+    ['~~~ts\r\na\r\nb\r\n~~~', 'a\r\nb', 'a\nb'],
+    ['| نام | مقدار |\n| --- | --- |\n| فارسی | 12 |', 'فارسی', 'فارسی'],
+  ])('maps encoded and nested text in both directions: %s', (source, needle, rendered) => {
+    const start = source.indexOf(needle), end = start + needle.length;
+    const { current, ranges, text } = selected(source, start, end);
+    expect(text).toBe(rendered);
+    expect(current.ledger.sourceRange(current.state.doc, ranges[0].from, ranges[ranges.length - 1].to)).toEqual({ start, end });
+    expect(current.ledger.snapshot(current.state.doc).text).toBe(source);
+  });
+  it('anchors the second identical label and block instead of searching visible text', () => {
+    const source = '**same** [same](https://example.com)\n\n**same** [same](https://example.com)';
+    const start = source.lastIndexOf('[same]') + 1;
+    const { current, ranges, text } = selected(source, start, start + 4);
+    expect(text).toBe('same');
+    expect(ranges).toHaveLength(1);
+    expect(ranges[0].from).toBeGreaterThan(current.state.doc.child(0).nodeSize);
+    expect(current.ledger.sourceRange(current.state.doc, ranges[0].from, ranges[0].to)).toEqual({ start, end: start + 4 });
+  });
+  it('identifies rendered owners of source-only URL and formatting syntax', () => {
+    const source = '**bold** [label](https://example.com)';
+    expect(selected(source, 0, 2).text).toBe('bold');
+    const start = source.indexOf('https:');
+    expect(selected(source, start, start + 'https://example.com'.length).text).toBe('label');
+  });
+  it('maps a selection across blocks and clears collapsed ranges', () => {
+    const source = '**first**\n\nsecond', current = session(source), doc = current.state.doc;
+    const ranges = current.ledger.richRanges(doc, { start: 2, end: source.length });
+    expect(ranges.map(range => doc.textBetween(range.from, range.to))).toEqual(['first', 'second']);
+    expect(current.ledger.sourceRange(doc, ranges[0].from, ranges[1].to)).toEqual({ start: 2, end: source.length });
+    expect(current.ledger.richRanges(doc, { start: 3, end: 3 })).toEqual([]);
+    expect(current.ledger.sourceRange(doc, 2, 2)).toBeNull();
+  });
+  it('retains provenance through rich edits, undo and an external replacement', () => {
+    const current = session('**same**\n\n&#97;a');
+    current.apply(closeHistory(current.state.tr.insertText('!', 3)));
+    let doc = current.state.doc, range = current.ledger.richRanges(doc, { start: 3, end: 4 })[0];
+    expect(doc.textBetween(range.from, range.to)).toBe('a');
+    const encoded = current.ledger.snapshot(doc).text.indexOf('&#97;');
+    range = current.ledger.richRanges(doc, { start: encoded, end: encoded + 5 })[0];
+    expect(current.ledger.sourceRange(doc, range.from, range.to)).toEqual({ start: encoded, end: encoded + 5 });
+    undo(current.state, transaction => current.apply(transaction));
+    doc = current.state.doc;
+    expect(current.ledger.sourceRange(doc, doc.child(0).nodeSize + 1, doc.child(0).nodeSize + 2)).toEqual({ start: 10, end: 15 });
+    current.replace('new **متن**'); doc = current.state.doc;
+    range = current.ledger.richRanges(doc, { start: 6, end: 9 })[0];
+    expect(doc.textBetween(range.from, range.to)).toBe('متن');
+  });
+  it('reuses a touched block map for repeated selections without parsing other blocks', () => {
+    const source = Array.from({ length: 80 }, (_, index) => `**block ${index}**`).join('\n\n'), current = session(source);
+    const parse = vi.spyOn(markdownParser, 'parse'), start = source.lastIndexOf('block');
+    for (let index = 0; index < 5; index++) current.ledger.richRanges(current.state.doc, { start, end: start + 5 });
+    expect(parse).toHaveBeenCalledTimes(1); parse.mockRestore();
+  });
+});
 describe('transaction source provenance', () => {
   it.each([{ from: 1, to: 2, output: 'a' }, { from: 2, to: 3, output: '&#97;' }])('deletes the selected repeated decoded character ($from)', ({ from, to, output }) => {
     const current = session('&#97;a'); expect(current.apply(current.state.tr.delete(from, to))).toBe(output);

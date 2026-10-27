@@ -1,7 +1,14 @@
 name: Build and publish desktop apps
 
-# Build only when requested; unit/browser tests are run locally.
+# Reused for automatic Windows releases; other desktop platforms stay manual.
 on:
+  workflow_call:
+    inputs:
+      platform:
+        description: Desktop installer platform
+        required: false
+        default: Windows
+        type: string
   workflow_dispatch:
     inputs:
       platform:
@@ -15,7 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: desktop-release-${{ github.ref }}-${{ inputs.platform }}
+  group: desktop-release-${{ github.sha }}-${{ inputs.platform }}
   cancel-in-progress: false
 
 jobs:

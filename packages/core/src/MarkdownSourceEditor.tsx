@@ -10,13 +10,14 @@ type Props = {
   id?: string;
   editorRef: RefObject<HTMLTextAreaElement | null>;
   value: string;
-  direction: 'auto' | 'ltr';
+  direction: 'auto' | 'ltr' | 'rtl';
   onChange: (value: string) => void;
   onFocus: () => void;
   onCompositionChange?: (composing: boolean) => void;
   diff?: DiffSide;
   readOnly?: boolean;
   searching?: boolean;
+  linkedSelection?: boolean;
 };
 
 const SourceLine = memo(function SourceLine({ line, index, diff }: { line: MarkdownSourceLine; index: number; diff?: DiffLine }) {
@@ -32,7 +33,7 @@ const SourceLine = memo(function SourceLine({ line, index, diff }: { line: Markd
 
 // The native textarea remains the input, selection and sizing surface. Color
 // spans are decorative: they never change font metrics or execute source HTML.
-export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ id = "markdown-source", editorRef, value, direction, onChange, onFocus, onCompositionChange, diff, readOnly = false, searching = false }: Props) {
+export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ id = "markdown-source", editorRef, value, direction, onChange, onFocus, onCompositionChange, diff, readOnly = false, searching = false, linkedSelection = false }: Props) {
   const { t } = useLocale();
   const paint = useRef<HTMLDivElement>(null);
   const surface = useRef<HTMLDivElement>(null);
@@ -58,10 +59,10 @@ export const MarkdownSourceEditor = memo(function MarkdownSourceEditor({ id = "m
         if (count > 20_000) return null;
         colored ||= line.tokens.some(token => token.kind !== undefined);
       }
-      return colored || diff || searching ? result : null;
+      return colored || diff || searching || linkedSelection ? result : null;
     }
     catch { return null; }
-  }, [displayed, !!diff, searching]);
+  }, [displayed, !!diff, searching, linkedSelection]);
   const highlighted = metricsReady && !composing && !!displayed && lines !== null;
 
   useLayoutEffect(() => {
