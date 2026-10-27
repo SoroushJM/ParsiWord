@@ -46,9 +46,9 @@ export function markdownContext(source: string) {
 export type MarkdownContext = ReturnType<typeof markdownContext>;
 export function documentFontUsage(markdown: string | Root) {
   const usage = { code: false, math: false };
-  function visit(node: { type: string; lang?: string | null; children?: readonly unknown[] }) {
-    if (node.type === 'math' || node.type === 'inlineMath' || node.type === 'code' && mathLanguage(node.lang)) usage.math = true;
-    else if (node.type === 'inlineCode' || node.type === 'code' && node.lang?.toLowerCase() !== 'mermaid' && !isTikzLanguage(node.lang)) usage.code = true;
+  function visit(node: { type: string; lang?: string | null; value?: string; children?: readonly unknown[] }) {
+    if (node.type === 'math' || node.type === 'inlineMath' || node.type === 'code' && mathLanguage(node.lang) && !isTikzLanguage(node.lang, node.value)) usage.math = true;
+    else if (node.type === 'inlineCode' || node.type === 'code' && node.lang?.toLowerCase() !== 'mermaid' && !isTikzLanguage(node.lang, node.value)) usage.code = true;
     node.children?.forEach(child => visit(child as Parameters<typeof visit>[0]));
   }
   visit(typeof markdown === 'string' ? markdownParser.parse(markdown) : markdown);

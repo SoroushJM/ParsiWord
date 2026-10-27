@@ -97,4 +97,6 @@ jobs:
             artifacts/vscode-test/local-images-*.pdf
             artifacts/vscode-test/tikz-*.docx
             artifacts/vscode-test/tikz-*.pdf
+            artifacts/vscode-test/xepersian-*.docx
+            artifacts/vscode-test/xepersian-*.pdf
           if-no-files-found: warn

@@ -10,6 +10,7 @@ import { useDisplayTheme } from './display-theme';
 import { DocumentSession, type MutationOrigin } from './document-session';
 import { MAX_MARKDOWN_LENGTH } from './document-limits';
 import { Button } from '@/components/ui/button';
+import { AiPromptButton } from './AiPromptButton';
 import { EditablePreview } from './EditablePreview';
 import { LocalImageBaseControl, useLocalImageBase } from './LocalImageBase';
 import { MarkdownSourceEditor } from './MarkdownSourceEditor';
@@ -408,11 +409,11 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
         </section>
         <footer className="page-footer">
           <span>{t('ساخته‌شده برای نوشتن، به زبان خودت.')}</span>
-          <nav className="footer-links" aria-label="GitHub">
+          <nav className="footer-links flex flex-wrap items-center gap-x-4 gap-y-2" aria-label="GitHub">
             <a href="https://github.com/SoroushJM" dir="ltr">GitHub · SoroushJM</a>
             <a href="https://github.com/SoroushJM/ParsiWord">{t('سورس پروژه')}</a>
           </nav>
-          <span>{t('نسخهٔ آزمایشی')} <bdi dir="ltr">{platform.version}</bdi></span>
+          <div className="flex items-center gap-2"><span>{t('نسخهٔ آزمایشی')} <bdi dir="ltr">{platform.version}</bdi></span><AiPromptButton /></div>
         </footer>
       </main>
 

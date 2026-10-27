@@ -1,6 +1,7 @@
 import { RichContentError } from './rich-content';
 
-export type Diagram = { png: Uint8Array; width: number; height: number; svg: string };
+export type DiagramPage = { png: Uint8Array; width: number; height: number; svg: string };
+export type Diagram = DiagramPage & { pages?: readonly DiagramPage[]; pdf?: Uint8Array };
 export type DiagramRenderer = (source: string) => Promise<Diagram>;
 const cache = new Map<string, Promise<Diagram>>();
 let queue = Promise.resolve();

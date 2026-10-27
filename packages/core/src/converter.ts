@@ -225,17 +225,20 @@ function createPreparedWord(context: MarkdownContext, settings: ExportSettings, 
         : block(child, availableWidth - 400));
       case 'math': return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER, spacing: { before: 160, after: 160 } })];
       case 'code': {
-        if (mathLanguage(node.lang)) return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER })];
-        if (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang)) {
-          const tikz = isTikzLanguage(node.lang), name = tikz ? 'TikZ' : 'Mermaid';
+        if (mathLanguage(node.lang) && !isTikzLanguage(node.lang, node.value)) return [new Paragraph({ children: [wordMath(node.value, true)], bidirectional: false, alignment: AlignmentType.CENTER })];
+        if (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang, node.value)) {
+          const tikz = isTikzLanguage(node.lang, node.value), name = tikz ? 'TikZ' : 'Mermaid';
           const diagram = diagrams.get(tikz ? `tikz\0${node.value}` : node.value);
           if (!diagram || !diagram.png.byteLength || !Number.isFinite(diagram.width) || !Number.isFinite(diagram.height) || diagram.width <= 0 || diagram.height <= 0 || availableWidth <= 0) throw new RichContentError('DIAGRAM_NOT_READY');
-          const scale = Math.min(1, 620 / diagram.width, 760 / diagram.height, availableWidth / 15 / diagram.width, imageHeight / diagram.height);
-          return [new Paragraph({ bidirectional: false, alignment: AlignmentType.CENTER,
-            spacing: { ...documentLayout.paragraph, lineRule: LineRuleType.AT_LEAST }, children: [new ImageRun({
-            type: 'png', data: diagram.png, transformation: { width: diagram.width * scale, height: diagram.height * scale },
-            altText: { name, title: `${name} diagram`, description: node.value },
-          })] })];
+          return (diagram.pages ?? [diagram]).map(picture => {
+            if (!picture.png.byteLength || !Number.isFinite(picture.width) || !Number.isFinite(picture.height) || picture.width <= 0 || picture.height <= 0) throw new RichContentError('DIAGRAM_NOT_READY');
+            const scale = Math.min(1, 620 / picture.width, 760 / picture.height, availableWidth / 15 / picture.width, imageHeight / picture.height);
+            return new Paragraph({ bidirectional: false, alignment: AlignmentType.CENTER,
+              spacing: { ...documentLayout.paragraph, lineRule: LineRuleType.AT_LEAST }, children: [new ImageRun({
+              type: 'png', data: picture.png, transformation: { width: picture.width * scale, height: picture.height * scale },
+              altText: { name, title: `${name} diagram`, description: node.value },
+            })] });
+          });
         }
         const code = highlightCode(node.value, node.lang);
         const header = new Paragraph({
@@ -308,11 +311,11 @@ export async function exportPreparedWord(context: MarkdownContext, settings: Exp
     if (decodedPixels > 24_000_000 || imageBytes > 32 * 1024 * 1024) throw new RichContentError(code);
   };
   async function prepare(node: { type: string; lang?: string | null; value?: string; children?: readonly unknown[] }): Promise<void> {
-    if (node.type === 'code' && node.value !== undefined && (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang))) {
-      const tikz = isTikzLanguage(node.lang), key = tikz ? `tikz\0${node.value}` : node.value;
+    if (node.type === 'code' && node.value !== undefined && (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang, node.value))) {
+      const tikz = isTikzLanguage(node.lang, node.value), key = tikz ? `tikz\0${node.value}` : node.value;
       if (!diagrams.has(key)) {
         const diagram = await (tikz ? tikzRenderer : renderer)(node.value);
-        accountPicture(diagram, tikz ? 'TIKZ_TOO_LARGE' : 'DIAGRAM_TOO_LARGE');
+        for (const picture of diagram.pages ?? [diagram]) accountPicture(picture, tikz ? 'TIKZ_TOO_LARGE' : 'DIAGRAM_TOO_LARGE');
         diagrams.set(key, diagram);
       }
     }

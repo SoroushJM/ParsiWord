@@ -1601,6 +1601,8 @@ body {
 }
 .page-footer {
   padding: 1rem 0.25rem 2rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   font-size: 0.75rem;
   color: var(--muted-foreground);
   border-top: 0.0625rem solid var(--border);

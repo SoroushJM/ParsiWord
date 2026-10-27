@@ -6,6 +6,7 @@ import codeSamples from '../packages/core/src/data/code-samples.json' with { typ
 const { samples } = codeSamples;
 
 test('fresh launch renders and exports the difficult default document offline', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort());
@@ -14,7 +15,8 @@ test('fresh launch renders and exports the difficult default document offline', 
   const markdown = await editor.inputValue();
   expect(markdown).toContain('React (version **19**)');
   for (const id of ['S01', 'S09', 'S11', 'S14', 'E01', 'P01', 'P72']) expect(markdown).toContain(id);
-  await expect(page.locator('.katex')).toHaveCount(5);
+  await expect(page.locator('.katex')).toHaveCount(12);
+  await expect(page.locator('.tikz-canvas > svg')).toHaveCount(1, { timeout: 60_000 });
   await expect(page.locator('.mermaid-diagram svg')).toHaveCount(2, { timeout: 30000 });
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.locator('.code-block')).toHaveCount(37);
@@ -49,11 +51,13 @@ test('fresh launch renders and exports the difficult default document offline', 
   for (const color of ['CF222E', '0550AE', '0A3069', '57606A']) expect(xml).toContain(`w:color w:val="${color}"`);
   expect(xml).toContain('<w:bidi/>');
   expect(xml).toContain('<w:bidi w:val="false"/>');
-  expect(xml.match(/<m:oMath[ >]/g)).toHaveLength(5);
+  expect(xml.match(/<m:oMath[ >]/g)).toHaveLength(12);
   expect(xml).toContain('<m:nary>');
-  const sum = Array.from(document.getElementsByTagName('m:nary')).find(n => n.getElementsByTagName('m:chr')[0].getAttribute('m:val') === '∑')!;
-  expect(Array.from(sum.childNodes).find(n => n.nodeName === 'm:e')!.textContent).toBe('k');
-  expect(zip.file(/word\/media\/.*\.png$/)).toHaveLength(2);
+  const sums = Array.from(document.getElementsByTagName('m:nary'))
+    .filter(n => n.getElementsByTagName('m:chr')[0].getAttribute('m:val') === '∑')
+    .map(n => Array.from(n.childNodes).find(child => child.nodeName === 'm:e')!.textContent);
+  expect(sums).toEqual(expect.arrayContaining(['k', '1n2']));
+  expect(zip.file(/word\/media\/.*\.png$/)).toHaveLength(3);
   expect(zip.file(/word\/fonts\/.*\.odttf$/)).toHaveLength(6);
   const table = await zip.file('word/fontTable.xml')!.async('string');
   for (const font of ['Vazirmatn', 'Noto Sans Mono', 'STIX Two Math', 'ParsiWord Symbols']) expect(table).toContain(font);

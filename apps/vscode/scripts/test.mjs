@@ -24,6 +24,7 @@ await writeFile(resolve(fixture, 'sample.md'), markdown);
 await writeFile(resolve(fixture, 'other.md'), '# Other\n\nLinked document.\n');
 await writeFile(resolve(fixture, 'crlf.md'), '# Windows\r\n\r\nمتن اصلی\r\n');
 await writeFile(resolve(fixture, 'tikz.md'), 'TIKZ_NATIVE_SEARCHABLE متن فارسی با $x^2$.\n\n' + await readFile(resolve(root, 'examples/tikz-geometry.md'), 'utf8'));
+await writeFile(resolve(fixture, 'xepersian.md'), await readFile(resolve(root, 'examples/xepersian-exam.md'), 'utf8'));
 await writeFile(resolve(fixture, 'nested folder/assets/diagram.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><circle cx="80" cy="50" r="40" fill="none" stroke="green"/><path d="M80 50L120 50M80 50L80 10" stroke="blue"/></svg>');
 await writeFile(resolve(fixture, 'image export/assets/circle.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><circle cx="80" cy="50" r="40" fill="none" stroke="green"/><path d="M80 50L120 50M80 50L80 10" stroke="blue"/></svg>');
 await writeFile(resolve(fixture, 'image export/assets/sample image.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAYElEQVR4nO3QMQEAIAgAMOIYw9PABKIJxuBgxwos6r6edG6NCgECBAgQIECAAAECBAgQIECAAAECBAgQIGBTQL6edLJGCRAgQIAAAQIECBAgQIAAAQIECBAgQIAAAYsCPgHNzcMN6g4/AAAAAElFTkSuQmCC', 'base64'));
@@ -52,8 +53,25 @@ await runTests({
 if (!process.env.PARSIWORD_TEST_THEME_WITNESS) {
 const reportPath=resolve(artifact,'results.json');
 const report=JSON.parse(await readFile(reportPath,'utf8'));
-if (process.env.PARSIWORD_TEST_FOCUS && !['image-export', 'tikz'].includes(process.env.PARSIWORD_TEST_FOCUS)) process.exit(0);
+if (process.env.PARSIWORD_TEST_FOCUS && !['image-export', 'tikz', 'xetex'].includes(process.env.PARSIWORD_TEST_FOCUS)) process.exit(0);
 const { getDocument, OPS }=await import('pdfjs-dist/legacy/build/pdf.mjs');
+if (report.xetexExports) {
+  const pdf = await getDocument({ data: new Uint8Array(await readFile(report.xetexExports.pdf)), useSystemFonts: false, disableFontFace: true, isEvalSupported: false }).promise;
+  let text = '', images = 0;
+  try {
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const page = await pdf.getPage(n);
+      text += (await page.getTextContent()).items.filter(item => 'str' in item).map(item => item.str).join(' ');
+      images += (await page.getOperatorList()).fnArray.filter(value => value === OPS.paintImageXObject).length;
+    }
+    const normalized = text.normalize('NFKC');
+    if (!normalized.includes('آزمون') || !normalized.includes('ریاضی') || images !== 0) throw Error('XeLaTeX native PDF lost searchable Persian text or vector pages');
+  } finally { await pdf.destroy(); }
+  report.results.push('Actual native XePersian PDF parsed outside Electron: Persian text remains searchable and all exam pages are vector, with zero raster image paint operations');
+  await writeFile(reportPath, JSON.stringify(report, null, 2));
+  console.log('PASS Native XePersian PDF keeps searchable Persian text and vector geometry');
+  if (process.env.PARSIWORD_TEST_FOCUS === 'xetex') process.exit(0);
+}
 if (report.tikzExports) {
   const tikzPdf = await getDocument({ data: new Uint8Array(await readFile(report.tikzExports.pdf)), useSystemFonts: false, disableFontFace: true, isEvalSupported: false }).promise;
   let imageCount = 0, text = '', structure = '';

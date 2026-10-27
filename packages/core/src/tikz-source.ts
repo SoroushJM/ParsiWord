@@ -95,6 +95,39 @@ function without(source: string, removed: readonly Command[]) {
 function hasContent(source: string) { return triviaEnd(source, 0) < source.length; }
 const leadingPreamble = new Set(['usepackage', 'RequirePackage', 'usetikzlibrary', 'usepgfplotslibrary', 'pgfplotsset', 'tikzset', 'newcommand', 'renewcommand', 'providecommand']);
 
+/** Full documents and Unicode font packages need the real XeLaTeX pipeline.
+ * Use the same scanner as the small TikZ adapter, so comments and examples do
+ * not accidentally select a much larger engine. */
+export function requiresXeLatex(input: string): boolean {
+  const unicodePackages = new Set(['xepersian', 'fontspec', 'unicode-math', 'polyglossia']);
+  return scan(input).some(command => command.name === 'documentclass' && command.arguments[0]?.trim() !== 'standalone' ||
+    ['settextfont', 'setlatintextfont', 'setmainfont', 'setsansfont', 'setmonofont'].includes(command.name) ||
+    ['usepackage', 'RequirePackage'].includes(command.name) && command.arguments[0]?.replace(/%[^\r\n]*/g, '').split(',').some(name => unicodePackages.has(name.trim())));
+}
+
+export function prepareXeLatexSource(input: string): string {
+  const commands = scan(input);
+  const classes = commands.filter(command => command.name === 'documentclass');
+  const starts = commands.filter(command => command.name === 'begin' && command.arguments[0]?.trim() === 'document');
+  const ends = commands.filter(command => command.name === 'end' && command.arguments[0]?.trim() === 'document');
+  if (classes.length > 1 || starts.length > 1 || ends.length > 1 || classes.length && (!starts.length || !ends.length) || starts.length !== ends.length) throw new ParsiWordError('XETEX_DOCUMENT_INVALID');
+  if (starts.length) {
+    if (starts[0].start > ends[0].start || classes.some(command => command.start > starts[0].start) || hasContent(input.slice(ends[0].end))) throw new ParsiWordError('XETEX_DOCUMENT_INVALID');
+    return classes.length ? input : `\\documentclass{article}\n${input}`;
+  }
+  // Keep all Unicode package/font setup before begin-document. Drawings without
+  // an explicit document get a small article wrapper, never lose their preamble.
+  const preamble = new Set([...leadingPreamble, 'settextfont', 'setlatintextfont', 'setmainfont', 'setsansfont', 'setmonofont']);
+  let boundary = 0;
+  for (const command of commands) {
+    if (!preamble.has(command.name) || hasContent(input.slice(boundary, command.start))) break;
+    boundary = command.end;
+  }
+  let body = input.slice(boundary);
+  if (!commands.some(command => command.name === 'begin' && command.arguments[0]?.trim() === 'tikzpicture')) body = `\\begin{tikzpicture}\n${body}\n\\end{tikzpicture}`;
+  return `\\documentclass{article}\n\\usepackage{tikz}\n\\pagestyle{empty}\n${input.slice(0, boundary)}\n\\begin{document}\n${body}\n\\end{document}`;
+}
+
 /** Adapt common standalone documents, picture environments and drawing bodies
  * to the engine's own document wrapper. This never changes canonical Markdown.
  * TeX execution/security limits remain the engine's responsibility. */

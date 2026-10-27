@@ -28,10 +28,10 @@ export async function testLinkedSelection(browser: Browser, artifact: string, re
     await expect.poll(() => highlights('preview')).toEqual(['تکراری English']);
     assert.equal(await view.evaluate(() => {
       const range = [...CSS.highlights.get('parsiword-linked-preview')!][0], paragraphs = document.querySelectorAll('.rich-document > p');
-      return range.intersectsNode(paragraphs[1]) && !range.intersectsNode(paragraphs[0]);
+      return range instanceof Range && range.intersectsNode(paragraphs[1]) && !range.intersectsNode(paragraphs[0]);
     }), true);
     await input.press('Control+c');
-    await expect.poll(() => vscode.env.clipboard.readText()).toBe('تکراری English');
+    await expect.poll(async () => await vscode.env.clipboard.readText()).toBe('تکراری English');
     record('Native combined view maps the selected repeated Markdown phrase to the correct preview block and preserves Ctrl+C');
     await view.locator('.rich-document > p strong').nth(1).evaluate(element => {
       element.closest<HTMLElement>('[contenteditable]')!.focus();
@@ -47,7 +47,7 @@ export async function testLinkedSelection(browser: Browser, artifact: string, re
     await page.screenshot({ path: join(artifact, 'linked-selection-vscode.png') });
     record('Preview selection highlights the exact Markdown origin after CRLF conversion without changing native text, dirty state or focus');
     await view.locator('.rich-document').press('Control+c');
-    await expect.poll(() => vscode.env.clipboard.readText()).toBe('تکراری English');
+    await expect.poll(async () => await vscode.env.clipboard.readText()).toBe('تکراری English');
     await view.locator('.rich-document').press('E');
     await expect.poll(() => doc.getText()).toBe(source.replace(/\*\*تکراری English\*\*(?![\s\S]*\*\*تکراری English\*\*)/, '**E**'));
     await expect.poll(() => highlights('source')).toEqual([]);

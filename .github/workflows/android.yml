@@ -139,9 +139,12 @@ jobs:
       - name: Install locked JavaScript dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify frontend entry detection
+        run: python3 scripts/test-android-frontend.py
+
       # This command builds the current frontend, optimized ARM64 Rust/Android
       # release, signs the APK, then verifies its signature and native contents.
-      # Unit/browser/device tests stay local; no emulator is installed or started.
+      # No emulator is installed or started; device installation remains a manual check.
       - name: Build and verify installable ARM64 Preview APK
         timeout-minutes: 45
         run: pnpm run android:test-apk "$APK_PATH"

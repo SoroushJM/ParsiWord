@@ -59,30 +59,22 @@ engine download reports a loading/connection timeout rather than asking the
 writer to simplify a valid drawing. Loading remains asynchronous, so Markdown
 editing stays available while the engine arrives.
 
-This is the bundled e-TeX/TikZ distribution. External files/packages,
-XeLaTeX/LuaLaTeX, `fontspec`, `xepersian`, shell escape and externalization are
-unavailable. Ordinary Unicode Persian/Arabic text inside TikZ nodes is not
-supported by this engine; Persian question text outside the drawing works
-normally. Use mathematical/Latin point labels inside the drawing. Unsupported
-packages or labels produce a visible error.
+Simple drawings keep using the small e-TeX path. Full documents such as
+`\documentclass{article}`, and explicit Unicode packages such as `xepersian`
+or `fontspec`, now select the separate local **XeLaTeX** engine. It supports
+Persian question sheets, numbered questions, formulas and Persian TikZ node
+labels. Use bundled font filenames; system fonts are not visible inside the
+worker. See [the XeLaTeX guide](xelatex.md) and the
+[complete Persian exam](../examples/xepersian-exam.md).
 
-A complete Persian exam such as `\documentclass{article}` plus
-`\usepackage{xepersian}` is a different workload from a TikZ drawing.
-[XePersian](https://ctan.org/pkg/xepersian?lang=en) requires XeTeX or LuaTeX;
-[fontspec](https://ctan.org/pkg/fontspec) requires XeLaTeX or LuaLaTeX and
-their font support. Merely stripping `article` or downloading the bundled
-e-TeX runtime cannot supply those capabilities. ParsiWord now identifies
-these explicit engine dependencies before loading TeX and explains them in
-Persian/English. Other full-document classes receive a separate drawing-only
-message. Source is retained exactly; unsupported packages are never silently
-removed. This diagnosis does not add a XeLaTeX engine.
-
-For a supported Persian worksheet today, write the question, numbered steps,
-headings and formulas in Markdown, then put just its geometry in a `tikz`
-fence, as in the example above. Use mathematical/Latin labels inside the
-figure; the Persian text outside it uses the regular document font and RTL
-layout. Full XePersian documents and Persian labels inside figures would
-need an additional engine, font resources and platform/export validation.
+Use a `xelatex` or `latex-document` fence for full documents. `latex` and `tex`
+fences containing a document-class declaration also render; ordinary formula
+fences retain their existing behavior. Old `tikz` fences containing a complete
+XePersian document work as well. Source is retained exactly. The XeLaTeX path
+previews each page, embeds page images in Word, and preserves the original
+vector PDF pages in PDF export. It does not install arbitrary CTAN packages,
+expose host files or enable shell escape. Bare Persian labels without a
+Unicode preamble still need XePersian/fontspec setup.
 
 TikZ requires WebAssembly, workers and gzip decompression streams; under the
 native security policy it requires Chromium/WebView 97+ or Safari 16.4+.

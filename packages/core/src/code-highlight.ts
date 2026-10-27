@@ -34,7 +34,7 @@ tikzSyntax.registerLanguage('latex', latex);
 /** One tokenization supplies both React text nodes and editable Word runs. */
 export function highlightCode(source: string, language?: string | null): HighlightedCode {
   const requested = (language || '').trim().toLowerCase();
-  const drawing = isTikzLanguage(requested);
+  const drawing = isTikzLanguage(requested, source);
   const grammar = drawing ? { id: 'latex', name: 'TikZ' } : aliases.get(requested);
   const label = grammar?.name || requested || 'Code';
   const plain = (): HighlightedCode => ({ language: grammar?.id, label,

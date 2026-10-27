@@ -9,20 +9,22 @@ import './tikz-preview.css';
 /** A lazy real TeX render; changing source never replaces the editor document. */
 export function TikzView({ source }: { source: string }) {
   const { t } = useLocale();
-  const [state, setState] = useState<{ source: string; svg?: string; width?: number; error?: string }>({ source });
+  const [state, setState] = useState<{ source: string; svg?: string; width?: number; error?: string; log?: string }>({ source });
   useEffect(() => {
     let active = true;
     const timer = setTimeout(() => {
       void renderTikz(source).then(diagram => {
         if (active) setState({ source, svg: diagram.svg, width: diagram.width });
       }).catch(error => {
-        if (active) setState({ source, error: errorMessage(error, 'رسم نمودار TikZ انجام نشد.') });
+        if (active) setState({ source, error: errorMessage(error, 'رسم نمودار TikZ انجام نشد.'), log: error?.code?.startsWith('XETEX_') && error.cause instanceof Error ? error.cause.message : undefined });
       });
     }, 200);
     return () => { active = false; clearTimeout(timer); };
   }, [source]);
   if (state.source === source && state.error) return <Alert variant="destructive"><AlertDescription>
-    {t(state.error)}<pre dir="ltr" className="max-h-48 overflow-auto whitespace-pre-wrap break-words">{source}</pre>
+    {t(state.error)}
+    {state.log && <details><summary>{t('گزارش XeLaTeX')}</summary><pre dir="ltr" className="max-h-48 overflow-auto whitespace-pre-wrap break-words">{state.log}</pre></details>}
+    <pre dir="ltr" className="max-h-48 overflow-auto whitespace-pre-wrap break-words">{source}</pre>
   </AlertDescription></Alert>;
   if (!state.svg) return <div className="flex items-center gap-2" role="status"><Spinner aria-hidden="true" /><span>{t('در حال رسم نمودار TikZ…')}</span></div>;
   const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;

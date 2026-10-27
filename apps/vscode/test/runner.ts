@@ -8,6 +8,7 @@ import { testGitDiff } from './git-diff';
 import { testShortcuts } from './shortcuts';
 import { testImageExports } from './image-export';
 import { testTikz } from './tikz';
+import { testXeTex } from './xetex';
 import { testRtlLists } from './rtl-lists';
 import { testLinkedSelection } from './linked-selection';
 
@@ -23,6 +24,7 @@ export async function run() {
   const exports: Record<string,string> = {};
   let imageExports: Record<string,string> | undefined;
   let tikzExports: Record<string,string> | undefined;
+  let xetexExports: Record<string,string> | undefined;
   const themes: unknown[] = [];
   const viewState: unknown[] = [];
   const narrowViews: unknown[] = [];
@@ -70,6 +72,11 @@ export async function run() {
     await vscode.commands.executeCommand('workbench.action.closeSidebar');
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${process.env.PARSIWORD_TEST_CDP}`);
     const pages = browser.contexts().flatMap(context=>context.pages());
+    if (process.env.PARSIWORD_TEST_FOCUS === 'xetex') {
+      const xetexExports = await testXeTex(browser, artifact, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results, xetexExports }, null, 2));
+      return;
+    }
     if (process.env.PARSIWORD_TEST_FOCUS === 'linked-selection') {
       await testLinkedSelection(browser, artifact, record);
       await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
@@ -324,6 +331,7 @@ export async function run() {
     await testGitDiff(browser, api, artifact, record);
     imageExports = await testImageExports(browser, api, artifact, record);
     tikzExports = await testTikz(browser, api, artifact, record);
+    xetexExports = await testXeTex(browser, artifact, record);
     await testRtlLists(browser, artifact, record);
     // Comparison checks close their editors. Reopen the native document and
     // refresh its webview references before continuing the multi-view checks.
@@ -536,7 +544,7 @@ export async function run() {
     }
     await page.setViewportSize(originalViewport);
     record('Actual 400px combined/source/rendered webviews have no page overflow; every enabled source/rich toolbar button is reachable with Tab and scrolls into view');
-    await writeFile(join(artifact,'results.json'),JSON.stringify({version:vscode.version,results,exports,imageExports,tikzExports,themes,viewState,narrowViews},null,2));
+    await writeFile(join(artifact,'results.json'),JSON.stringify({version:vscode.version,results,exports,imageExports,tikzExports,xetexExports,themes,viewState,narrowViews},null,2));
   } catch (error) {
     if(browser) for(const page of browser.contexts().flatMap(context=>context.pages())) await page.screenshot({path:join(artifact,'failure.png')}).catch(()=>{});
     await writeFile(join(artifact, themeWitness ? `syntax-${themeWitness}-failure.json` : 'results.json'),JSON.stringify({version:vscode.version,results,themes,viewState,narrowViews,error:String(error)},null,2));

@@ -1,15 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('./public-assets', () => ({ publicAsset: (path: string) => `https://parsiword.test/assets/${path}` }));
+vi.mock('./xetex', () => ({ renderXeLatex: vi.fn(async () => ({ png: new Uint8Array([1]), width: 1, height: 1, svg: '<svg/>' })) }));
 beforeEach(() => { vi.resetModules(); vi.stubGlobal('document', { baseURI: 'https://parsiword.test/documents/a' }); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 describe('bounded real TikZ worker lifecycle', () => {
   it.each([
-    [String.raw`\documentclass{article}\usepackage{xepersian}\begin{document}سؤال\end{document}`, 'TIKZ_ENGINE_UNSUPPORTED'],
-    [String.raw`\documentclass{exam}\begin{document}Question\end{document}`, 'TIKZ_DOCUMENT_UNSUPPORTED'],
-  ])('preserves an actionable incompatibility error without downloading or starting TeX: %s', async (source, code) => {
+    String.raw`\documentclass{article}\usepackage{xepersian}\begin{document}سؤال\end{document}`,
+    String.raw`\documentclass{exam}\begin{document}Question\end{document}`,
+  ])('routes full documents to XeLaTeX without starting the e-TeX worker: %s', async source => {
     const fetch = vi.fn(), Worker = vi.fn(); vi.stubGlobal('fetch', fetch); vi.stubGlobal('Worker', Worker);
     const { renderTikz } = await import('./tikz');
-    await expect(renderTikz(source)).rejects.toMatchObject({ code });
+    await expect(renderTikz(source)).resolves.toMatchObject({ svg: '<svg/>' });
+    const { renderXeLatex } = await import('./xetex');
+    expect(renderXeLatex).toHaveBeenCalledWith(source);
     expect(fetch).not.toHaveBeenCalled(); expect(Worker).not.toHaveBeenCalled();
   });
   it('rejects excessive source before fetching or allocating a worker', async () => {

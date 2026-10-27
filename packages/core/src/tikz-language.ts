@@ -1,5 +1,6 @@
 /** Classification stays independent of the lazy TeX/WASM rendering engine. */
-export const isTikzLanguage = (language?: string | null): boolean => /^(tikz|tikzpicture)$/i.test(language?.trim() || '');
+export const isTikzLanguage = (language?: string | null, source = ''): boolean => /^(tikz|tikzpicture|xelatex|latex-document)$/i.test(language?.trim() || '') ||
+  /^(latex|tex)$/i.test(language?.trim() || '') && /(?:^|\r?\n)[ \t]*\\documentclass\b/.test(source);
 
 /** A useful first geometry exercise; no additional TikZ library is required. */
 export const tikzSample = String.raw`\begin{tikzpicture}[scale=1.2]

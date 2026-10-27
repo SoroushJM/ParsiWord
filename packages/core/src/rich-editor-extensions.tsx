@@ -90,7 +90,7 @@ function CodeBlockView(props: NodeViewProps) {
   const math = mathLanguage(language);
   const source = node.textContent;
   const code = useMemo(() => highlightCode(source, language), [source, language]);
-  if (isTikzLanguage(language)) return <TikzCodeBlockView {...props} />;
+  if (isTikzLanguage(language, source)) return <TikzCodeBlockView {...props} />;
   return <NodeViewWrapper className={diagram || math ? 'rich-source-block' : 'code-block'} dir="ltr" data-language={code.language || ''}>
     {diagram || math ? <>
       <div contentEditable={false}>{diagram ? <MermaidView source={node.textContent} /> : <MathView source={node.textContent} display />}</div>
@@ -105,7 +105,7 @@ export const RichCodeBlock = CodeBlock.extend({
   addProseMirrorPlugins() {
     const key = new PluginKey<DecorationSet>('richCodeHighlight');
     const syntax = (node: ProseMirrorNode, pos: number) => {
-      if (node.type.name !== 'codeBlock' || mathLanguage(node.attrs.language) || isTikzLanguage(node.attrs.language) || String(node.attrs.language).toLowerCase() === 'mermaid') return [];
+      if (node.type.name !== 'codeBlock' || mathLanguage(node.attrs.language) || isTikzLanguage(node.attrs.language, node.textContent) || String(node.attrs.language).toLowerCase() === 'mermaid') return [];
       const decorations: Decoration[] = [];
       let offset = pos + 1;
       highlightCode(node.textContent, node.attrs.language).lines.forEach((line, index) => {

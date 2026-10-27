@@ -12,7 +12,7 @@ import { delimiterFont, delimiterFontParts } from './delimiter-font';
 import { highlightCode } from './code-highlight';
 import { renderMath } from './math';
 import { mathLanguage, RichContentError } from './rich-content';
-import { renderMermaid, type DiagramRenderer } from './diagrams';
+import { renderMermaid, type Diagram, type DiagramRenderer } from './diagrams';
 import { renderTikz } from './tikz';
 import { isTikzLanguage } from './tikz-language';
 import { prepareExportImages, type ExportImageResolver, type ExportImageReader } from './export-images';
@@ -154,14 +154,13 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
     }
     return pictures.get(key)!;
   };
-  const diagramPictures = new Map<string, Promise<PdfPicture>>();
+  const diagramPictures = new Map<string, Promise<Diagram>>();
+  const rasterDiagrams = new WeakMap<Diagram, PdfPicture>();
   const diagramPicture = (source: string, tikz: boolean) => {
     const key = `${tikz ? 'tikz' : 'mermaid'}\0${source}`;
     if (!diagramPictures.has(key)) {
       const renderer = tikz ? assets.tikz || renderTikz : assets.diagram || renderMermaid;
-      diagramPictures.set(key, renderer(source).then(diagram => accountPicture({ png: diagram.png,
-        width: diagram.width * 72 / 96, height: diagram.height * 72 / 96,
-        alt: `${tikz ? 'TikZ' : 'Mermaid'} diagram\n${source}` })));
+      diagramPictures.set(key, renderer(source));
     }
     return diagramPictures.get(key)!;
   };
@@ -169,8 +168,10 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
   // intrinsic raster dimensions use 96dpi; PDF layout uses physical points.
   const markdownImages = new Map([...images].map(([source, image]) => [source, accountPicture({ ...image, width: image.width * 72 / 96, height: image.height * 72 / 96 })]));
   let y = pdfPage.top;
+  let pageCount = 0;
+  const latexPages: { at: number; pdf: Uint8Array; count: number }[] = [];
   const bottom = pdfPage.height - pdfPage.bottom, contentWidth = pdfPage.width - pdfPage.left - pdfPage.right;
-  const page = () => { doc.addPage({ size: [pdfPage.width, pdfPage.height], margins: { top: pdfPage.top, bottom: pdfPage.bottom, left: pdfPage.left, right: pdfPage.right } }); y = pdfPage.top; };
+  const page = () => { doc.addPage({ size: [pdfPage.width, pdfPage.height], margins: { top: pdfPage.top, bottom: pdfPage.bottom, left: pdfPage.left, right: pdfPage.right } }); y = pdfPage.top; pageCount++; };
   const ensure = (height: number) => { if (y + height > bottom && y > pdfPage.top) page(); };
   page();
 
@@ -389,9 +390,26 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
         case 'table': await table(node, indent); break;
         case 'math': await paragraph([{ text: '\ufffc', picture: await picture(node.value, true) }], { indent, force: 'ltr', align: 'center' }); break;
         case 'code': {
-          if (mathLanguage(node.lang)) { await paragraph([{ text: '\ufffc', picture: await picture(node.value, true) }], { indent, force: 'ltr', align: 'center' }); break; }
-          if (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang)) {
-            await paragraph([{ text: '\ufffc', picture: await diagramPicture(node.value, isTikzLanguage(node.lang)) }], { indent, force: 'ltr', align: 'center' }); break;
+          if (mathLanguage(node.lang) && !isTikzLanguage(node.lang, node.value)) { await paragraph([{ text: '\ufffc', picture: await picture(node.value, true) }], { indent, force: 'ltr', align: 'center' }); break; }
+          if (node.lang?.toLowerCase() === 'mermaid' || isTikzLanguage(node.lang, node.value)) {
+            const tikz = isTikzLanguage(node.lang, node.value), diagram = await diagramPicture(node.value, tikz);
+            if (diagram.pdf && diagram.pages?.length) {
+              // Reserve complete pages, then insert the original TeX PDF pages.
+              // Persian letters, equations and TikZ paths stay vector/searchable;
+              // a full article is never squeezed into one diagram-sized image.
+              if (y > pdfPage.top) page();
+              latexPages.push({ at: pageCount - 1, pdf: diagram.pdf, count: diagram.pages.length });
+              for (let n = 1; n < diagram.pages.length; n++) page();
+              y = bottom;
+            } else {
+              let picture = rasterDiagrams.get(diagram);
+              if (!picture) {
+                picture = accountPicture({ png: diagram.png, width: diagram.width * 72 / 96, height: diagram.height * 72 / 96, alt: `${tikz ? 'TikZ' : 'Mermaid'} diagram\n${node.value}` });
+                rasterDiagrams.set(diagram, picture);
+              }
+              await paragraph([{ text: '\ufffc', picture }], { indent, force: 'ltr', align: 'center' });
+            }
+            break;
           }
           const highlighted = highlightCode(node.value, node.lang);
           await paragraph([{ text: highlighted.label, code: true, bold: true }], { size: 8, indent, force: 'ltr', fill: '#e7edeb', before: 8, after: 0, keepNext: true });
@@ -405,6 +423,23 @@ export async function exportPreparedPdf(context: MarkdownContext, settings: Expo
       }
     }
   }
-  try { await blocks(root.children); doc.end(); return await finished; }
-  catch (error) { doc.end(); await finished.catch(() => undefined); throw error; }
+  let ended = false;
+  try {
+    await blocks(root.children); doc.end(); ended = true; const bytes = await finished;
+    if (!latexPages.length) return bytes;
+    const { PDFDocument: PdfMerger } = await import('pdf-lib');
+    const output = await PdfMerger.load(bytes);
+    const loaded = new Map<Uint8Array, Awaited<ReturnType<typeof PdfMerger.load>>>();
+    for (const insertion of latexPages.reverse()) {
+      let input = loaded.get(insertion.pdf);
+      if (!input) { input = await PdfMerger.load(insertion.pdf); loaded.set(insertion.pdf, input); }
+      if (input.getPageCount() !== insertion.count) throw new RichContentError('XETEX_PREVIEW_FAILED');
+      const copies = await output.copyPages(input, input.getPageIndices());
+      for (let n = copies.length - 1; n >= 0; n--) {
+        output.removePage(insertion.at + n); output.insertPage(insertion.at + n, copies[n]);
+      }
+    }
+    return await output.save();
+  }
+  catch (error) { if (!ended) doc.end(); await finished.catch(() => undefined); throw error; }
 }

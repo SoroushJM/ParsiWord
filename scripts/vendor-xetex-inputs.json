@@ -1,0 +1,192 @@
+{
+  "busytex.wasm": {
+    "sha256": "3efcd116f16e058048f0870d5fbe75eafe6441063d9e7f83e617bf57102645bd",
+    "bytes": 30767701,
+    "url": "https://cdn.siglum.org/tl2025/busytex.wasm"
+  },
+  "siglum-busytex.js": {
+    "sha256": "53374fbb04e9b485c5854ae107cb68c3d3b79735e684c6049a7597013a23ff2b",
+    "bytes": 298998,
+    "url": "https://cdn.siglum.org/tl2025/busytex.js"
+  },
+  "file-manifest.json": {
+    "sha256": "0fcd4706eed7024e76eef24449450ff2e9751d23298f77d1847b5098bb3286dc",
+    "bytes": 1207666,
+    "url": "https://cdn.siglum.org/tl2025/bundles/file-manifest.json"
+  },
+  "xepersian.zip": {
+    "sha256": "8eb522cbe283d5f688e50ac42349588da7f4a1f6aec959df4ca12f3be22838f1",
+    "bytes": 1280358,
+    "url": "https://mirror.alastyr.com/tex-archive/install/macros/unicodetex/latex/xepersian.tds.zip"
+  },
+  "bidi.zip": {
+    "sha256": "0c191f8035ab9b10d454b436fb52a91eb22f8dfbbfc4a15c7d89d737c7174587",
+    "bytes": 4664122,
+    "url": "https://mirror.alastyr.com/tex-archive/install/macros/unicodetex/generic/bidi.tds.zip"
+  },
+  "enumitem.zip": {
+    "sha256": "112f692bc5c4909c2fa617fc72c470d9612394530f95728add3a50cb09555287",
+    "bytes": 184226,
+    "url": "https://mirror.alastyr.com/tex-archive/macros/latex/contrib/enumitem.zip"
+  },
+  "zref.tar.xz": {
+    "sha256": "571e083448b7b05924034b33767a9499679a7101dc55facf481b3aab734f5b7f",
+    "bytes": 14524,
+    "url": "https://mirrors.ctan.org/systems/texlive/tlnet/archive/zref.tar.xz"
+  },
+  "bundles/amsmath.data.gz": {
+    "sha256": "80e1b7a56b3a5c49755d97c6a86cbe67d9fa26ffdc2b8dc73e8f1ec81a222958",
+    "bytes": 122774,
+    "url": "https://cdn.siglum.org/tl2025/bundles/amsmath.data.gz"
+  },
+  "bundles/core.data.gz": {
+    "sha256": "75d68571b192afae1de539aeebba0e24bf1c6f6a5ba0886c12e6a699c00673d3",
+    "bytes": 747507,
+    "url": "https://cdn.siglum.org/tl2025/bundles/core.data.gz"
+  },
+  "bundles/dvips.data.gz": {
+    "sha256": "e16fcecc1ed2412c0b3261be3e11ea6630efd2c995309883ab4355981db1f60f",
+    "bytes": 18285,
+    "url": "https://cdn.siglum.org/tl2025/bundles/dvips.data.gz"
+  },
+  "bundles/extra-maps.data.gz": {
+    "sha256": "c3c2ccaf4def1f35aeb096ef2a639bcb34cb1138b0e44bbc3876da3abc699ff2",
+    "bytes": 72600,
+    "url": "https://cdn.siglum.org/tl2025/bundles/extra-maps.data.gz"
+  },
+  "bundles/extra-xetex-lang.data.gz": {
+    "sha256": "b070916f06b3338252186d1b245b2ffe4730efc612473eaa3539d15769eda208",
+    "bytes": 223714,
+    "url": "https://cdn.siglum.org/tl2025/bundles/extra-xetex-lang.data.gz"
+  },
+  "bundles/fmt-xelatex.data.gz": {
+    "sha256": "f9f1fb759c6ebb1ad3c9a36df0f7fb8627e4928b484d2f6fb0197da5b34f9077",
+    "bytes": 4646818,
+    "url": "https://cdn.siglum.org/tl2025/bundles/fmt-xelatex.data.gz"
+  },
+  "bundles/fonts-cm.data.gz": {
+    "sha256": "d9186579a6f1cffa58c1b8243c97b1dd6eb3850638408bfef3be9a5eaab2bd3b",
+    "bytes": 4068426,
+    "url": "https://cdn.siglum.org/tl2025/bundles/fonts-cm.data.gz"
+  },
+  "bundles/fonts-cmextra.data.gz": {
+    "sha256": "ea529fc35dc072292fcf7277daab199edfb55270130ddfb1b5bf64e3ca899f75",
+    "bytes": 31300,
+    "url": "https://cdn.siglum.org/tl2025/bundles/fonts-cmextra.data.gz"
+  },
+  "bundles/fonts-lm-otf.data.gz": {
+    "sha256": "30627b61bde688e7e2b6817e849754fe8594c5b5680de6c493beb05fc80050bf",
+    "bytes": 3913841,
+    "url": "https://cdn.siglum.org/tl2025/bundles/fonts-lm-otf.data.gz"
+  },
+  "bundles/fonts-lm-tfm.data.gz": {
+    "sha256": "c1562371699a0ab6e2af90f3c229838f5b7ef0c5bbfc66e2473c0142eb6cd602",
+    "bytes": 622707,
+    "url": "https://cdn.siglum.org/tl2025/bundles/fonts-lm-tfm.data.gz"
+  },
+  "bundles/fonts-misc.data.gz": {
+    "sha256": "327e547d93c35222820ae50e0673218a3ca427fb12e87a88c0d4067ba08b572d",
+    "bytes": 716656,
+    "url": "https://cdn.siglum.org/tl2025/bundles/fonts-misc.data.gz"
+  },
+  "bundles/fonts-symbols.data.gz": {
+    "sha256": "1021d6d633cdbd4d7eccea1d687cc85c4f46c4f8f5fc3a8bc3c834236355ae4e",
+    "bytes": 23706,
+    "url": "https://cdn.siglum.org/tl2025/bundles/fonts-symbols.data.gz"
+  },
+  "bundles/graphics.data.gz": {
+    "sha256": "5ffc6b9a6a2e3e63eb4e340ebe3106eba082f41d71c0ef8503397958cfd38cf2",
+    "bytes": 29347,
+    "url": "https://cdn.siglum.org/tl2025/bundles/graphics.data.gz"
+  },
+  "bundles/hyperref.data.gz": {
+    "sha256": "4d502d4a549a4ba467459569012f195a35ec6d87a0649f4c2d3677350c3353e6",
+    "bytes": 189250,
+    "url": "https://cdn.siglum.org/tl2025/bundles/hyperref.data.gz"
+  },
+  "bundles/l3.data.gz": {
+    "sha256": "7ab6b348dbc5d092021f52cf755d032e542b95355cb5857ca62f30e3aced6b0d",
+    "bytes": 280419,
+    "url": "https://cdn.siglum.org/tl2025/bundles/l3.data.gz"
+  },
+  "bundles/pgf-tikz.data.gz": {
+    "sha256": "5b424b9b5a1d90fd6c7af86302109a3c865cd80f8c8c1d5fbeb2ae38a48db4fc",
+    "bytes": 32035609,
+    "url": "https://cdn.siglum.org/tl2025/bundles/pgf-tikz.data.gz"
+  },
+  "bundles/tables.data.gz": {
+    "sha256": "415039096962a0681339b84103b7a6b0856af0ff5374bae0626cefe576345805",
+    "bytes": 16607158,
+    "url": "https://cdn.siglum.org/tl2025/bundles/tables.data.gz"
+  },
+  "bundles/tex-generic.data.gz": {
+    "sha256": "7d6e12ec0360416e9dea826919022e7f736e6fc7e74fb4e879a9e715c56f448d",
+    "bytes": 1000656,
+    "url": "https://cdn.siglum.org/tl2025/bundles/tex-generic.data.gz"
+  },
+  "bundles/tex-latex-misc.data.gz": {
+    "sha256": "66f1f5e644c4f18341736c9c2a46b95c44dc289c252c8626b3541a224e3a096f",
+    "bytes": 270157,
+    "url": "https://cdn.siglum.org/tl2025/bundles/tex-latex-misc.data.gz"
+  },
+  "bundles/tex-xelatex.data.gz": {
+    "sha256": "b73486bee460df30615563681183c1de923f684873028b1c6bd8df1e538b350e",
+    "bytes": 441180,
+    "url": "https://cdn.siglum.org/tl2025/bundles/tex-xelatex.data.gz"
+  },
+  "bundles/typography.data.gz": {
+    "sha256": "d5e17c62a107063aea9b4a9fd7805cee36c4b3ed5e696e9acf2e4b07547b6f80",
+    "bytes": 7731502,
+    "url": "https://cdn.siglum.org/tl2025/bundles/typography.data.gz"
+  },
+  "bundles/utils.data.gz": {
+    "sha256": "92b6faba2746b957ca7b45430233c3aa26147e28b96dbf70bb91d955cf2e09e2",
+    "bytes": 2142027,
+    "url": "https://cdn.siglum.org/tl2025/bundles/utils.data.gz"
+  },
+  "bundles/xcolor.data.gz": {
+    "sha256": "68deb1bed9b503497fe21cc78e229b4331e6c1fa41fd389b58e869b4353ab0c0",
+    "bytes": 14406,
+    "url": "https://cdn.siglum.org/tl2025/bundles/xcolor.data.gz"
+  },
+  "bundles/xref.data.gz": {
+    "sha256": "9be4e10e523c13906f6f06e85dda8bf837506b8ffb6760047098298584ec8c5b",
+    "bytes": 8356398,
+    "url": "https://cdn.siglum.org/tl2025/bundles/xref.data.gz"
+  },
+  "busytex-source.zip": {
+    "sha256": "216458fe62ee1c568294ac5400536273350d6f6e3c10cc0daa753db61cd48b7a",
+    "bytes": 77525,
+    "url": "https://codeload.github.com/SiglumProject/busytex/zip/fbaaee98ef8f2d3717a1b01ca4cea222fc33a82f"
+  },
+  "LICENSE-XeTeX.txt": {
+    "sha256": "5bf166af469a06c013cb1c5613cdb54007eecb37c145b3ea71bb08bf34b474ff",
+    "bytes": 1648,
+    "url": "https://raw.githubusercontent.com/TeX-Live/texlive-source/trunk/texk/web2c/xetexdir/COPYING"
+  },
+  "LICENSE-Xdvipdfmx.txt": {
+    "sha256": "dcc100d4161cc0b7177545ab6e47216f84857cda3843847c792a25289852dcaa",
+    "bytes": 18007,
+    "url": "https://raw.githubusercontent.com/TeX-Live/texlive-source/trunk/texk/dvipdfm-x/COPYING"
+  },
+  "LICENSE-GUST.txt": {
+    "sha256": "49ea6cb9257bbee0a3979c48a774cd221550ac1c20c95549efe45fc99cc18050",
+    "bytes": 1377,
+    "url": "https://tug.org/fonts/licenses/GUST-FONT-LICENSE.txt"
+  },
+  "LICENSE-LPPL-1.3c.txt": {
+    "sha256": "3d262cdf34dafa6955f703c634a8c238ec44109bc8dd6ef34fb7aa54809f7e66",
+    "bytes": 19102,
+    "url": "https://www.latex-project.org/lppl/lppl-1-3c.txt"
+  },
+  "LICENSE.TeXLive.txt": {
+    "sha256": "8147ff504e6d7d89a7c42d5c3dfbaa8705ad17f72c82a5c1bce5f4f0ee8b2fb7",
+    "bytes": 5129,
+    "url": "https://www.tug.org/texlive/LICENSE.TL"
+  },
+  "LICENSE-Siglum-MIT.txt": {
+    "sha256": "db86d0db6e49fa2004abb2c746d30c3390810769b032db033fa27d806714554b",
+    "bytes": 1071,
+    "url": "https://raw.githubusercontent.com/SiglumProject/siglum/2a44e46f216d04bf52235cae271cd5e31c881a92/LICENSE"
+  }
+}

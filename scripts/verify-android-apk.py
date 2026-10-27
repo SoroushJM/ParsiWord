@@ -12,6 +12,7 @@ import struct
 import subprocess
 import zipfile
 from pathlib import Path
+from android_frontend import frontend_bundles
 
 parser = argparse.ArgumentParser()
 parser.add_argument('apk', type=Path)
@@ -45,7 +46,7 @@ assert f"name='{args.expected_package}'" in badging
 assert not re.search(r'android:(?:debuggable|testOnly)\([^\n]*0xffffffff', manifest), 'Not a normal release APK'
 assert re.search(r'android:extractNativeLibs\([^\n]*0xffffffff', manifest), 'Native extraction not enabled'
 version = re.search(r"versionCode='(\d+)' versionName='([^']+)'", badging)
-bundle = next((Path(__file__).resolve().parents[1] / 'dist/assets').glob('index-*.js')).name
+bundles = frontend_bundles(Path(__file__).resolve().parents[1] / 'dist')
 with zipfile.ZipFile(args.apk) as archive:
     assert archive.testzip() is None
     libraries = [p for p in archive.namelist() if p.endswith('.so')]
@@ -67,7 +68,8 @@ with zipfile.ZipFile(args.apk) as archive:
         assert file_size <= memory_size and file_offset + file_size <= len(data)
         alignments.append(alignment)
     assert alignments
-    assert bundle.encode() in data, 'Latest frontend bundle is missing'
+    for bundle in bundles:
+        assert bundle.encode() in data, f'Latest frontend bundle is missing: {bundle}'
     assert b'ParsiWordSymbols-Regular.ttf' in data, 'Bundled delimiter font is missing'
 
 result = {
@@ -78,7 +80,7 @@ result = {
     'certificateSha256': fingerprint, 'architecture': 'arm64-v8a',
     'debuggable': False, 'testOnly': False, 'nativeExtraction': True,
     'nativeBytes': entry.file_size, 'nativeCompressedBytes': entry.compress_size,
-    'elfLoadAlignments': alignments, 'frontendBundle': bundle,
+    'elfLoadAlignments': alignments, 'frontendBundles': bundles,
     'signatureVerified': True, 'zipCrcVerified': True,
     'deviceInstallation': 'pending',
 }

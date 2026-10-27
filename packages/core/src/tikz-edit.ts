@@ -21,7 +21,7 @@ export function insertTikzSample(transaction: Transaction): Transaction {
 export function replaceTikzSource(state: EditorState, position: number, source: string, expected: string): Transaction | null {
   if (!Number.isInteger(position) || position < 0 || position >= state.doc.content.size) return null;
   const node = state.doc.nodeAt(position);
-  if (node?.type.name !== 'codeBlock' || !isTikzLanguage(node.attrs.language) || node.textContent !== expected) return null;
+  if (node?.type.name !== 'codeBlock' || !isTikzLanguage(node.attrs.language, node.textContent) || node.textContent !== expected) return null;
   const value = source.replace(/\r\n?/g, '\n');
   return closeHistory(state.tr.insertText(value, position + 1, position + 1 + node.content.size));
 }

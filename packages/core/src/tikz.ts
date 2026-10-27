@@ -2,7 +2,7 @@ import type { Diagram } from './diagrams';
 import { RichContentError } from './rich-content';
 import { ParsiWordError } from './errors';
 import { publicAsset } from './public-assets';
-import { prepareTikzSource } from './tikz-source';
+import { prepareTikzSource, requiresXeLatex } from './tikz-source';
 import { outlineTikzSvg, type TikzGlyphFont } from './tikz-svg';
 
 // Cold website downloads need their own budget; the execution limit applies
@@ -188,6 +188,11 @@ async function font(name: string): Promise<TikzGlyphFont> {
 
 async function render(source: string): Promise<Diagram> {
   if (idle) clearTimeout(idle);
+  if (requiresXeLatex(source)) {
+    active?.terminate(); active = undefined; fontCache.clear();
+    const { renderXeLatex } = await import('./xetex');
+    return renderXeLatex(source);
+  }
   active ??= new TexWorker();
   try {
     const raw = await active.compile(source);
@@ -229,7 +234,7 @@ export function renderTikz(source: string): Promise<Diagram> {
   if (pendingJobs >= 256 || pendingCharacters + source.length > 1_000_000) return Promise.reject(new RichContentError('TIKZ_TOO_LARGE'));
   pendingJobs++; pendingCharacters += source.length;
   const result = queue.then(() => render(source)).then(diagram => {
-    cacheBytes += diagram.png.byteLength + diagram.svg.length * 2;
+    cacheBytes += (diagram.pages?.reduce((sum, page) => sum + page.png.byteLength, 0) ?? diagram.png.byteLength) + diagram.svg.length * 2 + (diagram.pdf?.byteLength ?? 0);
     // Cached renderings stay small; the large TeX heap is released independently.
     if (cacheBytes > cacheBudget) { cache.clear(); cacheBytes = 0; }
     return diagram;

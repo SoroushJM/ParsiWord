@@ -197,5 +197,14 @@
   "آماده‌سازی فرمول یا نمودار انجام نشد. دوباره امتحان کن.": "Could not prepare an equation or diagram. Try again.",
   "تصویر": "Image",
   "ویرایش تصویر": "Edit image",
-  "تصویر بارگذاری نشد": "Image could not be loaded"
+  "تصویر بارگذاری نشد": "Image could not be loaded",
+  "موتور XeLaTeX بارگیری نشد. اتصال یا فایل‌های برنامه را بررسی کن و دوباره امتحان کن.": "The XeLaTeX engine could not load. Check your connection or application files and try again.",
+  "بارگیری موتور XeLaTeX بیش از حد طول کشید. دوباره امتحان کن؛ بارگیری اول حدود ۳۳ مگابایت است.": "Loading XeLaTeX took too long. Try again; the first download is about 33 MB.",
+  "اجرای XeLaTeX بیش از حد طول کشید. کد سند را بررسی یا آن را کوچک‌تر کن.": "XeLaTeX compilation took too long. Check the document source or split it into smaller documents.",
+  "ساخت سند XeLaTeX انجام نشد. کد، ترتیب بسته‌ها و بسته‌های موردنیاز را بررسی کن.": "XeLaTeX could not compile this document. Check the source, package order and required packages.",
+  "قلم سند در موتور XeLaTeX موجود نیست. قلم فارسی همراه برنامه Vazirmatn-Regular.ttf و قلم ضخیم Vazirmatn-Bold.ttf است؛ نام قلم را در settextfont مشخص کن.": "This font is not available in the XeLaTeX engine. Use the bundled Vazirmatn-Regular.ttf and Vazirmatn-Bold.ttf files in settextfont.",
+  "سند XeLaTeX باید documentclass و begin{document} و end{document} داشته باشد.": "A XeLaTeX document must include documentclass, begin{document} and end{document}.",
+  "خروجی XeLaTeX برای پیش‌نمایش بزرگ است. سند را به بخش‌های کوچک‌تر تقسیم کن؛ حداکثر ۱۲ صفحه پذیرفته می‌شود.": "This XeLaTeX output is too large to preview. Split the document into smaller parts; up to 12 pages are supported.",
+  "PDF ساخته شد اما آماده‌سازی پیش‌نمایش آن انجام نشد. سند را کوچک‌تر کن و دوباره امتحان کن.": "The PDF was compiled, but its preview could not be prepared. Use a smaller document and try again.",
+  "گزارش XeLaTeX": "XeLaTeX log"
 }
