@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Browser, type Frame } from '@playwright/test';
 import JSZip from 'jszip';
@@ -9,6 +9,7 @@ export async function testXeTex(browser: Browser, artifact: string, record: (tex
   const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'xepersian.md');
   const document = await vscode.workspace.openTextDocument(uri), source = document.getText();
   const logicalSource = source.replace(/\r\n/g, '\n');
+  let observed: Frame | undefined;
   await vscode.workspace.saveAll(false); await vscode.commands.executeCommand('workbench.action.closeAllEditors');
   try {
     await vscode.commands.executeCommand('vscode.openWith', uri, 'parsiword.markdown.rendered');
@@ -20,6 +21,7 @@ export async function testXeTex(browser: Browser, artifact: string, record: (tex
       if (!frame) await new Promise(resolve => setTimeout(resolve, 200));
     }
     assert.ok(frame, 'The XePersian document must open in the ParsiWord editor');
+    observed = frame;
     await frame.page().bringToFront();
     const english = frame.getByRole('link', { name: 'English', exact: true }); if (await english.isVisible()) await english.click();
     await expect(frame.locator('.tikz-canvas > svg image')).toHaveCount(1, { timeout: 100_000 });
@@ -44,5 +46,12 @@ export async function testXeTex(browser: Browser, artifact: string, record: (tex
     assert.equal(pdf.bytes.subarray(0, 5).toString(), '%PDF-');
     record('The actual VS Code extension saves XePersian Word images with source metadata and original native TeX PDF pages');
     return { docx: word.target, pdf: pdf.target };
+  } catch (error) {
+    if (observed) {
+      const diagnostics = await observed.locator('.tikz-diagram').allTextContents().catch(() => []);
+      await writeFile(join(artifact, 'xetex-failure.json'), JSON.stringify({ error: String(error), diagnostics }, null, 2));
+      await observed.page().screenshot({ path: join(artifact, 'xetex-failure.png') }).catch(() => undefined);
+    }
+    throw error;
   } finally { await vscode.commands.executeCommand('workbench.action.closeAllEditors'); }
 }

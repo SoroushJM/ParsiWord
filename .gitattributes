@@ -5,3 +5,5 @@ packages/core/src/starter-document.md text eol=lf
 # Vendored runtime hashes and upstream license bytes must survive Windows checkouts.
 packages/core/public/tikz/** -text whitespace=-blank-at-eol,-blank-at-eof
 third-party/tikz/sources/*.zip -text
+packages/core/public/xetex/** -text whitespace=-blank-at-eol,-blank-at-eof
+third-party/xetex/sources/* -text

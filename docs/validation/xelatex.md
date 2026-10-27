@@ -86,3 +86,13 @@ Word/PDF exports, native history and searchable/vector PDF parsing. A manual
 `native_only` validation input reruns the complete Windows extension job after
 already-passed editor checks, without rebuilding the website or native release
 packages. Automatic push validation retains the full editor prerequisite.
+
+The next native run passed TikZ, then exposed XePersian loader integrity failure
+on Windows checkout. `core.autocrlf=true checkout-index` reproduced a loader
+growth from 298,998 to 307,613 bytes and a SHA256 mismatch. XeTeX assets and source
+archives now have the same `-text` preservation used for the older TikZ runtime.
+A repeated Windows checkout produces exactly 298,998 bytes and the pinned hash.
+The extension build and desktop packaging verify all four real runtime assets
+before packaging, so future checkout corruption fails before producing a
+broken installer. Native XePersian failures also retain the visible diagnostic
+and a screenshot before closing the webview.

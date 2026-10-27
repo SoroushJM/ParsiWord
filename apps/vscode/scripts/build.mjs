@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 const root = fileURLToPath(new URL('../../../', import.meta.url));
+await import('../../../scripts/verify-xetex-assets.mjs');
 const tsc = spawnSync(process.execPath, [resolve(root, 'node_modules/typescript/bin/tsc'), '-p', resolve(root, 'apps/vscode/tsconfig.json')], { stdio: 'inherit' });
 if (tsc.status) process.exit(tsc.status);
 await bundle({ entryPoints: [resolve(root, 'apps/vscode/src/extension.ts')], bundle: true, platform: 'node', format: 'cjs', target: 'node20', outfile: resolve(root, 'apps/vscode/dist/extension.cjs'), external: ['vscode'], sourcemap: true });

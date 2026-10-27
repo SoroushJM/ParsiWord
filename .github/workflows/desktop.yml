@@ -62,6 +62,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev librsvg2-dev libayatana-appindicator3-dev patchelf
       - name: Install locked JavaScript dependencies
         run: pnpm install --frozen-lockfile
+      - name: Verify pinned XeLaTeX assets before packaging
+        run: node scripts/verify-xetex-assets.mjs
       - name: Build native installer
         run: pnpm run ${{ matrix.build }}
         env:
