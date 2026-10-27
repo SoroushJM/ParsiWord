@@ -17,6 +17,7 @@ async function until<T>(read: () => T | PromiseLike<T>, predicate: (value: T) =>
 export async function testTikz(browser: Browser, api: Diagnostics, artifact: string, record: (text: string) => void) {
   const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'tikz.md');
   const document = await vscode.workspace.openTextDocument(uri), source = document.getText();
+  const logicalSource = source.replace(/\r\n/g, '\n');
   const paths: Record<string, string> = {};
   const diagnostics: string[] = [];
   for (const page of browser.contexts().flatMap(context => context.pages())) {
@@ -43,7 +44,7 @@ export async function testTikz(browser: Browser, api: Diagnostics, artifact: str
     await until(() => api.getOpenDocuments(), items => items.some(item => item.uri === uri.toString() && item.ready), 'TikZ custom editor');
     const frame = await until(async () => {
       for (const page of browser.contexts().flatMap(context => context.pages())) for (const candidate of page.frames()) {
-        try { const input = candidate.locator('#markdown-source'); if (await input.count() && await input.inputValue() === source) return candidate; } catch { /* Unrelated VS Code frame. */ }
+        try { const input = candidate.locator('#markdown-source'); if (await input.count() && await input.inputValue() === logicalSource) return candidate; } catch { /* Unrelated VS Code frame. */ }
       }
       return undefined;
     }, value => !!value, 'TikZ webview') as Frame;
@@ -55,7 +56,7 @@ export async function testTikz(browser: Browser, api: Diagnostics, artifact: str
     assert.ok(await frame.locator('.tikz-diagram svg path').count() > 12, 'Real geometry and label outlines must be present under the webview CSP');
     await expect(frame.locator('.tikz-diagram svg text, .tikz-diagram svg script, .tikz-diagram svg foreignObject')).toHaveCount(0);
     record('Real local TeX/WASM compiles TikZ geometry, libraries and math-label outlines inside the VS Code webview');
-    const originalBody = /```tikz\n([\s\S]*?)\n```/.exec(source)![1];
+    const originalBody = /```tikz\r?\n([\s\S]*?)\r?\n```/.exec(source)![1];
     await frame.getByRole('button', { name: 'Edit TikZ drawing', exact: true }).click();
     const input = frame.getByRole('textbox', { name: 'TikZ source', exact: true });
     const changed = originalBody.replace('blue,thick', 'green,thick');

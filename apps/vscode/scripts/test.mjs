@@ -23,8 +23,11 @@ const markdown = '# عنوان فارسی\n\nمتن فارسی و English SEARCH
 await writeFile(resolve(fixture, 'sample.md'), markdown);
 await writeFile(resolve(fixture, 'other.md'), '# Other\n\nLinked document.\n');
 await writeFile(resolve(fixture, 'crlf.md'), '# Windows\r\n\r\nمتن اصلی\r\n');
-await writeFile(resolve(fixture, 'tikz.md'), 'TIKZ_NATIVE_SEARCHABLE متن فارسی با $x^2$.\n\n' + await readFile(resolve(root, 'examples/tikz-geometry.md'), 'utf8'));
-await writeFile(resolve(fixture, 'xepersian.md'), await readFile(resolve(root, 'examples/xepersian-exam.md'), 'utf8'));
+// Exercise Windows documents explicitly, even when checkout uses LF. The
+// webview sees logical LF, while native TextDocument/source history stays CRLF.
+const windowsMarkdown = value => value.replace(/\r\n|\n/g, '\r\n');
+await writeFile(resolve(fixture, 'tikz.md'), windowsMarkdown('TIKZ_NATIVE_SEARCHABLE متن فارسی با $x^2$.\n\n' + await readFile(resolve(root, 'examples/tikz-geometry.md'), 'utf8')));
+await writeFile(resolve(fixture, 'xepersian.md'), windowsMarkdown(await readFile(resolve(root, 'examples/xepersian-exam.md'), 'utf8')));
 await writeFile(resolve(fixture, 'nested folder/assets/diagram.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><circle cx="80" cy="50" r="40" fill="none" stroke="green"/><path d="M80 50L120 50M80 50L80 10" stroke="blue"/></svg>');
 await writeFile(resolve(fixture, 'image export/assets/circle.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><circle cx="80" cy="50" r="40" fill="none" stroke="green"/><path d="M80 50L120 50M80 50L80 10" stroke="blue"/></svg>');
 await writeFile(resolve(fixture, 'image export/assets/sample image.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAYAAAChS3wfAAAAYElEQVR4nO3QMQEAIAgAMOIYw9PABKIJxuBgxwos6r6edG6NCgECBAgQIECAAAECBAgQIECAAAECBAgQIGBTQL6edLJGCRAgQIAAAQIECBAgQIAAAQIECBAgQIAAAYsCPgHNzcMN6g4/AAAAAElFTkSuQmCC', 'base64'));

@@ -70,3 +70,19 @@ separately from browser tests and bounded retries of that precondition did
 not resolve this local host limitation. No shortcut assertion was skipped or
 weakened. Focused native XePersian integration passed as recorded above; the
 full suite is retained for CI verification on its own Windows runner.
+
+The first publication run passed Pages deployment and all three native package
+releases. The editor job passed unit, Chromium and WebKit checks. Its Windows
+native job passed shortcuts, linked selections, Git comparisons and image
+exports, then exposed a test-fixture CRLF mismatch while locating the TikZ
+webview. Native snapshots intentionally normalize text to LF for the textarea;
+the original native document remains CRLF. Frame discovery now compares logical
+line endings and TikZ-fence matching accepts CRLF. Assertions about unchanged
+native source, Undo/Redo and actual exports remain exact.
+
+Explicit CRLF TikZ/XePersian fixtures reproduce that timeout locally before the
+fix. Both focused native suites passed after it, including real geometry,
+Word/PDF exports, native history and searchable/vector PDF parsing. A manual
+`native_only` validation input reruns the complete Windows extension job after
+already-passed editor checks, without rebuilding the website or native release
+packages. Automatic push validation retains the full editor prerequisite.

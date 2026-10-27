@@ -1,6 +1,11 @@
 name: Validate editor and VS Code extension
 on:
   workflow_dispatch:
+    inputs:
+      native_only:
+        description: 'Run the full native extension suite only (editor checks already passed)'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -46,6 +51,7 @@ permissions:
   contents: read
 jobs:
   editor:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.native_only) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,6 +79,7 @@ jobs:
           if-no-files-found: ignore
   extension:
     needs: editor
+    if: ${{ always() && !cancelled() && (needs.editor.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.native_only)) }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,7 +98,7 @@ jobs:
           path: |
             artifacts/*.vsix
             artifacts/vscode-test/results.json
-            artifacts/vscode-test/git-diff-failure.json
+            artifacts/vscode-test/*failure.json
             artifacts/vscode-test/*.png
             artifacts/vscode-test/local-images-*.docx
             artifacts/vscode-test/local-images-*.pdf

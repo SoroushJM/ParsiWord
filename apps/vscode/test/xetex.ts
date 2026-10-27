@@ -8,13 +8,14 @@ import JSZip from 'jszip';
 export async function testXeTex(browser: Browser, artifact: string, record: (text: string) => void) {
   const uri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'xepersian.md');
   const document = await vscode.workspace.openTextDocument(uri), source = document.getText();
+  const logicalSource = source.replace(/\r\n/g, '\n');
   await vscode.workspace.saveAll(false); await vscode.commands.executeCommand('workbench.action.closeAllEditors');
   try {
     await vscode.commands.executeCommand('vscode.openWith', uri, 'parsiword.markdown.rendered');
     let frame: Frame | undefined;
     for (let attempt = 0; attempt < 150 && !frame; attempt++) {
       for (const page of browser.contexts().flatMap(context => context.pages())) for (const candidate of page.frames()) {
-        try { if (await candidate.locator('#markdown-source').count() && await candidate.locator('#markdown-source').inputValue() === source) frame = candidate; } catch { /* Unrelated frame. */ }
+        try { if (await candidate.locator('#markdown-source').count() && await candidate.locator('#markdown-source').inputValue() === logicalSource) frame = candidate; } catch { /* Unrelated frame. */ }
       }
       if (!frame) await new Promise(resolve => setTimeout(resolve, 200));
     }
