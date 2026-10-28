@@ -69,6 +69,37 @@ describe('precise rich source patches', () => {
     expect(result).toBe(source.replace('first', 'fi<br>rst'));
     expect(parseRichMarkdown(result).document.content![0].content![0].content![0].content![0].content).toEqual([{ type: 'text', text: 'fi' }, { type: 'hardBreak' }, { type: 'text', text: 'rst' }]);
   });
+  it.each(['add', 'delete'])('keeps every row when a table column changes: %s', operation => {
+    const source = '| نام | مقدار | شرح |\r\n| --- | ---: | --- |\r\n| نمونه | 12 | اول |\r\n| دوم | 24 | آخر |';
+    let expected!: JSONContent;
+    const result = edit(source, table => {
+      for (const row of table.content!) {
+        if (operation === 'add') row.content!.splice(1, 0, { type: row.content![0].type, attrs: { align: null }, content: [{ type: 'paragraph', content: [] }] });
+        else row.content!.splice(1, 1);
+      }
+      expected = table;
+    });
+    expect(parseRichMarkdown(result).document.content?.[0]).toEqual(expected);
+    expect(result.replace(/\r\n/g, '')).not.toContain('\n');
+  });
+  it.each(['quote', 'list'])('keeps surrounding %s source when changing nested table columns', container => {
+    const prefix = container === 'quote' ? '> ' : '   ';
+    const opening = container === 'quote' ? '> lead __one__\r\n>\r\n' : '3. lead __one__\r\n\r\n';
+    const closing = container === 'quote' ? '\r\n>\r\n> tail &amp;' : '\r\n\r\n   tail &amp;';
+    const source = opening + ['| A | B |', '| --- | --- |', '| a | b |'].map(line => prefix + line).join('\r\n') + closing;
+    const result = edit(source, block => {
+      let table = block;
+      if (container === 'list') table = table.content![0];
+      table = table.content!.find(node => node.type === 'table')!;
+      table.content!.forEach(row => row.content!.pop());
+    });
+    expect(result.startsWith(opening)).toBe(true);
+    expect(result.endsWith(closing)).toBe(true);
+    let block = parseRichMarkdown(result).document.content![0];
+    if (container === 'list') block = block.content![0];
+    const table = block.content!.find(node => node.type === 'table')!;
+    expect(table.content!.map(row => row.content!.map(cell => cell.content![0].content![0].text))).toEqual([['A'], ['a']]);
+  });
   it('patches astral characters and whole escaped/entity source spans', () => {
     expect(edit('a &#x1F642; b', block => { block.content![0].text = 'a 🙂 B'; })).toBe('a &#x1F642; B');
     expect(edit('a &#x1F642; b', block => { block.content![0].text = 'a 🙃 b'; })).toBe('a 🙃 b');

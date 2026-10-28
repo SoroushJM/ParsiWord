@@ -327,7 +327,11 @@ function patchStructure(previous: JSONContent, next: JSONContent, source: string
         changes.push({ start, end: finish, text: text.replace(/\n/g, eol + indentation) }); return;
       }
     }
-    if (before.type === after.type && JSON.stringify(before.attrs) === JSON.stringify(after.attrs) && before.content?.length === after.content?.length && !['paragraph', 'heading', 'codeBlock'].includes(before.type || '')) {
+    // GFM rows are not standalone Markdown blocks: changing a column must
+    // rewrite the owning table, including its header separator. Descending
+    // into rows here serialized them as empty paragraphs and left the source
+    // ledger describing a different document from the visible table.
+    if (before.type === after.type && JSON.stringify(before.attrs) === JSON.stringify(after.attrs) && before.content?.length === after.content?.length && !['paragraph', 'heading', 'codeBlock', 'table'].includes(before.type || '')) {
       let cursor = 0;
       const originals = (before.content || []).map(child => {
         const count = child.type === 'rawBlock' ? parseRichMarkdown(String(child.attrs?.source || ''), definitions).document.content?.length || 1 : 1;
