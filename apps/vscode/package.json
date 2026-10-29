@@ -2,7 +2,7 @@
   "name": "parsiword-vscode",
   "displayName": "ParsiWord — RTL Markdown Editor",
   "description": "View and edit Persian, Arabic and mixed RTL/LTR Markdown, with editable preview, LaTeX, TikZ geometry, Mermaid and Word/PDF export.",
-  "version": "0.1.9",
+  "version": "0.1.11",
   "publisher": "SoroushJM",
   "engines": {
     "vscode": "^1.100.0"
@@ -240,6 +240,15 @@
           ],
           "default": 12,
           "description": "Export font size in points."
+        },
+        "parsiword.appearance": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "default": null,
+          "scope": "machine",
+          "description": "Device appearance managed by the ParsiWord Theme panel. Shared by all ParsiWord editors and windows on this machine."
         }
       }
     }

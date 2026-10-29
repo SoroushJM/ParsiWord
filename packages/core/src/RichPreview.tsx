@@ -1,5 +1,7 @@
 import { useLocale } from './locale';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { PreviewBounds } from './preview-bounds';
 import { renderMath } from './math';
 import { diagramFontSize, renderMermaid } from './diagrams';
 import 'katex/dist/katex.min.css';
@@ -10,17 +12,50 @@ import { cn } from '@/lib/utils';
 
 export function MathView({ source, display = false }: { source: string; display?: boolean }) {
   const { t } = useLocale();
+  const paneWidth = useContext(PreviewBounds);
+  const natural = useRef<HTMLSpanElement>(null);
+  const [overflow, setOverflow] = useState(false);
   const result = useMemo(() => {
     try { return { html: renderMath(source, display) }; }
     catch (error) { return { error: (error as Error).message }; }
   }, [source, display]);
-  const Tag = display ? 'div' : 'span';
-  if (result.html) return <Tag dir="ltr" className={cn(display ? 'math-block' : 'math-inline')} dangerouslySetInnerHTML={{ __html: result.html }} />;
+  useLayoutEffect(() => {
+    const content = natural.current;
+    if (!content) return;
+    const frame = content.closest<HTMLElement>('.math-scroll')!;
+    const measure = () => {
+      const cell = frame.closest('td, th');
+      const style = cell ? getComputedStyle(cell) : null;
+      const inset = style ? parseFloat(style.paddingInlineStart) + parseFloat(style.paddingInlineEnd) + parseFloat(style.borderInlineStartWidth) + parseFloat(style.borderInlineEndWidth) : 0;
+      const available = paneWidth - inset;
+      if (available <= 0) return;
+      const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      frame.style.setProperty('--math-cap', `${available / rootSize}rem`);
+      setOverflow(content.getBoundingClientRect().width > available + .5);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(content);
+    measure();
+    return () => observer.disconnect();
+  }, [paneWidth, result.html]);
+  if (result.html) return <ScrollArea dir="ltr" inline={!display} orientation="horizontal" type={overflow ? 'always' : 'auto'}
+    className={cn('math-scroll', display ? 'math-block' : 'math-inline')} data-overflow={overflow}
+    viewportProps={{ tabIndex: overflow ? 0 : -1, role: overflow ? 'region' : undefined, 'aria-label': overflow ? t('فرمول ریاضی؛ اسکرول افقی') : undefined }}>
+    <span ref={natural} className="math-content" dangerouslySetInnerHTML={{ __html: result.html }} />
+  </ScrollArea>;
   if (display) return <Alert variant="destructive"><AlertDescription>{t(result.error || '')} <code dir="ltr">{source}</code></AlertDescription></Alert>;
   // Inline formulas must remain phrasing content inside their paragraph.
   return <span className="rich-error" role="alert">{t(result.error || '')} <code dir="ltr">{source}</code></span>;
 }
 export function MermaidView({ source }: { source: string }) {
+  const [mode, setMode] = useState<'light' | 'dark'>(() => document.documentElement.dataset.displayTheme === 'dark' ? 'dark' : 'light');
+  useEffect(() => {
+    const update = () => setMode(document.documentElement.dataset.displayTheme === 'dark' ? 'dark' : 'light');
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-display-theme'] });
+    update(); return () => observer.disconnect();
+  }, []);
+
   const { t, dir } = useLocale();
   const [state, setState] = useState<{ source: string; svg?: string; width?: number; error?: string }>({ source });
   const [overflowing, setOverflowing] = useState(false);
@@ -32,11 +67,11 @@ export function MermaidView({ source }: { source: string }) {
     // Source is directly editable in the rich preview. Coalesce keystrokes
     // before adding expensive SVG/PNG work to the shared render queue.
     const timer = setTimeout(() => {
-      renderMermaid(source).then(diagram => { if (active) setState({ source, svg: diagram.svg, width: diagram.width }); })
+      renderMermaid(source, mode).then(diagram => { if (active) setState({ source, svg: diagram.svg, width: diagram.width }); })
         .catch(error => { if (active) setState({ source, error: (error as Error).message }); });
     }, 200);
     return () => { active = false; clearTimeout(timer); };
-  }, [source]);
+  }, [source, mode]);
   useEffect(() => {
     const element = frame.current;
     const content = canvas.current;
@@ -53,7 +88,7 @@ export function MermaidView({ source }: { source: string }) {
   if (!state.svg && (state.source !== source || !state.error)) return <div className="flex items-center gap-2"><Spinner aria-label={t("در حال رسم نمودار")} /><span>{t("در حال رسم نمودار…")}</span></div>;
   if (state.error) return <Alert variant="destructive"><AlertDescription>{t(state.error || '')}<pre dir="ltr">{source}</pre></AlertDescription></Alert>;
   const widthInText = state.width! / diagramFontSize;
-  return <><div ref={frame} dir="ltr" className="mermaid-diagram" role="img" aria-label={t("نمودار Mermaid")}
+  return <><div ref={frame} dir="ltr" className="mermaid-diagram" data-diagram-theme={mode} role="img" aria-label={t("نمودار Mermaid")}
     aria-busy={state.source !== source}
     tabIndex={overflowing ? 0 : undefined} aria-describedby={overflowing ? hintId : undefined}>
     <div ref={canvas} className="mermaid-canvas" style={{

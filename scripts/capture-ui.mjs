@@ -13,6 +13,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, value, i, a
 const width = Number(args.width || 1100), height = Number(args.height || 800);
 const output = resolve(args.output || 'artifacts/ui-preview.png');
 if (!(width >= 320 && height >= 320)) throw new Error('Width and height must be at least 320.');
+if (args['theme-panel'] !== undefined && !['presets', 'environment', 'markdown', 'syntax'].includes(args['theme-panel'])) throw new Error('Unknown theme panel section.');
 if (args.view !== undefined && !['edit', 'preview'].includes(args.view)) throw new Error('View must be edit or preview.');
 if (args.language !== undefined && !['fa', 'en'].includes(args.language)) throw new Error('Language must be fa or en.');
 if (args.theme !== undefined && !['system', 'light', 'dark'].includes(args.theme)) throw new Error('Theme must be system, light or dark.');
@@ -90,6 +91,20 @@ try {
     await delay(100);
   }
   if (!ready) throw new Error('The development screenshot function did not load.');
+  if (args['sample-library']) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const opened = await send('Runtime.evaluate', { expression: `(() => { const button = document.querySelector('button[title="متن‌های نمونه"], button[title="Sample documents"]'); if (!button) return false; if (!document.querySelector('[role="dialog"]')) button.click(); return Boolean(document.querySelector('.sample-library-dialog')); })()` });
+      if (opened.result.value) break;
+      await delay(100);
+      if (attempt === 99) throw new Error('Sample library dialog did not open.');
+    }
+  }
+  if (args['theme-panel']) {
+    await send('Runtime.evaluate', { expression: "document.querySelector('.theme-open-button').click()" });
+    await delay(200);
+    await send('Runtime.evaluate', { expression: `document.querySelector('[role="tab"][id$="-trigger-${args['theme-panel']}"]')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))` });
+    await delay(200);
+  }
   const options = {};
   if (args.markdown) options.markdown = await readFile(args.markdown, 'utf8');
   if (args.scroll !== undefined) options.scrollY = Number(args.scroll);

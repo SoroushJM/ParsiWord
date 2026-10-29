@@ -1,4 +1,5 @@
 import type { ExportSettings } from './document-model';
+import type { AppearanceSettings } from './appearance';
 
 export type DocumentSnapshot = { markdown: string; dirty: boolean };
 export type SaveFormat = { label: string; extension: string; mime: string };
@@ -21,6 +22,8 @@ export interface EditorHost {
   fontResource?: (url: string) => Promise<Uint8Array>;
   saveBytes?: (bytes: Uint8Array, filename: string, format: SaveFormat) => Promise<boolean>;
   openMarkdown?: () => Promise<{ name: string; text: string } | null>;
+  /** Follow a preview link using this document's host, outside the editor webview. */
+  openLink?: (href: string) => Promise<void>;
   initial?: { markdown: string; settings: ExportSettings; dirty: boolean; viewMode?: DocumentViewMode; recovery?: 'oversize' };
   documentChanged?: (markdown: string) => void;
   compositionChanged?: (composing: boolean) => void;
@@ -30,6 +33,7 @@ export interface EditorHost {
   command?: (command: HostCommand) => void;
   locale?: 'fa' | 'en';
   localeChanged?: (locale: 'fa' | 'en') => void;
+  appearanceChanged?: (settings: AppearanceSettings) => void;
   readOnly?: boolean;
   comparison?: DocumentComparison;
   subscribeComparison?: (listener: (comparison: DocumentComparison | undefined) => void) => () => void;

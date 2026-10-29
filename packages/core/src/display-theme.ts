@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { appearanceKey } from './appearance';
+import { applyAppearance, useAppearance, previewPalette, saveAppearance, savedAppearance, receiveAppearance } from './appearance-store';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
@@ -33,56 +35,39 @@ export function resolveDisplayTheme(preference: ThemePreference, systemDark: boo
   };
 }
 
-function browserPreference(): ThemePreference {
-  try { return readThemePreference(window.localStorage); } catch { return 'system'; }
-}
-
-/** Display state never enters a document snapshot, export settings or host edits. */
+/** Shared appearance state changes CSS tokens, without touching document state. */
 export function useDisplayTheme(hostKind: HostKind) {
-  const [preference, changePreference] = useState<ThemePreference>(browserPreference);
+  const settings = useAppearance();
+  const preference = settings.mode;
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [hostClasses, setHostClasses] = useState(() => document.body.className);
-  const isHostControlled = hostKind === 'vscode';
-  const { resolvedTheme, highContrast } = resolveDisplayTheme(preference, systemDark, isHostControlled ? hostClasses : undefined);
-
+  const isHostControlled = hostKind === 'vscode' && settings.followHost;
+  const forced = previewPalette();
+  const { resolvedTheme, highContrast } = resolveDisplayTheme(forced ?? preference, systemDark, isHostControlled ? hostClasses : undefined);
   useEffect(() => {
-    if (isHostControlled) {
-      const update = () => setHostClasses(document.body.className);
-      update();
-      const observer = new MutationObserver(update);
-      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-      return () => observer.disconnect();
-    }
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const update = () => setSystemDark(media.matches);
+    const observer = new MutationObserver(() => setHostClasses(document.body.className));
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     const onStorage = (event: StorageEvent) => {
-      if (event.key === themePreferenceKey || event.key === null) changePreference(browserPreference());
+      if (event.key !== appearanceKey && event.key !== null) return;
+      try { receiveAppearance(JSON.parse(localStorage.getItem(appearanceKey) ?? 'null')); } catch { /* Keep current appearance. */ }
     };
-    update();
     media.addEventListener('change', update);
     window.addEventListener('storage', onStorage);
-    return () => {
-      media.removeEventListener('change', update);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [isHostControlled]);
-
+    return () => { observer.disconnect(); media.removeEventListener('change', update); window.removeEventListener('storage', onStorage); };
+  }, []);
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', resolvedTheme === 'dark');
     root.dataset.displayTheme = resolvedTheme;
     root.dataset.themePreference = isHostControlled ? 'host' : preference;
     root.dataset.displayContrast = highContrast ? 'high' : 'normal';
-  }, [preference, resolvedTheme, highContrast, isHostControlled]);
-
+    applyAppearance(settings, resolvedTheme, isHostControlled);
+  }, [settings, preference, resolvedTheme, highContrast, isHostControlled]);
   const setPreference = useCallback((next: ThemePreference) => {
-    if (isHostControlled || !isThemePreference(next)) return;
-    changePreference(next);
-    // A blocked/full storage area must not prevent an immediate theme change.
-    try { window.localStorage.setItem(themePreferenceKey, next); } catch { /* Session preference still applies. */ }
+    if (!isHostControlled && isThemePreference(next)) saveAppearance({ ...savedAppearance(), mode: next });
   }, [isHostControlled]);
-
   return { preference, resolvedTheme, setPreference, isHostControlled };
 }
-
 export type DisplayThemeControls = ReturnType<typeof useDisplayTheme>;

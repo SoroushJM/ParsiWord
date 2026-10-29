@@ -12,6 +12,9 @@ import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TableKit } from "@tiptap/extension-table";
 import { MarkdownTable } from "./rich-table";
+import { PreviewBounds, usePreviewBounds } from './preview-bounds';
+import { replaceMarkdown } from './replace-markdown';
+import { useTableScroll } from './table-scroll';
 import type { Direction } from "./document-model";
 import { parseRichMarkdown, type SourcePosition } from "./rich-editor-markdown";
 import { RichSourceDocument, replaceRichSourceState } from "./rich-source";
@@ -41,6 +44,10 @@ import type { DiffSide } from "./markdown-diff";
 import { browserImageUrl, markdownImage } from "./markdown-image";
 import "./markdown-image.css";
 import { ImageResolverContext } from "./image-resource";
+import { externalLinkUrl, isMarkdownLink } from "./markdown-link";
+import type { EditorHost } from "./host";
+import { toast } from "sonner";
+import { errorMessages } from "./errors";
 
 type Props = {
   markdown: string;
@@ -53,6 +60,7 @@ type Props = {
   onRejected?: (code: "FILE_TOO_LARGE") => void;
   readOnly?: boolean;
   showReadOnlyToolbar?: boolean;
+  retainExternalHistory?: boolean;
   inheritedDefinitions?: ReadonlyMap<
     string,
     { url?: string; title?: string | null }
@@ -60,6 +68,7 @@ type Props = {
   diff?: DiffSide;
   onEditor?: (editor: Editor | null, source?: RichSourceDocument) => void;
   resolveImage?: (source: string) => Promise<string | null>;
+  openLink?: EditorHost['openLink'];
 };
 
 export const EditablePreview = memo(function EditablePreview({
@@ -75,10 +84,15 @@ export const EditablePreview = memo(function EditablePreview({
   diff,
   onEditor,
   resolveImage,
+  openLink,
   inheritedDefinitions,
   showReadOnlyToolbar = false,
+  retainExternalHistory = false,
 }: Props) {
   const { t } = useLocale();
+  const article = useRef<HTMLElement>(null);
+  const previewWidth = usePreviewBounds(article);
+  useTableScroll(article, t('جدول؛ اسکرول افقی'));
   const onChangeRef = useRef(onChange);
   const applied = useRef(markdown);
   const source = useRef(markdown);
@@ -92,6 +106,7 @@ export const EditablePreview = memo(function EditablePreview({
   const rejected = useRef(onRejected);
   const cachedEditor = useRef<Editor | null>(null);
   const imageResolver = useRef(resolveImage);
+  const linkOpener = useRef(openLink);
   const externalPositions = useRef<SourcePosition[] | null>(null);
   const [initial] = useState(() =>
     parseRichMarkdown(markdown, inheritedDefinitions),
@@ -103,6 +118,7 @@ export const EditablePreview = memo(function EditablePreview({
   diffRef.current = diff;
   latestMarkdown.current = markdown;
   imageResolver.current = resolveImage;
+  linkOpener.current = openLink;
   const documentSnapshot = useCallback(
     (doc: ProseMirrorNode) => ledger.current.snapshot(doc),
     [],
@@ -217,6 +233,24 @@ export const EditablePreview = memo(function EditablePreview({
         spellcheck: "false",
       },
       handleDOMEvents: {
+        click: (view, event) => {
+          if (event.button !== 0 || !(event.ctrlKey || event.metaKey)) return false;
+          const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+          if (!anchor || !view.dom.contains(anchor)) return false;
+          // Keep ordinary clicks available for editing. Follow modifier clicks
+          // even in read-only Git previews, without navigating the editor itself.
+          event.preventDefault();
+          const href = anchor.getAttribute('href');
+          if (isMarkdownLink(href)) {
+            if (linkOpener.current) {
+              void linkOpener.current(href).catch(() => toast.error(t(errorMessages.HOST_REQUEST_FAILED)));
+            } else {
+              const url = externalLinkUrl(href, anchor.ownerDocument.baseURI);
+              if (url) window.open(url, '_blank', 'noopener,noreferrer');
+            }
+          }
+          return true;
+        },
         compositionstart: () => {
           compositionChange.current?.(true);
           return false;
@@ -228,7 +262,11 @@ export const EditablePreview = memo(function EditablePreview({
       },
     },
     onCreate: ({ editor }) => scheduleAnnotation(editor),
-    onUpdate: ({ editor }) => {
+    onTransaction: ({ editor, transaction }) => {
+      // Markdown spelling can change while the rendered ProseMirror document
+      // stays equal (entities, mark delimiters, CRLF). Tiptap intentionally
+      // skips onUpdate for that case; the source ledger must still publish it.
+      if (!transaction.docChanged || transaction.getMeta('preventUpdate')) return;
       externalSyncVersion.current++;
       const next = ledger.current.commit(editor.state.doc, editor.state).text;
       applied.current = next;
@@ -265,6 +303,9 @@ export const EditablePreview = memo(function EditablePreview({
       const parsed = parseRichMarkdown(markdown);
       externalPositions.current = parsed.positions;
       try {
+        if (retainExternalHistory) {
+          replaceMarkdown(editor, ledger.current, ledger.current.snapshot(editor.state.doc).text, markdown, true);
+        } else {
         editor.view.updateState(
           replaceRichSourceState(editor.state, parsed.document),
         );
@@ -273,6 +314,7 @@ export const EditablePreview = memo(function EditablePreview({
         // transaction subscribers so contextual tools reflect the new table
         // shape without waiting for another click or creating a source edit.
         editor.view.dispatch(editor.state.tr.setMeta("addToHistory", false));
+        }
       } finally {
         externalPositions.current = null;
       }
@@ -281,7 +323,7 @@ export const EditablePreview = memo(function EditablePreview({
     return () => {
       active = false;
     };
-  }, [markdown, editor, scheduleAnnotation, preserveSources]);
+  }, [markdown, editor, scheduleAnnotation, preserveSources, retainExternalHistory]);
   useLayoutEffect(() => {
     if (!editor) return;
     editor.view.dom.dir = direction === "auto" ? "auto" : direction;
@@ -315,7 +357,9 @@ export const EditablePreview = memo(function EditablePreview({
         <RichToolbar editor={editor} readOnly={readOnly} />
       )}
       <ImageResolverContext.Provider value={resolveImage}>
+      <PreviewBounds.Provider value={previewWidth}>
         <article
+          ref={article}
           className="editable-preview-content"
           data-empty={!markdown.trim()}
         >
@@ -344,6 +388,7 @@ export const EditablePreview = memo(function EditablePreview({
             </Empty>
           )}
         </article>
+      </PreviewBounds.Provider>
       </ImageResolverContext.Provider>
     </>
   );

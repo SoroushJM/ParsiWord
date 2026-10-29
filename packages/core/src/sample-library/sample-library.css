@@ -1,0 +1,15 @@
+.sample-library-dialog {
+  display: flex;
+  flex-direction: column;
+  max-block-size: calc(100dvh - 2rem);
+}
+.sample-library-dialog > :not(.sample-library-list) {
+  flex-shrink: 0;
+}
+.sample-library-list {
+  block-size: min(24rem, 40dvh);
+  flex: 0 1 24rem;
+}
+.sample-library-list [data-slot="scroll-area-viewport"] > div {
+  display: block !important;
+}

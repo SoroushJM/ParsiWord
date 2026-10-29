@@ -7,3 +7,5 @@ export * from './document-model';
 export * from './document-limits';
 export * from './document-validation';
 export * from './errors';
+export * from './markdown-link';
+export * from './appearance';

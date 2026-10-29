@@ -1,4 +1,5 @@
 import { languagePath, useLocale } from './locale';
+import { ThemeControl } from './ThemePanel';
 import { memo } from 'react';
 import { ArrowDownToLine, Bold, BookOpen, Check, ChevronDown, Code2, FileCode2, FilePlus2, Files, FileText, FileType2, FolderOpen, Heading2, Italic, Languages, List, Monitor, Moon, Settings2, Shapes, Sun, Undo2 } from 'lucide-react';
 import { tikzSampleInsertion } from './tikz-language';
@@ -87,6 +88,7 @@ export const DocumentHeading = memo(function DocumentHeading({ instanceId, hostC
                 <Button variant="ghost" size="icon-lg" className="document-icon-control" title={t("یادداشت تازه")} aria-label={t("یادداشت تازه")} onClick={onNew}><FilePlus2 data-icon="inline-start" /></Button>
               </div></>}
               <div className={hostControlled ? 'flex items-center gap-1' : 'document-export'}>
+                <ThemeControl compact={compact} />
                 <Button variant="outline" size={compact ? 'icon-xs' : 'icon'} className={cn(!compact && 'document-icon-control')} aria-label={t("تنظیمات خروجی")} title={t("تنظیمات خروجی")} onClick={onSettings}><Settings2 data-icon="inline-start" /></Button>
                 <Button variant={compact ? 'outline' : 'default'} size={compact ? 'xs' : 'lg'} className={cn('document-export-button min-w-0', !hostControlled && 'flex-1')} aria-label={compact ? t('ذخیرهٔ فایل Word') : undefined} title={compact ? t('ذخیرهٔ فایل Word') : undefined} onClick={onExport} disabled={busy || !canExport}>{busy ? <Spinner aria-label={t("در حال ساخت سند")} data-icon="inline-start" /> : !compact && <ArrowDownToLine data-icon="inline-start" />}<span>{compact ? 'Word' : busy ? t("در حال ساخت سند…") : t("ذخیرهٔ فایل Word")}</span></Button>
                 {compact && <Button variant="outline" size="xs" aria-label={t('ذخیرهٔ فایل PDF')} title={t('ذخیرهٔ فایل PDF')} onClick={onExportPdf} disabled={busy || !canExport}>PDF</Button>}

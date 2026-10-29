@@ -44,6 +44,9 @@ pnpm run ui:capture --language en --width 1100 --height 800 --output artifacts/d
 pnpm run ui:capture --theme dark --width 1366 --height 900 --output artifacts/desktop-dark.png
 pnpm run ui:capture --theme light --width 393 --height 851 --view preview --output artifacts/mobile-light.png
 
+# کتابخانهٔ نمونه‌ها در عرض باریک
+pnpm run ui:capture --sample-library --width 320 --height 640 --output artifacts/sample-library-mobile.png
+
 # ویرایش موبایل و پیش‌نمایش همان متن
 pnpm run ui:capture --width 393 --height 851 --view edit --markdown /tmp/demo.md --output artifacts/mobile-edit.png
 pnpm run ui:capture --width 393 --height 851 --view preview --markdown /tmp/demo.md --output artifacts/mobile-preview.png
@@ -176,3 +179,12 @@ node scripts/profile-rich-input.mjs --label production-after --cpu 4 --repeat 1 
 [گزارش ۰.۴.۶](releases/0.4.6-performance.json) هستند؛ هر اجرای مستقل حفظ
 شده و میانگین چند اجرا به‌جای توزیع زمان‌ها گزارش نشده است. هنگام سنجش،
 ویرایش فایل‌ها و HMR را متوقف کن تا reload با زمان تایپ مخلوط نشود.
+
+برای بازبینی پنل تم، گزینهٔ `--theme-panel` یکی از بخش‌های `presets`،
+`environment`، `markdown` یا `syntax` را پیش از عکس باز می‌کند؛ با
+`--theme light` یا `--theme dark` قابل ترکیب است. نمونه:
+
+```sh
+pnpm run ui:capture --width 1366 --height 900 --theme dark --theme-panel syntax --output artifacts/theme-desktop-syntax.png
+pnpm run ui:capture --width 320 --height 900 --theme light --theme-panel presets --output artifacts/theme-mobile-presets.png
+```

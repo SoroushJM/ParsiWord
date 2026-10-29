@@ -1,272 +1,288 @@
-# پارسی‌ورد · ParsiWord
+# ParsiWord · پارسی‌ورد
 
-[**نسخهٔ فارسی**](https://soroushjm.github.io/ParsiWord/) · [**English RTL Markdown editor**](https://soroushjm.github.io/ParsiWord/en/) · [Source code](https://github.com/SoroushJM/ParsiWord) · [GitHub: SoroushJM](https://github.com/SoroushJM)
+**An RTL Markdown editor and viewer with an editable live preview, Word/PDF export, and tools for mathematics.**
 
-**RTL Markdown editor and viewer with an editable live preview.** Read and edit
-right-to-left Markdown for Persian, Arabic and mixed RTL/LTR documents. Work in
-Markdown source or edit the rendered preview directly; both views stay in sync.
-ParsiWord also exports to Word (DOCX) and PDF, with embedded fonts, LaTeX equations,
-Mermaid diagrams, [TikZ geometry drawings](docs/tikz.md) and syntax highlighting. The interface is available in English
-and Persian. Document conversion runs on your device, without uploading your text
-to a server. The web app is free to use in a modern browser.
+Write Persian, Arabic, English, and mixed RTL/LTR documents in Markdown. Edit the source or the rendered result, draw geometry with TikZ, and export your work on your own device.
 
-**Markdown راست‌به‌چپ را راحت ببین و ویرایش کن.** پارسی‌ورد منبع Markdown و
-پیش‌نمایش قابل ویرایش را کنار هم می‌گذارد؛ برای نوشتن فارسی و عربی در کنار
-انگلیسی، عددها، کد و فرمول. رابط فارسی و انگلیسی دارد و تغییر زبان، متن،
-جهت سند و پیش‌نویس را حفظ می‌کند. خروجی Word و PDF هم روی دستگاه ساخته می‌شود.
+[![Web deployment](https://github.com/SoroushJM/ParsiWord/actions/workflows/pages.yml/badge.svg)](https://github.com/SoroushJM/ParsiWord/actions/workflows/pages.yml)
+[![Editor and VS Code tests](https://github.com/SoroushJM/ParsiWord/actions/workflows/vscode.yml/badge.svg)](https://github.com/SoroushJM/ParsiWord/actions/workflows/vscode.yml)
 
-برای طراحی سؤال هندسه، شکل را داخل بلوک `tikz` بنویس؛ موتور واقعی TeX/PGF روی
-دستگاه آن را رسم می‌کند و تصویرش در Word/PDF هم جاسازی می‌شود. ویرایش کد شکل از
-پیش‌نمایش، در همان تاریخچهٔ سند ثبت می‌شود. [راهنما و محدودیت‌های TikZ](docs/tikz.md)
-و [نمونهٔ دایره و دو شعاع](examples/tikz-geometry.md).
+[**Open the web app**](https://soroushjm.github.io/ParsiWord/en/) · [**نسخهٔ فارسی**](https://soroushjm.github.io/ParsiWord/) · [**Downloads**](https://github.com/SoroushJM/ParsiWord/releases) · [فارسی](#persian) · [Report an issue](https://github.com/SoroushJM/ParsiWord/issues)
 
-[نسخهٔ ۰.۴.۷ و دانلود APK](docs/releases/0.4.7.md) برای تبدیل Markdown به Word و PDF روی دستگاه، با رابط فارسی، جهت متن
-فارسی/انگلیسی، فرمول LaTeX و نمودار Mermaid. کنترل‌های نمونه و مقایسه از رابط
-حذف شده‌اند. شروع نخست با یک [متن ترکیبی سخت](packages/core/src/default-document.md) شامل
-همهٔ موارد سخت قبلی، ۷۲ جفت علامت، LaTeX، Mermaid و نمونهٔ ۳۶ زبان کد است؛ پیش‌نویس قبلی (حتی خالی) حفظ می‌شود و
-«یادداشت تازه» همچنان یک سند خالی باز می‌کند.
+![ParsiWord showing Persian Markdown source beside an editable preview of a TikZ circle with two radii, an angle, and a chord.](docs/images/parsiword-editor.png)
 
-## سه پروژه در یک مخزن
+*The web editor running locally with the [geometry example](examples/tikz-geometry.md). The interface language and document direction are independent.*
 
-| پروژه | مسیر | مسئولیت |
+## Why ParsiWord?
+
+Persian and Arabic Markdown need more than right-aligned paragraphs. A document can mix RTL prose with English names, numbers, links, code, and equations. ParsiWord brings source editing, an editable rendered view, and document export into one workflow designed around that mix.
+
+Use it for technical documentation, study notes, user guides, and mathematics question sheets. The same editor and conversion core powers the website, VS Code extension, and native apps.
+
+## Use it now
+
+| Platform | Start here |
+| --- | --- |
+| **Web** | [English](https://soroushjm.github.io/ParsiWord/en/) or [فارسی](https://soroushjm.github.io/ParsiWord/) — no installation. |
+| **VS Code** | Download `parsiword-vscode-*.vsix` from [GitHub Releases](https://github.com/SoroushJM/ParsiWord/releases), then choose **Extensions → Install from VSIX…**. |
+| **Android** | Download the Preview `.apk` from [GitHub Releases](https://github.com/SoroushJM/ParsiWord/releases). Android 7+; ARM64 only. |
+| **Windows** | Download the `*_x64-setup.exe` installer from [GitHub Releases](https://github.com/SoroushJM/ParsiWord/releases). |
+
+Native downloads are **Preview releases**. Each release includes build information and SHA-256 checksums. Linux, macOS, and iOS build targets are also present in the source; see the [platform guide](docs/platforms.md) for requirements and recorded validation.
+
+### Write, preview, and export
+
+1. Open a Markdown file or start writing. In the web app, your draft is saved in the current browser.
+2. Choose **RTL**, **LTR**, or **Auto** for the document. You can switch the interface language separately.
+3. Edit the source or the live preview. On desktop, both panes are visible; on mobile, switch between them with the editor tabs.
+4. Choose your output font and size, then save **Word**, **PDF**, or **Markdown**.
+
+## Website features
+
+### Documents and editing
+
+- **Open local files:** import Markdown or plain text (`.md`, `.markdown`, `.txt`) and choose the document title used for exported filenames.
+- **Start fresh or restore:** **New note** opens an empty document. **Restore previous text** brings back the text replaced by opening a file or starting a note during the current session.
+- **Local autosave:** keep the current draft and output settings in the browser. The status bar shows saving/saved/storage-error state, word count, and character count. Clearing browser data removes the stored draft and downloaded fonts.
+- **An editable preview:** type directly into formatted paragraphs, headings, lists, and table cells. Changes update the Markdown source; small rich edits preserve unrelated source spelling, spacing, escapes, and line endings.
+- **Markdown toolbar:** insert headings, bold, italic, list markers, inline code, or a starter TikZ drawing around the current source selection.
+- **Rich formatting toolbar:** paragraph and heading levels 1–6, bold, italic, strikethrough, bulleted and numbered lists, list indent/outdent, block quotes, inline code, code blocks, links, tables, equations, TikZ insertion, clear formatting, Undo, and Redo.
+- **Table editing:** insert a table, edit cells, add or remove rows and columns, or delete the table. GFM table alignment is preserved in the document model and exports.
+- **Readable tables on small screens:** short columns stay compact, longer prose wraps at a readable width, and wide tables scroll inside their own frame. Long formulas retain their natural size and get an independent horizontal ScrollArea when wider than the preview pane; large images fit proportionally. These are preview/editing rules; Word/PDF use their existing page layout.
+- **Markdown structure:** nested lists, checklists, quotes, thematic breaks, inline and reference-style links/images, and explicit hard breaks. Ordinary source newlines flow within a paragraph; explicit hard breaks remain visible.
+- **Starter document:** the first visit includes mixed Persian/English text, formulas, Mermaid, TikZ, and code samples. Existing drafts, including intentionally empty ones, are preserved.
+- **Sample library:** the small library icon in the footer (in VS Code, the editor status row) opens 16 named examples, including wide/incomplete tables and previous bug reproductions. Expectations are written beside the example in its Markdown. Search examples, save the current text as a named personal sample on this device, or delete a personal sample. Loading a sample replaces the document as one separate Undo/Redo step; ordinary editing and autosave continue.
+
+### RTL, languages, and layout
+
+- **RTL / LTR / Auto:** choose a fixed writing direction or detect each paragraph independently. Code remains LTR, and math has its own layout.
+- **Persian and English interfaces:** switch language without changing the document's content, direction, title, or draft.
+- **Desktop split view:** source and preview appear side by side with a draggable divider that also supports keyboard adjustment.
+- **Synchronized reading:** scrolling either pane reveals corresponding source blocks in the other. Selecting text highlights its counterpart without moving keyboard focus.
+- **Mobile editing:** sticky edit/preview tabs show one pane at a time and retain reading position and selection when switching. Formatting tools remain available while scrolling.
+- **Themes:** open **Theme** beside settings for Neutral, Navy, Paper or Soft purple, each with independent light/dark palettes and Light/Dark/System mode. Customize interface, source, preview, Markdown and code colors using any CSS color format supported by your runtime. Preview live, save/cancel/reset, keep named themes, and import/export JSON on the same device. VS Code follows its host theme by default and also supports independent themes. Word/PDF retain their print colors; Git and linked-selection decorations keep their meaning.
+- **Accessible controls:** labeled icon buttons, keyboard focus, accessible dialogs, and a readable native source-input fallback during text composition or forced-colors display.
+
+### Fonts and output settings
+
+- Set the document title, RTL/LTR/automatic direction, font family, and text size. Sizes **10, 11, 12, 14, 16, and 18 pt** are shared by Word and PDF.
+- Use bundled **Vazirmatn** for Persian, **Noto Sans Mono** for code, and **STIX Two Math** for equations, with a fallback font for supported rare symbols.
+- Search a bundled catalogue of **1,949 Google Fonts families**. Filter by Persian/Arabic support, downloaded fonts, or all fonts; load more results as needed.
+- Download only the selected font and its available regular/bold faces. Reuse cached fonts, remove downloaded fonts, or refresh the catalogue. In the website, refresh reads the catalogue snapshot published with the app.
+- Embed the fonts actually used in Word and PDF. Latin-only document fonts use Vazirmatn for Persian text. Font requests do not include document text; embedded-font display still depends on the reader application.
+
+### Images
+
+- Display inline and reference-style Markdown images in the editable preview, including relative paths and online URLs. Use the image's **Edit image** control to edit its Markdown source.
+- In the website's **Local image base folder**, select the document or project folder, set the document's subfolder when needed, change the selection, or clear access. A compatible folder picker is available when the browser's directory API is unavailable.
+- Resolve paths such as `./images/circle.png` and `../images/circle.svg` inside the selected folder. Folder access must be selected again after reloading; typing a computer path alone does not grant access.
+- Embed the actual image bytes in Word/PDF, including images within lists and tables. **PNG, JPEG, GIF, WebP, AVIF, BMP, and SVG** are normalized to embedded PNG; animations become a still frame.
+- Preserve aspect ratio and fit images to page or table-cell bounds. The exported file no longer depends on the original local image files.
+
+Online images must allow CORS for web export. Unavailable preview images retain alternative text; missing or invalid export images stop conversion with an explanation. Folder contents are not uploaded.
+
+### Code, equations, and diagrams
+
+| Content | Input | Preview and editing |
 | --- | --- | --- |
-| هستهٔ مشترک | `packages/core` | ویرایشگر، RTL، Markdown، فرمول، نمودار، فونت و خروجی‌ها |
-| اکستنشن VS Code | `apps/vscode` | اتصال به TextDocument، منبع و پیش‌نمایش بومی، diff گیت و Webview |
-| وب و اپ پارسی‌ورد | `apps/parsiword` | سایت دوزبانه، پیش‌نویس و پروژه‌های Tauri دسکتاپ/موبایل |
+| **Highlighted code** | A code fence with a language such as `typescript` or `python` | Syntax colors and a language label; unrecognized languages remain plain text. |
+| **LaTeX equations** | `$...$`, `$$` on separate lines, or `math` / `tex` / `latex` fences | Fractions, roots, powers, sums, integrals, matrices, and other supported KaTeX expressions. Select an equation to edit its LaTeX. |
+| **Mermaid** | A `mermaid` fence | Flowcharts, sequence diagrams, and other engine-supported diagrams; edit the diagram source from the preview. Wide diagrams can be scrolled horizontally. |
+| **TikZ and PGFPlots** | A `tikz` or `tikzpicture` fence | Real local TeX/PGF compilation for geometry and plots. Edit the source in a draft dialog; Apply updates the document, Cancel leaves it unchanged. |
+| **Full Persian LaTeX documents** | A `xelatex` or `latex-document` fence; `latex` / `tex` with `\documentclass` also works | Local XeLaTeX/XePersian compilation, Persian text and labels, multi-page preview, and expandable compiler logs when a document fails. |
 
-`pnpm run dev`، `pnpm run build` و فرمان‌های ساخت اپ از ریشه اجرا می‌شوند.
-برای اکستنشن: `pnpm run package:vscode`؛ بسته در `artifacts/parsiword-vscode-0.1.5.vsix` قرار می‌گیرد.
-آزمون واقعی VS Code: `pnpm run test:vscode`، با پروفایل و مخزن آزمایشی مستقل.
-[راهنمای اکستنشن](apps/vscode/README.md) · [نقشهٔ راه و معیارهای پذیرش](docs/architecture-roadmap.md) · [نتایج آزمون میزبان](docs/validation/vscode-session-validation.md).
+<details>
+<summary>All 36 bundled code languages</summary>
 
-در منوی **Reopen Editor With…** سه نما وجود دارد: **ParsiWord Source + Result**
-برای حالت ترکیبی، **ParsiWord Markdown Source** برای منبع فارسی ParsiWord و
-**ParsiWord Rendered Result** برای نتیجهٔ قابل‌ویرایش. حالت ترکیبی پیش‌فرض است.
-پوستهٔ افزونه از فونت، رنگ و تم روشن/تیره/High Contrast خود VS Code پیروی می‌کند؛
-فونت سند مستقل می‌ماند. با بستن یک نوع editor و بازکردن نوع دیگر، جای مکان‌نما و
-اسکرول از نو آغاز می‌شود؛ سند و تاریخچهٔ بومی مشترک باقی می‌مانند.
+`bash`, `c`, `cpp`, `csharp`, `css`, `diff`, `go`, `graphql`, `ini`, `java`,
+`javascript`, `json`, `kotlin`, `less`, `lua`, `makefile`, `markdown`, `objectivec`,
+`perl`, `php`, `php-template`, `plaintext`, `python`, `python-repl`, `r`, `ruby`,
+`rust`, `scss`, `shell`, `sql`, `swift`, `typescript`, `vbnet`, `wasm`, `xml`, `yaml`.
 
-دکمهٔ «منبع بومی VS Code» همان سند را کنار
-پیش‌نمایش باز می‌کند تا تکمیل خودکار، Outline، folding، پیوندها و سایر امکانات
-Markdown و افزونه‌های نصب‌شده در ادیتور بومی باقی بمانند. «Git diff»،
-«Staged diff» و بازکردن تغییر Markdown از Source Control، مقایسهٔ پارسی‌ورد
-را در یک تب باز می‌کنند. منبع Markdown و خروجی رندرشده، هر دو حالت کنارهم و
-Inline دارند. منبع با هایلایت قرمز/سبز خط و کلمه و پیش‌نمایش با هایلایت بلوک‌های
-تغییرکرده نمایش داده می‌شود. ستون‌ها هدر هم‌تراز، کنترل سند مشترک و جداکنندهٔ
-قابل جابه‌جایی دارند. نسخهٔ Git فقط خواندنی است؛ فایل فعلی همچنان ویرایش، ذخیره
-و Undo/Redo بومی همان سند را دارد. در Inline، «ویرایش نسخهٔ فعلی» همان ادیتور
-را در همان تب باز می‌کند و «مرور تغییرات» به نمایش یکپارچه برمی‌گردد. جهت، فونت،
-زبان و پوستهٔ فشردهٔ VS Code حفظ می‌شوند. staging تکه‌های تغییر در مقایسه‌گر بومی
-انجام می‌شود. [تصمیم مقایسهٔ یک‌تب](docs/adr/0008-single-tab-comparison-and-images.md) ·
-[جزئیات و آزمون مقایسه](docs/validation/parsiword-git-comparison.md).
+Aliases include `html`/`xml` and `jsx`/`javascript`. Highlighting runs locally in the preview and Word output. See the [highlighting guide](docs/code-highlighting.md).
 
-میان‌برهای رایج داخل منبع و پیش‌نمایش افزونه کار می‌کنند: کپی/بریدن/چسباندن،
-ذخیره و Undo/Redo، جست‌وجو با Ctrl+F، جایگزینی با Ctrl+H و رفتن به خط Markdown
-با Ctrl+G. Quick Open، Command Palette و جابه‌جایی تب‌ها به خود VS Code می‌رسند.
-[جدول میان‌برها](apps/vscode/README.md) و [تصمیم دامنهٔ این مرحله](docs/adr/0007-vscode-ui-history-and-shortcuts.md).
+</details>
 
-## استفاده
+### Try a geometry question
 
-متن را بنویس یا با آیکن پوشهٔ «باز کردن فایل» یک Markdown یا فایل متنی وارد کن. در
-«پیش‌نمایش» هم می‌توانی متن قالب‌بندی‌شده را مستقیم ویرایش کنی؛ تغییر متن
-و قالب‌بندی، Markdown همان سند را به‌روز می‌کند. از «تنظیمات خروجی» نام، جهت، اندازه و فونت را انتخاب
-کن؛ سپس «ذخیرهٔ فایل Word» را بزن یا از منوی «قالب‌های دیگر خروجی»، PDF یا
-Markdown بگیر. تنظیمات ظاهر Word و PDF مشترک‌اند؛ Markdown متن اصلی را
-با UTF-8 و بدون BOM نگه می‌دارد و برای پیش‌نویس خالی هم قابل ذخیره است.
-جهت «خودکار» هر پاراگراف را جدا تشخیص می‌دهد.
-تراز و جهت مستقل‌اند، ولی حالت آزمایشی «فقط راست‌چین» در رابط وجود ندارد.
+Paste this into ParsiWord:
 
-انتخابگر ظاهر وب سه حالت سیستم، روشن و تیره دارد و انتخاب را نگه می‌دارد؛ تم
-رابط و سند، رنگ چاپی Word/PDF را عوض نمی‌کند. ویرایش کوچک در پیش‌نمایش، متن و
-فاصله‌ها و escapeهای نامرتبط منبع را حفظ می‌کند. پایان سطر عادی درون پاراگراف
-به‌صورت فاصله نمایش داده می‌شود؛ شکست صریح Markdown و خط‌های کد/فرمول محفوظ‌اند.
+````markdown
+# دایره و دو شعاع
 
-منبع Markdown با رنگ‌های نحوی نمایش داده می‌شود؛ تیتر، فهرست، کد، پیوند،
-فرمول و نشانه‌ها خواناترند و متن اصلی و مکان‌نما در ورودی بومی حفظ
-می‌شوند. هنگام composition، حالت forced-colors یا متن بسیار بزرگ، نمایش
-سادهٔ بومی خوانا می‌ماند. رنگ‌ها اندازهٔ حروف یا شکست سطر را تغییر نمی‌دهند.
+شعاع دایره $r=2$ و زاویهٔ بین دو شعاع $60^\circ$ است.
+طول وتر $AB$ را به دست آورید.
 
-تصویرهای Markdown، از جمله مسیر نسبی `![دایره](./images/circle.svg)` و تصویرهای
-reference-style، در پیش‌نمایش سایت و VS Code دیده می‌شوند. در VS Code مسیر نسبت
-به خود سند حل می‌شود. در سایت، «پوشهٔ پایهٔ تصاویر» را باز کن و پوشهٔ سند یا پروژه
-را انتخاب کن؛ اگر سند داخل زیرپوشه‌ای مثل `docs` است، همان را در مسیر سند بنویس.
-مسیرهای `../` هم در محدودهٔ پوشهٔ انتخاب‌شده کار می‌کنند. فایل‌ها آپلود نمی‌شوند
-و انتخاب پوشه با بستن/بارگذاری مجدد صفحه تکرار می‌شود. تصویرهای آنلاین نیز نمایش
-داده می‌شوند؛ متن Markdown اصلی و مسیرهایش تغییر نمی‌کنند. همین تصاویر در خروجی
-Word و PDF نیز داخل فایل جاسازی می‌شوند و پس از ذخیره به فایل اصلی وابسته نیستند.
-PNG، JPEG، GIF، WebP، AVIF، BMP و SVG به PNG تبدیل می‌شوند؛ تصویر متحرک به یک فریم
-ثابت تبدیل می‌شود. در سایت، تصاویر آنلاین باید اجازهٔ CORS بدهند؛ در غیر این صورت
-نسخهٔ محلی تصویر را در پوشهٔ پایه قرار بده. تصویر خراب یا گم‌شده خروجی را با پیام
-خطا متوقف می‌کند تا فایل ناقص ذخیره نشود.
+$$
+AB = 2r\sin\left(\frac{\theta}{2}\right)
+$$
 
-جهت زیر تیتر اصلی و ذخیره/تنظیمات بالای سند قرار دارند. متن Markdown با
-محتوا بلند می‌شود و نوار قالب‌بندی هنگام اسکرول چسبان است. در دسکتاپ،
-فضای سند تمام عرض در دسترس صفحه را می‌گیرد. پیش‌نمایش کنار ادیتور قرار دارد؛
-جداکنندهٔ shadcn/ui میان آن‌ها را با ماوس یا کلیدهای جهت چپ و راست جابه‌جا کن
-تا عرض هر بخش تغییر کند. اسکرول دو بخش در هر دو جهت با بلوک‌های
-متن هماهنگ می‌شود. در موبایل، انتخابگر چسبان «ویرایش متن / پیش‌نمایش» فقط
-یکی از دو بخش را نشان می‌دهد؛ با تغییر حالت، جای متن حفظ می‌شود. برگشت
-به ویرایش، صفحه‌کلید را خودکار باز نمی‌کند و متن و انتخاب قبلی باقی می‌مانند.
-نوار ابزار پیش‌نمایش شامل متن عادی و تیترهای ۱ تا ۶، پررنگ/مورب/خط‌خورده،
-فهرست بولت‌دار و شماره‌دار با تورفتگی، نقل‌قول، کد درون متن و بلوک کد،
-پیوند، جدول، فرمول، پاک‌کردن قالب‌بندی و واگرد/انجام دوباره است. داخل جدول،
-ابزار افزودن و حذف ردیف/ستون هم دیده می‌شود. انتخابگر سبک متن با آیکن
-نمایش داده می‌شود و همچنان متن عادی و شش سطح تیتر دارد. برای کار با نشانه‌های Markdown
-نیز می‌توانی به «ویرایش متن» برگردی. در موبایل نوار ابزار دو ردیف دارد و
-برای رسیدن به دکمه‌های بیشتر می‌توانی داخل آن افقی اسکرول کنی.
-کنترل‌های پیش‌نمایش از کامپوننت‌های shadcn/ui پروژه استفاده می‌کنند. در
-اندروید، فاصلهٔ نوار وضعیت و ناوبری در والد WebView اعمال می‌شود تا نوارهای
-چسبان فاصلهٔ ناحیهٔ امن را دوباره حساب نکنند.
-هنگام تایپ پیش‌نمایش، Markdown اصلی و ورودی ذخیرهٔ Word فوراً به‌روز
-می‌شوند؛ فقط نمایش ادیتور منبع با تأخیر کوتاه ۱۲۰ms تازه می‌شود و هنگام
-برگشت به آن فوراً متن فعلی را نشان می‌دهد. مقایسهٔ قابل بازاجرای کارایی
-منبع رنگی و پیش‌نمایش در [گزارش ۰.۴.۷](docs/releases/0.4.7-performance.json)
-ثبت شده است؛ این سنجش مرورگر با CPU کندشده است، نه سرعت واقعی گوشی.
-
-فرمول درون‌خطی با `$x^2$`، فرمول نمایشی با `$$` در خط‌های جدا و بلوک‌های
-`math`/`latex`/`tex` پشتیبانی می‌شود. فرمول در Word ساختار ریاضی قابل ویرایش
-دارد. برای ویرایش فرمول در پیش‌نمایش روی آن بزن. بلوک `mermaid` در
-پیش‌نمایش SVG و در Word تصویر PNG است؛ منبعش از «ویرایش نمودار» در
-پیش‌نمایش یا از Markdown قابل تغییر است. تبدیل روی دستگاه انجام می‌شود و متن ارسال
-نمی‌شود. اندازهٔ نمودار در پیش‌نمایش با اندازهٔ متن متناسب است؛ نمودار
-عریض داخل محفظهٔ خودش افقی اسکرول می‌شود و راهنما دارد.
-[دامنهٔ ریاضی و نمودار](docs/rich-content.md).
-
-تیتر، متن پررنگ/مورب/خط‌خورده، نقل‌قول، فهرست، جدول، لینک و کد پشتیبانی
-می‌شوند. نام زبان بعد از سه بک‌تیک، مثل `typescript` یا `python`، رنگ‌آمیزی
-آفلاین را فعال می‌کند؛ نام زبان بالای بلوک و رنگ‌ها در پیش‌نمایش و Word
-قرار می‌گیرند. کد در Word قابل ویرایش و LTR می‌ماند. زبان‌های بدون پشتیبانی
-و بلوک‌های بدون برچسب، متن ساده‌اند. [فهرست ۳۶ زبان و جزئیات](docs/code-highlighting.md).
-PDF متن و کد را برداری و قابل جست‌وجو، با فونت جاسازی‌شده و تنظیمات Word
-ذخیره می‌کند؛ فرمول و نمودار به تصویر محلی تبدیل می‌شوند.
-[راهنمای PDF و Markdown](docs/pdf-export.md). تصاویر Markdown با حفظ نسبت ابعاد
-در محدودهٔ صفحه یا خانهٔ جدول جاسازی می‌شوند. پیش‌نمایش صفحه‌بندی Word را شبیه‌سازی
-نمی‌کند. حداکثر پیش‌نویس ۵۰۰ هزار نویسه است؛ بازگشت به متن قبلی مربوط به همان
-اجرای اپ است و پاک‌کردن دادهٔ اپ، پیش‌نویس و فونت‌های دریافتی را پاک می‌کند.
-
-## فونت همراه سند
-
-فونت انتخابی واقعاً داخل DOCX جاسازی می‌شود: فایل کامل TTF/OTF در قالب
-استاندارد ODTTF، همراه رابطه و کلید بازیابی در جدول فونت Word. تنظیم
-`embedTrueTypeFonts` نیز ثبت می‌شود تا Word هنگام ذخیرهٔ بعدی فونت را حفظ کند.
-وزیرمتن، Noto Sans Mono برای کد و STIX Two Math برای ریاضی همراه اپ هستند.
-فقط فونت‌های لازم برای همان سند جاسازی می‌شوند؛ فارسیِ فونت‌های فاقد حروف عربی
-از وزیرمتن استفاده می‌کند. فونت نشانه‌های کمیاب هم هنگام نیاز جاسازی می‌شود.
-
-۱٬۹۴۹ خانوادهٔ Google Fonts در انتخابگر جست‌وجو می‌شوند. فقط خانوادهٔ
-انتخابی دریافت و روی دستگاه نگهداری می‌شود، نه تمام فونت‌ها. صورت معمولی و
-پررنگ در صورت وجود دریافت می‌شوند؛ فونت تک‌وزن برای سبک‌های دیگر می‌تواند
-با شبیه‌سازی نمایش‌دهنده استفاده شود. API دریافت نیاز به کلید ندارد و فقط نام
-فونت ارسال می‌شود. فهرست آفلاین همراه اپ است و به‌روزرسانی اختیاری دارد.
-نسخهٔ مرورگر نشانی مستقیم TTF را از snapshot همراه سایت می‌گیرد؛ دکمهٔ
-به‌روزرسانی فهرست در وب، snapshot منتشرشدهٔ همان سایت را دوباره می‌خواند.
-
-گزینه‌های فاقد فایل مثل Arial/Tahoma/Times New Roman/Courier New از انتخابگر
-حذف شدند؛ انتخاب قدیمی آن‌ها به وزیرمتن مهاجرت می‌کند و متن حفظ می‌شود. حالت
-مقایسهٔ ذخیره‌شده در پیش‌نویس‌های قدیمی نیز خاموش می‌شود. نمایش‌دهنده باید از
-فونت جاسازی‌شده پشتیبانی کند؛ بعضی خواننده‌ها فونت جاسازی‌شده یا فونت ریاضی را
-نادیده می‌گیرند. در بررسی LibreOffice متن و کد با فونت همراه سند نمایش داده
-شدند، ولی موتور ریاضی آن از فونت‌های خودش استفاده کرد؛ جاسازی داخل DOCX
-همچنان برای همهٔ فونت‌های معرفی‌شده تأیید شده است.
-
-تست ارسال‌پذیری، فونت‌های داخل Word را با کلید استاندارد بازیابی و **تمام
-بایت‌ها** را با اصل مقایسه می‌کند. برای بررسی مستقل یک خروجی:
-
-```sh
-python scripts/verify-docx-fonts.py document.docx --font-dir packages/core/public/fonts
+```tikz
+\begin{tikzpicture}
+\coordinate (O) at (0,0);
+\coordinate (A) at (2,0);
+\coordinate (B) at (60:2);
+\draw[blue,thick] (O) circle (2);
+\draw (A)--(O)--(B);
+\draw[red,dashed] (A)--(B) node[midway,right] {$x$};
+\node[below] at (O) {$O$};
+\node[right] at (A) {$A$};
+\node[above] at (B) {$B$};
+\end{tikzpicture}
 ```
+````
 
-این ابزار به fontTools نیاز دارد. منبع و مجوز فونت‌های همراه در
-`packages/core/public/fonts/FONT-SOURCES.txt` و فایل‌های OFL کنار فونت‌ها است؛ بازسازی فونت
-کد با `scripts/build-document-fonts.py` انجام می‌شود. مجوز و منبع کتابخانهٔ
-mathml2omml در `packages/core/public/licenses` همراه بسته قرار دارند.
+For a complete Persian exam sheet, use the XeLaTeX/XePersian path with the bundled font filenames. The curated runtime includes LaTeX, XePersian, bidi, fontspec, amsmath/amssymb, TikZ/PGF, PGFPlots, geometry, and enumitem. No local TeX installation or remote compiler is required. The larger engine loads only when needed; the first web download is about 33 MB.
 
-## ساخت و تست
+[TikZ guide](docs/tikz.md) · [Geometry example](examples/tikz-geometry.md) · [XeLaTeX/XePersian guide](docs/xelatex.md) · [Complete Persian exam example](examples/xepersian-exam.md)
 
-React + TypeScript + Vite + Tailwind 4 + shadcn/ui، ویرایش قالب‌بندی‌شده با
-Tiptap 3 و خواندن/نوشتن Markdown با remark، تبدیل با docx/remark و
-bidi-js، ریاضی با KaTeX/mathml2omml، نمودار با Mermaid و پوستهٔ Tauri 2.
+### Word, PDF, and Markdown exports
 
-مدیریت وابستگی‌ها با **pnpm 10.17.0** است؛ نسخه در `packageManager` ثبت شده
-و هر سه پروژه از `pnpm-workspace.yaml` و یک `pnpm-lock.yaml` مشترک استفاده می‌کنند.
-اگر pnpm نصب نیست، یک‌بار `npm install --global pnpm@10.17.0` را اجرا کن.
-فرمان‌های زیر از ریشهٔ مخزن اجرا می‌شوند. آرگومان‌های اسکریپت در pnpm مستقیم
-پس از نام آن می‌آیند؛ مثلاً `pnpm run test:ui --project chromium`.
+| Content | Word (DOCX) | PDF |
+| --- | --- | --- |
+| Markdown text, headings, lists, tables, and code | Editable document content with embedded fonts | Searchable text with embedded fonts |
+| Ordinary LaTeX equations | Editable Word equations | Rendered images |
+| Markdown images, Mermaid, and standalone TikZ drawings | Embedded images | Embedded images |
+| Complete XeLaTeX/XePersian documents | A page image for each compiled page, with source metadata | Original vector PDF pages, with text extraction |
 
-Node.js 22.12+ یا 24 لازم است؛ ساخت اپ بومی به Rust stable هم نیاز دارد.
-اندروید به JDK 21، SDK Platform
-36، Build Tools 36 و NDK 28.2.13676358 نیاز دارد؛ مسیرهای JAVA_HOME،
-ANDROID_HOME و NDK_HOME را برای دستگاه خود تنظیم کن. پروژهٔ Android Studio
-در `apps/parsiword/src-tauri/gen/android` است. کلید امضا بیرون مخزن نگه داشته می‌شود.
+- **Shared settings:** title, direction, font, and text size apply to both document formats. Pages use A4 with consistent margins; long content is paginated.
+- **UTF-8 Markdown:** save the current logical source without a BOM, preserving its escapes and line endings. Empty Markdown documents can be saved too.
+- **Current content:** export uses the current document and settings, including recent edits. A display theme never changes the printed colors.
+- **Local conversion:** the website creates real downloadable files without a conversion server or a print-dialog dependency.
+- **Explicit failures:** invalid formulas, diagrams, missing images, and oversized output report errors instead of silently dropping content.
+
+The live preview is an editing view rather than a simulation of Word pagination. Text inside an exported image is not editable Word text. See the [export guide](docs/pdf-export.md) for details.
+
+### AI writing guide
+
+The small AI prompt button in the website footer copies a guide describing the supported Markdown, math, diagrams, image paths, and export rules. Give it to an AI assistant when asking it to prepare a document for ParsiWord, then paste the result into the editor. It copies instructions in the interface language; it does not send your document to an AI service.
+
+## VS Code
+
+After installing the VSIX, open a Markdown file and use **Reopen Editor With…** to choose:
+
+- **ParsiWord Source + Result** — Markdown source and editable preview together; the default.
+- **ParsiWord Markdown Source** — the RTL-friendly source editor.
+- **ParsiWord Rendered Result** — direct editing of the rendered document.
+
+The views share the VS Code document, saving, backups, and native Undo/Redo. Common shortcuts include Ctrl+S, Ctrl+Z, Ctrl+F, Ctrl+H, and Ctrl+G; Quick Open, Command Palette, and tab-switching shortcuts remain available. The extension follows the VS Code theme, including High Contrast.
+
+**Git diff** compares the index and working file; **Staged diff** compares HEAD and the index. Both open one ParsiWord comparison tab. Choose source or rendered output, then **Side by side** with synchronized scrolling or **Inline**. Added and removed content is highlighted, change navigation is available, and the working file remains editable. **VS Code Diff** opens the same revisions in the built-in text comparison when you need it.
+
+Local image paths resolve relative to the Markdown file. Native VS Code source and preview commands remain available. See the [extension guide](apps/vscode/README.md) for the full shortcut table, comparison behavior, installation, and recovery handling.
+
+## Local processing and supported scope
+
+Document editing, conversion, and TeX compilation run on your device. Document text is not sent to a conversion server. The website still needs its application assets on an initial visit; it does not install an offline copy through a service worker. Downloading additional fonts or loading online images makes network requests.
+
+- **Markdown and HTML:** Markdown structure is supported; arbitrary HTML layouts, CSS, and scripts are not executed. Raw HTML is preserved as literal source.
+- **TeX:** the bundled engines provide a curated package set, not all of TeX Live. Arbitrary packages, system fonts, external files, and shell-based toolchains are outside that set. XeLaTeX blocks are limited to 50,000 source characters and up to 12 preview pages, subject to execution and memory limits.
+- **Document size:** rich editing supports up to 500,000 Markdown characters. Oversize recovered documents retain their source while rich preview is paused.
+- **VS Code features:** multi-cursor editing is not implemented in the ParsiWord editor. The built-in source editor remains available for it and for other Markdown extensions.
+- **Native validation:** a supported build target is distinct from testing on a real device. The [platform guide](docs/platforms.md) records requirements and validation limits.
+
+## Development
+
+Use **Node.js 24** and **pnpm 10.17.0**, matching the repository's CI and `packageManager` setting.
 
 ```sh
+npm install -g pnpm@10.17.0
+git clone https://github.com/SoroushJM/ParsiWord.git
+cd ParsiWord
 pnpm install --frozen-lockfile
-pnpm test
-pnpm run samples:check
-pnpm run build
-pnpm exec playwright install chromium
-pnpm run test:ui
-pnpm run android:apk
+pnpm run dev
 ```
 
-برای بررسی ظاهری کامپوننت‌ها با یک فرمان، از `pnpm run ui:capture` استفاده
-کن؛ [راهنمای عکس، موبایل و اسکرول](docs/ui-capture.md) شامل پیش‌نیازها و
-تابع داخل اپ است. راهنمای ورود عامل در [agent.md](agent.md) قرار دارد.
+Open **http://localhost:1420/**. Run all commands below from the repository root.
 
-خروجی اندروید فقط ARM64 و Android 7+ است؛ طبق درخواست، Android x86/x86_64 یا
-ARM32 ساخته نمی‌شود. برای ساخت APK آزمایشیِ امضاشده از پروفایل release و
-فرمان زیر استفاده کن:
+The sample library is enabled in production by default and loaded on demand.
+Set `VITE_SAMPLE_LIBRARY=false` when building to omit its entry, code and built-in
+documents entirely. Personal samples remain in local storage. For example, in
+PowerShell: `$env:VITE_SAMPLE_LIBRARY='false'; pnpm run build`. Remove that
+environment override to restore the default. The decision and behavior are recorded
+in [ADR 0011](docs/adr/0011-responsive-tables-and-sample-library.md).
 
-```sh
-PARSIWORD_SIGNING_DIR=/path/outside-repository/signing pnpm run android:test-apk /path/output.apk
+| Command | Purpose |
+| --- | --- |
+| `pnpm run build` | Type-check and build the website into `dist/`. |
+| `pnpm run preview` | Serve the production web build locally. |
+| `pnpm test` | Run the unit tests. |
+| `pnpm run check:architecture` | Check shared-core API and dependency boundaries. |
+| `pnpm run test:ui` | Run browser integration tests; install Chromium first with `pnpm exec playwright install chromium`. |
+| `pnpm exec playwright test --config playwright.production.config.ts` | After `pnpm run build`, test responsive tables and the sample library against the local production build. |
+| `node scripts/check-sample-library-build.mjs enabled dist` | Verify library assets are included; use `disabled <directory>` to verify a build made with `VITE_SAMPLE_LIBRARY=false`. |
+| `pnpm run package:vscode` | Build a VSIX in `artifacts/parsiword-vscode-<version>.vsix`. |
+| `pnpm run test:vscode` | Run integration tests in an isolated VS Code profile. |
+| `pnpm run samples:build` / `pnpm run samples:check` | Regenerate or verify the starter document after changing its sources. |
+| `pnpm run ui:capture` | Capture the running web interface; see the [capture guide](docs/ui-capture.md). |
+
+Native builds additionally require Rust and the platform's Tauri toolchain:
+
+| Target | Command | Requirements |
+| --- | --- | --- |
+| Android ARM64 | `pnpm run android:apk` | Android SDK/NDK, JDK, and signing configuration. See [Android packaging](docs/android-packaging.md) for signed Preview builds. |
+| Windows | `pnpm run windows:build` | MSVC build tools and WebView2. |
+| Linux | `pnpm run linux:build` | GTK/WebKitGTK development dependencies. |
+| macOS | `pnpm run macos:build` | macOS and Xcode command-line tools. |
+| iOS | `pnpm run ios:init`, then `pnpm run ios:build` | macOS, Xcode, and device signing/provisioning. |
+
+### Repository layout
+
+```text
+packages/core/      Shared editor, RTL handling, Markdown, renderers, and exports
+apps/parsiword/     Bilingual website and Tauri desktop/mobile application
+apps/vscode/        VS Code extension host and webview
+examples/          Markdown geometry and Persian exam examples
+tests/             Browser integration tests and fixtures
+docs/              Feature guides, architecture decisions, and validation records
+third-party/       TeX runtime provenance and upstream source archives
 ```
 
-این ساخت با شناسهٔ `app.parsiword.mobile.preview` و نام **ParsiWord Preview**
-کنار نسخهٔ قبلی نصب می‌شود. کلید امضای قبلی در آرشیو سورس نبود؛ این مسیر
-کلید آزمایشی جدا می‌سازد و خارج از مخزن نگه می‌دارد. برای آپدیت‌های بعدی
-Preview همان پوشهٔ کلید و رمز را حفظ کن. بدون `PARSIWORD_SIGNING_DIR`،
-مسیر پیش‌فرض `~/.local/share/parsiword/signing` است. دادهٔ دو نصب جداست.
-فرمان `pnpm run android:apk` شناسهٔ عادی `app.parsiword.mobile` را حفظ می‌کند؛
-کلید اصلی توزیع در سورس قرار ندارد. این بستهٔ آزمایشی توزیع فروشگاهی نیست.
-بررسی امضا، ABI و هم‌ترازی ۱۶KB با `scripts/verify-android-apk.py` انجام می‌شود.
-APK تحویلی ۰.۴.۷ با Preview نسخهٔ ۰.۴.۶ گواهی امضای یکسان و کد نسخهٔ
-بالاتر دارد؛ حجم آن ۹٬۴۳۶٬۷۸۷ بایت است.
-[دانلود APK آزمایشی](https://gofile.io/d/VnwASSPS) و
-[گزارش بررسی فایل و SHA256](docs/releases/0.4.7-preview-verification.json).
+GitHub Actions deploys the website through [`pages.yml`](.github/workflows/pages.yml). [`release.yml`](.github/workflows/release.yml) builds Android, Windows, and VS Code packages and attaches them to a Preview release identified by the source commit. See the [Pages guide](docs/github-pages.md) and [platform guide](docs/platforms.md) for configuration.
 
-دارایی‌های آیکن Android، iOS، Windows، macOS و Linux نیز به‌روز شده‌اند؛
-برای نسخهٔ ۰.۴.۷ باینری دسکتاپ تازه‌ای ساخته نشده است.
-[منبع و روش بازسازی آیکن‌ها](assets/README.md).
+## Documentation
 
-## انتشار روی GitHub Pages
+- [Word/PDF and Markdown export](docs/pdf-export.md)
+- [LaTeX, Mermaid, and rich content](docs/rich-content.md)
+- [TikZ and PGFPlots](docs/tikz.md)
+- [Full Persian LaTeX documents](docs/xelatex.md)
+- [Syntax highlighting](docs/code-highlighting.md)
+- [VS Code usage](apps/vscode/README.md)
+- [Platform builds and releases](docs/platforms.md)
+- [Core API](docs/core-api.md), [Markdown contracts](docs/markdown-contracts.md), and [architecture decisions](docs/adr/)
 
-همین برنامه به‌صورت سایت ایستا با ویرایش منبع و پیش‌نمایش، فونت، ذخیرهٔ
-پیش‌نویس و دانلود Word/PDF/Markdown کار می‌کند. گردش‌کار Pages در مخزن
-آماده است؛ Pages را روی **GitHub Actions** تنظیم کن و `main` را push کن
-یا workflow را دستی اجرا کن. خود کاربر مخزن را متصل و منتشر می‌کند؛
-در این کار سایت زنده‌ای منتشر نشده است.
-[راهنمای کامل راه‌اندازی و مسیر پروژه](docs/github-pages.md).
+## Third-party software and fonts
 
-برای تست موتور WebKit نیز `pnpm exec playwright install --with-deps webkit` را
-اجرا کن؛ سپس با متغیر `PW_WEBKIT=1`، `pnpm run test:ui --project webkit` را
-اجرا کن. تست‌های مرورگر، فایل Word واقعی را دانلود و داخل آن را بررسی می‌کنند.
-تست‌های واحد و مرورگر، حفظ جهت متن، ذخیرهٔ پیش‌نویس، تبدیل فرمول/نمودار و
-جاسازی فونت را بررسی می‌کنند؛ نتیجهٔ هر انتشار در یادداشت همان نسخه ثبت است.
+ParsiWord uses React, Tiptap/ProseMirror, remark, Tailwind CSS, shadcn/ui, Tauri, docx, PDFKit, KaTeX, Mermaid, and local TeX runtimes. Attributions and upstream licenses are retained with the [libraries](packages/core/public/licenses/NOTICE.txt), [fonts](packages/core/public/fonts/FONT-SOURCES.txt), [TikZ runtime](third-party/tikz/README.md), and [XeLaTeX runtime](third-party/xetex/README.md).
 
-متن شروع از `packages/core/src/starter-document.md`، همان corpus تست RTL و نمونه‌های دارای
-مجوز در `packages/core/src/data/code-samples.json` ساخته می‌شود. بعد از تغییر آن‌ها،
-`pnpm run samples:build` را اجرا کن؛ `samples:check` همگام بودن خروجی را بررسی می‌کند.
+<a id="persian"></a>
 
-فرمان‌های `linux:build`، `windows:build`، `macos:build` و `ios:simulator` برای
-پلتفرم‌ها آماده‌اند؛ پیش‌نیاز و وضعیت واقعی ساخت/اجرا در
-[docs/platforms.md](docs/platforms.md) ثبت شده است. iOS به macOS/Xcode نیاز دارد.
-تست WebKit روی لینوکس، تست خود iOS نیست. گردش‌کارهای GitHub Actions آماده‌اند
-ولی مخزن ریموتی ایجاد یا push نشده و این گردش‌کارها اینجا اجرا نشده‌اند.
+## فارسی — ویرایشگر Markdown راست‌به‌چپ
 
-## تاریخچهٔ بررسی RTL
+**پارسی‌ورد برای دیدن و ویرایش Markdown فارسی، عربی و متن ترکیبی فارسی/انگلیسی ساخته شده است.** در یک محیط، منبع و خروجی قالب‌بندی‌شده را بخوان و ویرایش کن، فرمول و شکل بنویس و فایل Word یا PDF بگیر.
 
-ترتیب منطقی متن حفظ می‌شود. جهت پاراگراف و run با API آمادهٔ docx ثبت می‌شود؛
-نشانه‌های استاندارد Unicode فقط برای موارد مبهم به خروجی Word افزوده می‌شوند.
-خود Markdown تغییر نمی‌کند. شواهد و تصمیم‌ها در `docs/word-android-bidi-investigation.md`،
-`docs/rtl-hard-stress.md` و `docs/adr` هستند. تست‌های قدیمی و ابزارهای ساخت سند
-آزمایش در مخزن باقی مانده‌اند و در رابط محصول نمایش داده نمی‌شوند.
+[**شروع در مرورگر**](https://soroushjm.github.io/ParsiWord/) · [**دانلود اندروید، ویندوز و افزونهٔ VS Code**](https://github.com/SoroushJM/ParsiWord/releases)
+
+| بخش | امکانات |
+| --- | --- |
+| **نوشتن و فایل‌ها** | باز کردن Markdown و متن ساده، یادداشت تازه، نام سند، بازگرداندن متن قبلی در همان جلسه، ذخیرهٔ خودکار محلی، شمارش واژه و نویسه و وضعیت ذخیره. |
+| **ویرایش دوطرفه** | ویرایش منبع و پیش‌نمایش یک سند مشترک، رنگ‌آمیزی Markdown، اسکرول هماهنگ، نمایش متن متناظر هنگام انتخاب، حفظ بخش‌های نامرتبط منبع در ویرایش‌های کوچک. |
+| **قالب‌بندی** | تیترهای ۱ تا ۶، پررنگ، مورب، خط‌خورده، فهرست شماره‌دار و بولت‌دار و تورفتگی، چک‌لیست Markdown، نقل‌قول، کد، پیوند، پاک‌کردن قالب‌بندی و Undo/Redo. |
+| **جدول** | درج و ویرایش جدول، افزودن و حذف ردیف و ستون و حذف کل جدول؛ عرض بر اساس محتوا، شکستن متن بلند، اسکرول داخلی جدول عریض و اسکرول مستقل فرمول خیلی بلند با ScrollArea. |
+| **زبان و ظاهر** | رابط فارسی و انگلیسی، جهت راست‌به‌چپ/چپ‌به‌راست/خودکار، تم روشن/تیره/سیستم، تقسیم پنل‌های دسکتاپ و تب‌ها و ابزار چسبان موبایل. |
+| **فونت** | وزیرمتن و فونت کد و ریاضی همراه، جست‌وجو در ۱٬۹۴۹ خانوادهٔ Google Fonts، فیلتر فارسی/عربی و فونت‌های ذخیره‌شده، دریافت، نگهداری و حذف فونت، اندازه‌های ۱۰ تا ۱۸ پوینت و جاسازی فونت در خروجی. |
+| **تصاویر** | تصویر محلی، اینترنتی و reference-style، انتخاب پوشهٔ پایه و مسیر زیرپوشه، ویرایش نشانه‌گذاری تصویر، حفظ نسبت ابعاد و جاسازی واقعی در Word/PDF. |
+| **کد** | رنگ‌آمیزی ۳۶ زبان در پیش‌نمایش و Word؛ متن کد در Word قابل‌ویرایش است. |
+| **ریاضی و نمودار** | فرمول LaTeX، ویرایش فرمول از پیش‌نمایش، نمودار Mermaid، شکل هندسی TikZ، نمودار PGFPlots و سند کامل فارسی با XeLaTeX/XePersian. |
+| **خروجی** | Word، PDF و Markdown، تنظیم مشترک نام و جهت و فونت و اندازه، کاغذ A4، فونت و تصویر جاسازی‌شده و تبدیل روی دستگاه. |
+| **راهنمای AI** | دکمهٔ کوچک فوتر، پرامپت فارسی یا انگلیسیِ قابلیت‌ها و قواعد نوشتن سند را کپی می‌کند تا به دستیار AI بدهی. |
+| **متن‌های نمونه** | آیکن کوچک کتابخانه در فوتر، و در VS Code در نوار وضعیت ادیتور؛ ۱۶ نمونهٔ آماده با انتظارِ نوشته‌شده در خود متن، جست‌وجو و ذخیره/حذف نمونهٔ شخصی روی دستگاه. انتخاب نمونه یک تغییر مستقل قابل Undo/Redo است. با `VITE_SAMPLE_LIBRARY=false` هنگام ساخت، کل ماژول و متن‌های آماده از خروجی حذف می‌شوند. |
+| **VS Code** | سه نمای ویرایش، تاریخچه و ذخیرهٔ بومی، میان‌برهای رایج، مقایسهٔ Git برای منبع و خروجی رندرشده با حالت کنارهم و یکپارچه، هایلایت تغییرات، اسکرول هماهنگ و دسترسی به مقایسه‌گر خود VS Code. |
+
+برای طراحی سؤال، [نمونهٔ دایره و دو شعاع](examples/tikz-geometry.md) و [نمونهٔ آزمون فارسی](examples/xepersian-exam.md) را ببین. فرمول‌های معمولی در Word قابل‌ویرایش‌اند؛ نمودارها و تصاویر به‌صورت تصویر جاسازی می‌شوند. سند کامل XePersian در Word به تصویر صفحه تبدیل می‌شود و متن داخل آن تصویر قابل‌ویرایش نیست؛ در PDF، صفحات برداری اصلی حفظ می‌شوند.
+
+متن سند برای تبدیل به سرور ارسال نمی‌شود. دریافت فایل‌های برنامه، فونت‌های اضافی یا تصاویر آنلاین به اینترنت نیاز دارد. موتور TeX مجموعهٔ مشخصی از بسته‌ها و فونت‌ها دارد؛ محدودیت‌ها در [راهنمای XeLaTeX](docs/xelatex.md) آمده‌اند. نسخه‌های بومی از بخش **Releases** دریافت می‌شوند؛ اندروید فقط ARM64 است.
+
+---
+
+Built by [SoroushJM](https://github.com/SoroushJM) · [Source](https://github.com/SoroushJM/ParsiWord) · [Issues and feature requests](https://github.com/SoroushJM/ParsiWord/issues)

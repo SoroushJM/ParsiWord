@@ -36,7 +36,9 @@
   max-width: 100%;
 }
 .rich-document table {
-  table-layout: fixed;
+  table-layout: auto;
+  width: max-content;
+  min-inline-size: 100%;
 }
 .rich-document th,
 .rich-document td {
@@ -47,6 +49,45 @@
 .rich-document th > p,
 .rich-document td > p {
   margin: 0;
+  inline-size: max-content;
+  max-inline-size: min(24rem, calc(var(--preview-inline-size, 25.5rem) - 1.5rem));
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.rich-document :is(th, td) > p:has(.math-inline) {
+  max-inline-size: calc(var(--preview-inline-size, 25.5rem) - 1.5rem);
+}
+.rich-document :is(th, td) .rich-markdown-image {
+  max-inline-size: min(20rem, calc(var(--preview-inline-size, 21.5rem) - 1.5rem));
+}
+.rich-document :is(th, td) .rich-markdown-image img {
+  max-inline-size: 100%;
+  block-size: auto;
+}
+.math-scroll {
+  display: inline-block;
+  inline-size: max-content;
+  max-inline-size: var(--math-cap, 100%);
+  vertical-align: middle;
+}
+.math-scroll.math-block {
+  display: block;
+  margin-inline: auto;
+}
+.math-scroll [data-slot="scroll-area-viewport"] > div {
+  display: block !important;
+}
+.math-content {
+  display: inline-block;
+  inline-size: max-content;
+  white-space: nowrap;
+}
+.math-scroll[data-overflow="true"] [data-slot="scroll-area-viewport"] {
+  padding-block-end: 0.75rem;
+}
+.rich-document .tableWrapper:focus-visible {
+  outline: 0.125rem solid var(--ring);
+  outline-offset: -0.125rem;
 }
 .rich-document .selectedCell {
   background-color: var(--accent);
@@ -90,6 +131,8 @@
 }
 .rich-math-button {
   max-width: 100%;
+  font-size: inherit;
+  line-height: inherit;
   text-align: inherit;
   color: var(--document-foreground);
 }

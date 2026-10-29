@@ -513,3 +513,21 @@ body.vscode-high-contrast-light .document-panel {
     top: 0;
   }
 }
+
+/* Independent appearance keeps VS Code's layout while using ParsiWord colors. */
+body.vscode-shell[data-independent-theme] { background: var(--background); color: var(--foreground); }
+.vscode-shell[data-independent-theme] :is(.brand, .diff-count[data-diff]) { color: var(--foreground); }
+.vscode-shell[data-independent-theme] :is(.document-heading, .pane-heading) { background: var(--muted); }
+.vscode-shell[data-independent-theme] :is(.format-toolbar, .rich-toolbar-container, .editor-status) { background: var(--card); }
+.vscode-shell[data-independent-theme] .file-icon { color: var(--document-link); }
+.vscode-shell[data-independent-theme] [data-slot="input"] { color: var(--foreground); background: var(--card); border-color: var(--border); }
+.vscode-shell[data-independent-theme] [data-slot="button"][data-variant="outline"] { color: var(--foreground); background: var(--secondary); border-color: var(--border); }
+.vscode-shell[data-independent-theme] [data-slot="button"]:is([data-variant="outline"], [data-variant="ghost"]):hover { background: var(--accent); }
+.vscode-shell[data-independent-theme] [data-slot="button"][data-variant="default"]:hover { background: var(--primary); }
+.vscode-shell[data-independent-theme] [data-slot="toggle"][data-state="on"] { background: var(--accent); outline-color: var(--ring); }
+.vscode-shell[data-independent-theme] :is(button, a, input, textarea, .markdown-source-editor, .preview-panel):focus-visible { outline-color: var(--ring); }
+.vscode-shell .theme-panel .theme-color-inputs [data-slot="input"] { min-height: 2.75rem; }
+.vscode-shell .theme-panel .theme-presets .theme-preset { height: auto; min-height: 4.5rem; }
+.vscode-shell .theme-panel [data-slot="toggle-group-item"] { min-height: 2rem; }
+
+.vscode-shell .theme-panel[data-slot="dialog-content"] { padding: 0; gap: 0; }

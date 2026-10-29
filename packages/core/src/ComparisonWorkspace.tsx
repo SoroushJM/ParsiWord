@@ -34,7 +34,7 @@ function reviewModel(before: string, after: string, view: View) {
   })();
   return { documents, parts };
 }
-function InlineReview({ model: { documents, parts }, view, host, originalImage, settings }: { model: ReturnType<typeof reviewModel>; view: View; host: EditorHost; originalImage?: EditorHost['resolveImage']; settings: ExportSettings }) {
+function InlineReview({ model: { documents, parts }, view, host, originalImage, originalLink, settings }: { model: ReturnType<typeof reviewModel>; view: View; host: EditorHost; originalImage?: EditorHost['resolveImage']; originalLink?: EditorHost['openLink']; settings: ExportSettings }) {
   const { locale } = useLocale();
   const fa = locale === 'fa';
   const definitionKeys = useMemo(() => documents ? { original: JSON.stringify([...documents.original.definitions]), modified: JSON.stringify([...documents.modified.definitions]) } : null, [documents]);
@@ -45,13 +45,13 @@ function InlineReview({ model: { documents, parts }, view, host, originalImage, 
       {part.kind !== 'same' && <span className="comparison-part-label" aria-hidden="true">{part.kind === 'delete' ? '−' : '+'}</span>}
       {view === 'source' ? <InlineSource text={part.text} direction={settings.direction} /> : <EditablePreview markdown={part.text} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize}
         inheritedDefinitions={part.kind === 'delete' ? documents!.original.definitions : documents!.modified.definitions}
-        resolveImage={part.kind === 'delete' ? originalImage : host.resolveImage} readOnly onChange={ignore} onStartWriting={ignore} />}
+        resolveImage={part.kind === 'delete' ? originalImage : host.resolveImage} openLink={part.kind === 'delete' ? originalLink ?? host.openLink : host.openLink} readOnly onChange={ignore} onStartWriting={ignore} />}
     </section>)}
   </section>;
 }
 
 /** One custom editor tab owns the working document; review panes never own edits. */
-export function ComparisonWorkspace({ host, resolveOriginalImage, onFocusSide }: { host: EditorHost; resolveOriginalImage?: EditorHost['resolveImage']; onFocusSide: (side: Side) => void }) {
+export function ComparisonWorkspace({ host, resolveOriginalImage, openOriginalLink, onFocusSide }: { host: EditorHost; resolveOriginalImage?: EditorHost['resolveImage']; openOriginalLink?: EditorHost['openLink']; onFocusSide: (side: Side) => void }) {
   const { locale, number, setLocale, dir } = useLocale();
   const fa = locale === 'fa';
   const [comparison, setComparison] = useState(host.comparison!);
@@ -80,7 +80,7 @@ export function ComparisonWorkspace({ host, resolveOriginalImage, onFocusSide }:
       host.documentChanged?.(text);
     }, settingsChanged: settings => { setDisplaySettings(settings); host.settingsChanged?.(settings); },
       subscribeEditorAction: listener => common.subscribeEditorAction(listener, 'modified') };
-    const original: EditorHost = { ...host, readOnly: true, resolveImage: resolveOriginalImage,
+    const original: EditorHost = { ...host, readOnly: true, resolveImage: resolveOriginalImage, openLink: openOriginalLink ?? host.openLink,
       initial: { ...host.initial!, markdown: host.comparison!.other, dirty: false },
       comparison: { side: 'original', other: host.initial!.markdown, staged: host.comparison!.staged },
       documentChanged: undefined, compositionChanged: undefined, settingsChanged: undefined, command: name => { if (!['save', 'undo', 'redo', 'new'].includes(name)) host.command?.(name); },
@@ -89,7 +89,7 @@ export function ComparisonWorkspace({ host, resolveOriginalImage, onFocusSide }:
       subscribeEditorAction: listener => common.subscribeEditorAction(listener, 'original'),
     };
     return { original, modified };
-  }, [host, resolveOriginalImage]);
+  }, [host, resolveOriginalImage, openOriginalLink]);
   useEffect(() => host.subscribeEditorAction?.(action => {
     if (display.current.layout === 'inline' && !display.current.editing) {
       activeSide.current = 'modified';
@@ -159,6 +159,6 @@ export function ComparisonWorkspace({ host, resolveOriginalImage, onFocusSide }:
       {side === 'original' && <ResizableHandle withHandle className="comparison-resize-handle" aria-label={fa ? 'تغییر عرض دو سمت مقایسه' : 'Resize comparison panes'} />}
       </Fragment>)}
     </ResizablePanelGroup>
-    {model && <InlineReview model={model} view={view} host={host} originalImage={resolveOriginalImage} settings={displaySettings} />}
+    {model && <InlineReview model={model} view={view} host={host} originalImage={resolveOriginalImage} originalLink={openOriginalLink} settings={displaySettings} />}
   </main>;
 }

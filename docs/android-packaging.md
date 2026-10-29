@@ -167,7 +167,9 @@ No converter or UI behavior changed in this version. The existing 777 unit and 4
 ## Follow-up: device confirmation and 0.4.0
 
 The user confirmed that 0.2.4 installs and works on their Android phone.
-Emulator testing was stopped at their request; see android-emulator-check.md.
+Emulator testing was stopped at their request before installation and launch
+were verified in the emulator. That incomplete emulator attempt is not device
+validation; the installation confirmation above came from the user's phone.
 
 0.4.0 adds offline LaTeX and Mermaid. Its release APK remains ARM64-only,
 API 24+, nondebug, nontest, with the same application ID and preview signing

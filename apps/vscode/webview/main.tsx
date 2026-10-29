@@ -2,7 +2,7 @@ import '@parsiword/core/styles.css';
 import './vscode.css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { EditorApp as App, ComparisonWorkspace, LocaleProvider, translate, browserImageUrl } from '@parsiword/core/ui';
+import { EditorApp as App, ComparisonWorkspace, LocaleProvider, translate, browserImageUrl, receiveAppearance } from '@parsiword/core/ui';
 import { configureHost, DocumentSync, isHostMessage, ParsiWordError, errorMessage, type DocumentSnapshot, type DocumentComparison, type EditorAction, type EditorHost, isRecord } from '@parsiword/core/host';
 import { toast } from 'sonner';
 
@@ -39,7 +39,9 @@ const request = <T,>(method: string, args: unknown): Promise<T> => new Promise((
 window.addEventListener('message', event => {
   const message = event.data;
   if (!isHostMessage(message)) return;
-  if (message.type === 'editorAction') {
+  if (message.type === 'appearance') {
+    receiveAppearance(message.appearance);
+  } else if (message.type === 'editorAction') {
     for (const listener of actionListeners) listener(message.action);
   } else if (message.type === 'response') {
     const operation = pending.get(message.id);
@@ -54,6 +56,7 @@ window.addEventListener('message', event => {
     eol = message.snapshot.eol ?? eol;
     sync.receive(message.snapshot, message.snapshot.client === client);
   } else if (message.type === 'init' && !sync) {
+    if (message.appearance) receiveAppearance(message.appearance);
     client = message.client;
     eol = message.snapshot.eol ?? '\n';
     comparison = message.comparison ?? undefined;
@@ -77,6 +80,7 @@ window.addEventListener('message', event => {
       subscribeDocument: listener => { listeners.add(listener); return () => { listeners.delete(listener); }; },
       settingsChanged: settings => api.postMessage({ type: 'settings', settings }),
       localeChanged: locale => api.postMessage({ type: 'locale', locale }),
+      appearanceChanged: appearance => api.postMessage({ type: 'appearance', appearance }),
       resolveImage: source => /^data:/i.test(source) ? Promise.resolve(browserImageUrl(source)) : request<string | null>('imageUri', { source }),
       readImage: async source => {
         const image = await request<{ bytes: number[]; mimeType?: string }>('imageBytes', { source });
@@ -89,12 +93,14 @@ window.addEventListener('message', event => {
         return request<boolean>('saveBytes', { bytes: Array.from(output), filename, extension: format.extension });
       },
       openMarkdown: () => request<null>('open', {}),
+      openLink: async href => { await request('openLink', { href }); },
       command: name => { void sync.drain().then(() => request('command', { name })).catch(showError); },
     };
     configureHost(host);
     const originalImage = (source: string) => /^data:/i.test(source) ? Promise.resolve(browserImageUrl(source)) : request<string | null>('imageUri', { source, baseUri: comparison?.originalUri });
+    const originalLink = async (href: string) => { await request('openLink', { href, baseUri: comparison?.originalUri }); };
     if (comparison?.singleTab && comparison.originalUri) api.setState({ comparisonOriginal: comparison.originalUri });
-    root.render(<React.StrictMode><LocaleProvider>{comparison?.singleTab ? <ComparisonWorkspace host={host} resolveOriginalImage={originalImage} onFocusSide={focusSide} /> : <App />}</LocaleProvider></React.StrictMode>);
+    root.render(<React.StrictMode><LocaleProvider>{comparison?.singleTab ? <ComparisonWorkspace host={host} resolveOriginalImage={originalImage} openOriginalLink={originalLink} onFocusSide={focusSide} /> : <App />}</LocaleProvider></React.StrictMode>);
   }
 });
 const state = api.getState();

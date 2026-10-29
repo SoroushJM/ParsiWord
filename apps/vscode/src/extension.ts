@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { randomBytes } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { minimalChange, rebaseText, canApplyMarkdown, MAX_MARKDOWN_LENGTH, normalizeSettings, isRecord,
-  isClientMessage, PendingDocument, ParsiWordError, getErrorCode, type SyncSnapshot, type DocumentViewMode, type DocumentComparison } from '@parsiword/core/host';
+  isClientMessage, isAppearanceSettings, defaultAppearance, externalLinkUrl, PendingDocument, ParsiWordError, getErrorCode, type SyncSnapshot, type DocumentViewMode, type DocumentComparison } from '@parsiword/core/host';
 
 const viewType = 'parsiword.markdown';
 const comparisonViewType = `${viewType}.diff`;
@@ -12,6 +12,10 @@ type GitApi = { getRepository(uri: vscode.Uri): GitRepository | null; toGitUri(u
 
 export function activate(context: vscode.ExtensionContext) {
   const sessions = new Set<Session>();
+  const storedAppearance = () => { const value = vscode.workspace.getConfiguration('parsiword').get('appearance'); return isAppearanceSettings(value) ? value : defaultAppearance(); };
+  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
+    if (event.affectsConfiguration('parsiword.appearance')) for (const session of sessions) if (session.ready) void session.panel.webview.postMessage({ type: 'appearance', appearance: storedAppearance() });
+  }));
   const applying = new Set<string>();
   const queues = new Map<string, Promise<void>>();
   const comparisonRequests = new Map<string, vscode.Uri>();
@@ -366,7 +370,7 @@ export function activate(context: vscode.ExtensionContext) {
             const settings = normalizeSettings(context.workspaceState.get(`settings:${document.uri.toString()}`), normalizeSettings(defaults));
             await panel.webview.postMessage({ type: 'init', snapshot: snapshot(document), client: session.client, settings, assetRoot,
               locale: context.globalState.get<string>('locale', config.get<string>('language', 'fa')) === 'en' ? 'en' : 'fa', version: context.extension.packageJSON.version, viewMode,
-              readOnly: readOnly(document), comparison: session.comparison ?? null });
+              appearance: storedAppearance(), readOnly: readOnly(document), comparison: session.comparison ?? null });
             scheduleComparisons();
             return;
           }
@@ -403,6 +407,11 @@ export function activate(context: vscode.ExtensionContext) {
             }
             return;
           }
+          if (message.type === 'appearance') {
+            await vscode.workspace.getConfiguration('parsiword').update('appearance', message.appearance, vscode.ConfigurationTarget.Global);
+            for (const target of sessions) if (target.ready) void target.panel.webview.postMessage(message);
+            return;
+          }
           if (message.type === 'settings') { await context.workspaceState.update(`settings:${document.uri.toString()}`, message.settings); return; }
           if (message.type === 'locale' && ['fa','en'].includes(message.locale)) { await context.globalState.update('locale', message.locale); return; }
           if (message.type !== 'request' || !Number.isSafeInteger(message.id)) return;
@@ -411,6 +420,20 @@ export function activate(context: vscode.ExtensionContext) {
             let result: unknown;
             const args = message.args ?? {};
             if (message.method === 'command') await command(String(args.name), document, panel);
+            else if (message.method === 'openLink') {
+              const href = String(args.href);
+              const external = externalLinkUrl(href, href.startsWith('//') ? 'https://parsiword.invalid/' : undefined);
+              if (external) {
+                if (!await vscode.env.openExternal(vscode.Uri.parse(external, true))) throw new ParsiWordError('HOST_REQUEST_FAILED');
+              } else {
+                if (args.baseUri !== undefined && args.baseUri !== session.document.uri.toString() && args.baseUri !== session.original?.uri.toString()) throw new ParsiWordError('INVALID_HOST_REQUEST');
+                const base = localUri(args.baseUri && session.original ? session.original.uri : session.document.uri);
+                if (!base) throw new ParsiWordError('INVALID_HOST_REQUEST');
+                const target = new URL(href, base.toString());
+                if (target.protocol !== 'file:') throw new ParsiWordError('INVALID_HOST_REQUEST');
+                await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(target.href, true), { preview: false });
+              }
+            }
             else if (message.method === 'imageUri') result = await imageUri(session, String(args.source), typeof args.baseUri === 'string' ? args.baseUri : undefined);
             else if (message.method === 'imageBytes') result = await imageBytes(session, String(args.source), typeof args.baseUri === 'string' ? args.baseUri : undefined);
             else if (message.method === 'open') {

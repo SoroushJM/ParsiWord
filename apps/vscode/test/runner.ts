@@ -12,6 +12,9 @@ import { testXeTex } from './xetex';
 import { testRtlLists } from './rtl-lists';
 import { testTables } from './tables';
 import { testLinkedSelection } from './linked-selection';
+import { testPreviewLinks } from './preview-links';
+import { testAppearance } from './appearance';
+import { testSampleLibrary } from './sample-library';
 
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds));
 async function until<T>(read: () => T | PromiseLike<T>, predicate: (value: T) => boolean, label: string): Promise<T> {
@@ -73,6 +76,11 @@ export async function run() {
     await vscode.commands.executeCommand('workbench.action.closeSidebar');
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${process.env.PARSIWORD_TEST_CDP}`);
     const pages = browser.contexts().flatMap(context=>context.pages());
+    if (process.env.PARSIWORD_TEST_FOCUS === 'sample-library') {
+      await testSampleLibrary(browser, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
+      return;
+    }
     if (process.env.PARSIWORD_TEST_FOCUS === 'tables') {
       await testTables(browser, artifact, record);
       await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
@@ -81,6 +89,16 @@ export async function run() {
     if (process.env.PARSIWORD_TEST_FOCUS === 'xetex') {
       const xetexExports = await testXeTex(browser, artifact, record);
       await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results, xetexExports }, null, 2));
+      return;
+    }
+    if (process.env.PARSIWORD_TEST_FOCUS === 'appearance') {
+      await testAppearance(browser, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
+      return;
+    }
+    if (process.env.PARSIWORD_TEST_FOCUS === 'preview-links') {
+      await testPreviewLinks(browser, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
       return;
     }
     if (process.env.PARSIWORD_TEST_FOCUS === 'linked-selection') {
@@ -334,6 +352,7 @@ export async function run() {
     record('The built-in Markdown preview command remains usable');
     await testShortcuts(browser, artifact, record);
     await testLinkedSelection(browser, artifact, record);
+    await testPreviewLinks(browser, record);
     await testGitDiff(browser, api, artifact, record);
     imageExports = await testImageExports(browser, api, artifact, record);
     tikzExports = await testTikz(browser, api, artifact, record);

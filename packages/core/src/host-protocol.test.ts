@@ -6,6 +6,20 @@ import { normalizeSettings } from './document-validation';
 import { PendingDocument } from './pending-document';
 
 describe('runtime host protocol', () => {
+  it('accepts bounded preview links without exposing command or script URLs', () => {
+    const request = { type: 'request', id: 1, method: 'openLink' };
+    for (const href of ['https://example.com/', 'mailto:hi@example.com', './other%20file.md#part']) {
+      for (const baseUri of [undefined, 'git:/workspace/readme.md?ref=HEAD']) {
+        expect(isClientMessage({ ...request, args: { href, baseUri } })).toBe(true);
+      }
+    }
+    for (const href of [null, [], true, '', 'command:run', 'javascript:alert(1)', 'data:text/html,hi', 'a'.repeat(8193)]) {
+      expect(isClientMessage({ ...request, args: { href } })).toBe(false);
+    }
+    for (const baseUri of [null, [], 0, {}, 'a'.repeat(8193)]) {
+      expect(isClientMessage({ ...request, args: { href: './other.md', baseUri } })).toBe(false);
+    }
+  });
   it('accepts only supported editor actions from the host', () => {
     for (const action of ['find', 'replace', 'goToLine', 'findNext', 'findPrevious']) expect(isHostMessage({ type: 'editorAction', action })).toBe(true);
     for (const action of [null, [], 'undo', 'execute', 1]) expect(isHostMessage({ type: 'editorAction', action })).toBe(false);

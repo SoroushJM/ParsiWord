@@ -17,21 +17,21 @@ function fontSizeKeys(config: unknown): string[] {
   ]);
 }
 
-async function render(source: string): Promise<Diagram> {
+async function render(source: string, mode: 'light' | 'dark'): Promise<Diagram> {
   if (source.length > 50_000) throw new RichContentError('DIAGRAM_TOO_LARGE');
   const { default: mermaid } = await import('mermaid');
   mermaid.initialize({
-    startOnLoad: false, securityLevel: 'strict', theme: 'default',
+    startOnLoad: false, securityLevel: 'strict', theme: mode === 'dark' ? 'dark' : 'default',
     fontFamily: 'Arial, sans-serif', fontSize: diagramFontSize,
-    themeVariables: { fontSize: `${diagramFontSize}px` }, htmlLabels: false,
+    themeVariables: { fontSize: `${diagramFontSize / 16}rem` }, htmlLabels: false,
     flowchart: { htmlLabels: false }, maxTextSize: 50_000,
     suppressErrorRendering: true,
     // Mermaid applies these keys recursively, including init/frontmatter options.
     // Keep labels at document scale even when a source requests huge font sizes.
-    secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'htmlLabels', 'flowchart', 'fontFamily', 'fontSize', 'themeCSS', ...new Set(fontSizeKeys(mermaid.mermaidAPI.defaultConfig))],
+    secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'htmlLabels', 'flowchart', 'fontFamily', 'fontSize', 'themeCSS', 'theme', ...new Set(fontSizeKeys(mermaid.mermaidAPI.defaultConfig))],
   });
   const host = document.createElement('div');
-  host.style.cssText = `position:fixed;left:-20000px;top:0;visibility:hidden;width:1200px;font:${diagramFontSize}px Arial,sans-serif;line-height:normal`;
+  host.style.cssText = `position:fixed;left:-1250rem;top:0;visibility:hidden;width:75rem;font:${diagramFontSize / 16}rem Arial,sans-serif;line-height:normal`;
   document.body.append(host);
   try {
     const { svg } = await mermaid.render(`parsiword-diagram-${++counter}`, source, host);
@@ -59,23 +59,24 @@ async function render(source: string): Promise<Diagram> {
       canvas.width = Math.max(1, Math.ceil(width * scale)); canvas.height = Math.max(1, Math.ceil(height * scale));
       const context = canvas.getContext('2d');
       if (!context) throw new Error('Canvas unavailable');
-      context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = mode === 'dark' ? '#1f2020' : '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error('PNG encode failed')), 'image/png'));
       return { svg: cleanSvg, png: new Uint8Array(await blob.arrayBuffer()), width, height };
     } finally { URL.revokeObjectURL(url); }
   } finally { host.remove(); }
 }
-export function renderMermaid(source: string): Promise<Diagram> {
-  const existing = cache.get(source);
+export function renderMermaid(source: string, mode: 'light' | 'dark' = 'light'): Promise<Diagram> {
+  const key = `${mode}:${source}`;
+  const existing = cache.get(key);
   if (existing) return existing;
-  const result = queue.then(() => render(source)).catch(cause => {
-    cache.delete(source);
+  const result = queue.then(() => render(source, mode)).catch(cause => {
+    cache.delete(key);
     if (cause instanceof RichContentError) throw cause;
     throw new RichContentError('DIAGRAM_RENDER_FAILED', { cause });
   });
   queue = result.then(() => undefined, () => undefined);
-  cache.set(source, result);
+  cache.set(key, result);
   if (cache.size > 8) cache.delete(cache.keys().next().value!);
   return result;
 }

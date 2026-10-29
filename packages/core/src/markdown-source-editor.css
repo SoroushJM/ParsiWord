@@ -2,7 +2,7 @@
   position: relative;
   isolation: isolate;
   min-width: 0;
-  background: var(--card);
+  background: var(--source-background, var(--card));
 }
 .markdown-source-highlight {
   position: absolute;
@@ -13,17 +13,17 @@
   overflow: hidden;
   pointer-events: none;
   user-select: none;
-  color: var(--foreground);
+  color: var(--source-foreground, var(--foreground));
   visibility: hidden;
 }
 .markdown-source-editor .markdown-editor {
   position: relative;
-  color: var(--foreground);
+  color: var(--source-foreground, var(--foreground));
   caret-color: var(--document-caret);
-  background: var(--card);
+  background: var(--source-background, var(--card));
 }
 .markdown-source-editor .markdown-editor:focus {
-  background: var(--card);
+  background: var(--source-background, var(--card));
 }
 .markdown-source-editor[data-highlighted="true"] .markdown-source-highlight {
   visibility: visible;
@@ -97,3 +97,12 @@
     background: Canvas;
   }
 }
+
+/* Semantic Markdown colors never change the native textarea's metrics. */
+.markdown-source-highlight [data-md-token="strong"] { color: var(--markdown-strong, var(--source-syntax-emphasis)); }
+.markdown-source-highlight [data-md-token="emphasis"] { color: var(--markdown-emphasis, var(--source-syntax-emphasis)); }
+.markdown-source-highlight [data-md-token="math"] { color: var(--markdown-math, var(--source-syntax-emphasis)); }
+.markdown-source-highlight [data-md-token="quote"] { color: var(--markdown-quote, var(--muted-foreground)); }
+.markdown-source-highlight :is([data-md-token="marker"], [data-md-token="escape"], [data-md-token="strike"]) { color: var(--markdown-marker, var(--muted-foreground)); }
+.markdown-source-highlight [data-md-token="table"] { color: var(--markdown-table, var(--source-syntax-heading)); }
+.markdown-source-highlight [data-md-token="link"] { color: var(--document-link); }

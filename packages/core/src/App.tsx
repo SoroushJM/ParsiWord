@@ -1,6 +1,6 @@
 import { useLocale } from './locale';
 import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { editorHost, type DocumentComparison, type EditorHost, type DocumentViewMode } from './host';
 import type { Editor } from '@tiptap/react';
 import { EditorSearch, type SearchRequest } from './EditorSearch';
@@ -11,6 +11,7 @@ import { DocumentSession, type MutationOrigin } from './document-session';
 import { MAX_MARKDOWN_LENGTH } from './document-limits';
 import { Button } from '@/components/ui/button';
 import { AiPromptButton } from './AiPromptButton';
+import { replaceMarkdown } from './replace-markdown';
 import { EditablePreview } from './EditablePreview';
 import { LocalImageBaseControl, useLocalImageBase } from './LocalImageBase';
 import { MarkdownSourceEditor } from './MarkdownSourceEditor';
@@ -38,6 +39,8 @@ import '@fontsource/vazirmatn/600.css';
 import '@fontsource/vazirmatn/700.css';
 import '@fontsource-variable/geist';
 
+const SampleLibraryLauncher = import.meta.env.VITE_SAMPLE_LIBRARY === 'false' ? null : lazy(() => import('./sample-library/SampleLibraryLauncher'));
+
 function App({ host, mode, embedded = false, instanceId, controlsTarget, displaySettings }: { host?: EditorHost; mode?: DocumentViewMode; embedded?: boolean; instanceId?: string; controlsTarget?: HTMLElement | null; displaySettings?: ExportSettings } = {}) {
   const { t, dir, number, locale } = useLocale();
   const platform = host ?? editorHost();
@@ -60,6 +63,7 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
   const [changeIndex, setChangeIndex] = useState(0);
   const [search, setSearch] = useState<SearchRequest | null>(null);
   const [richEditor, setRichEditor] = useState<Editor | null>(null);
+  const [retainHistory, setRetainHistory] = useState(false);
   const readOnly = !!platform.readOnly;
   const diff = useMemo(() => comparison ? comparison.side === 'original' ? compareMarkdown(markdown, comparison.other) : compareMarkdown(comparison.other, markdown) : undefined, [markdown, comparison]);
   const diffSide = comparison && diff?.[comparison.side];
@@ -335,13 +339,37 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
 
   const documentHeading = <DocumentHeading instanceId={instanceId} hostControlled={platform.kind === 'vscode'} compact={embedded} direction={settings.direction} onDirectionChange={onDirectionChange} title={settings.title} busy={busy} canExport={!!markdown.trim()} onTitleChange={onTitleChange} onOpen={onOpen} onNew={onNew} onSettings={onSettings} onExport={onExport} onExportPdf={onExportPdf} onExportMarkdown={onExportMarkdown} />;
   const wordCount = markdown.trim() ? markdown.trim().split(/\s+/u).length : 0;
+  const sampleLibrary = SampleLibraryLauncher && <Suspense fallback={null}><SampleLibraryLauncher
+    current={() => session.getSnapshot().markdown} readOnly={readOnly}
+    load={next => {
+      if (!richEditor || !richSource.current || session.getSnapshot().composing) return false;
+      if (!replaceMarkdown(richEditor, richSource.current, session.getSnapshot().markdown, next)) return false;
+      if (platform.kind !== 'vscode') setRetainHistory(true);
+      setInactiveSource(next);
+      setPreviewMarkdown(next);
+      selectEditingView(viewMode === 'source' ? 'edit' : 'preview');
+      requestAnimationFrame(() => {
+        if (viewMode === 'source') { editor.current?.focus(); editor.current?.setSelectionRange(0, 0); }
+        else richEditor.commands.focus('start');
+      });
+      return true;
+    }} /></Suspense>;
 
   return (
     <div ref={shell} className="app-shell" data-document-title={settings.title} data-embedded={embedded || undefined} data-host={platform.kind} data-comparison={comparison?.side} onKeyDownCapture={event => {
-      if (platform.kind !== 'vscode' || event.nativeEvent.isComposing || !(event.ctrlKey || event.metaKey)) return;
+      if (event.nativeEvent.isComposing || !(event.ctrlKey || event.metaKey)) return;
       const key = event.key.toLowerCase();
       const command = key === 's' ? 'save' : key === 'z' ? (event.shiftKey ? 'redo' : 'undo') : key === 'y' ? 'redo' : null;
       const documentInput = (event.target as HTMLElement).closest('.markdown-editor, .rich-document');
+      if (platform.kind !== 'vscode') {
+        if (retainHistory && documentInput && !readOnly && (command === 'undo' || command === 'redo') && richEditor && richSource.current) {
+          event.preventDefault(); event.stopPropagation();
+          const current = session.getSnapshot().markdown;
+          replaceMarkdown(richEditor, richSource.current, richSource.current.snapshot(richEditor.state.doc).text, current, true);
+          richEditor.commands[command]();
+        }
+        return;
+      }
       if ((command === 'undo' || command === 'redo') && !documentInput && (event.target as HTMLElement).matches('input, textarea, [contenteditable="true"]')) {
         // Let ordinary form controls keep their browser history without the
         // outer VS Code webview forwarding Undo to the Markdown document.
@@ -390,14 +418,14 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
                 <section id={elementId("preview-pane")} className="preview-pane" aria-labelledby={elementId("preview-heading")}>
                   <div className="pane-heading"><h2 id={elementId("preview-heading")}><BookOpen size="1.0625rem" /> {t("پیش‌نمایش")}</h2></div>
                   <div ref={preview} id={elementId("preview-panel")} className="preview-panel" aria-busy={previewMarkdown !== markdown} onFocusCapture={onPreviewFocus} onPointerDownCapture={onPreviewFocus}>
-                    {!oversized && <EditablePreview markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} diff={diffSide} readOnly={readOnly} resolveImage={platform.resolveImage ?? localImages.resolveImage} showReadOnlyToolbar={embedded} onEditor={onRichEditor} />}
+                    {!oversized && <EditablePreview retainExternalHistory={retainHistory} markdown={previewMarkdown} direction={settings.direction} fontFamily={settings.fontFamily} fontSize={settings.fontSize} onChange={updateFromPreview} onStartWriting={focusEditor} onCompositionChange={onCompositionChange} onRejected={onRichRejected} diff={diffSide} readOnly={readOnly} resolveImage={platform.resolveImage ?? localImages.resolveImage} openLink={platform.openLink} showReadOnlyToolbar={embedded} onEditor={onRichEditor} />}
                   </div>
                 </section>
               }
             />
             </div>
 
-            <div className="editor-status"><span>{number(wordCount)} {t("واژه")}<span className="separator">·</span> {number(markdown.length)} {t("نویسه")}</span><Badge variant={storageError ? 'destructive' : 'secondary'}>{storageError ? t("ذخیرهٔ خودکار در دسترس نیست") : saved ? <><CheckCheck data-icon="inline-start" /> {t("ذخیره شد")}</> : t("در حال ذخیره…")}</Badge></div>
+            <div className="editor-status"><span>{number(wordCount)} {t("واژه")}<span className="separator">·</span> {number(markdown.length)} {t("نویسه")}</span>{platform.kind === 'vscode' && sampleLibrary}<Badge variant={storageError ? 'destructive' : 'secondary'}>{storageError ? t("ذخیرهٔ خودکار در دسترس نیست") : saved ? <><CheckCheck data-icon="inline-start" /> {t("ذخیره شد")}</> : t("در حال ذخیره…")}</Badge></div>
           </section>
 
         </div>
@@ -413,7 +441,7 @@ function App({ host, mode, embedded = false, instanceId, controlsTarget, display
             <a href="https://github.com/SoroushJM" dir="ltr">GitHub · SoroushJM</a>
             <a href="https://github.com/SoroushJM/ParsiWord">{t('سورس پروژه')}</a>
           </nav>
-          <div className="flex items-center gap-2"><span>{t('نسخهٔ آزمایشی')} <bdi dir="ltr">{platform.version}</bdi></span><AiPromptButton /></div>
+          <div className="flex items-center gap-2"><span>{t('نسخهٔ آزمایشی')} <bdi dir="ltr">{platform.version}</bdi></span><AiPromptButton />{platform.kind !== 'vscode' && sampleLibrary}</div>
         </footer>
       </main>
 

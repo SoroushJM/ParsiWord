@@ -6,7 +6,7 @@
 
 .mermaid-diagram .mermaid-canvas {
   margin-inline: auto;
-  /* Mermaid's cached SVG has its own light palette and is reused by exports. */
+  /* Preview cache is separate from the light print/export rendering. */
   background: #fff;
   border-radius: 0.25rem;
 }
@@ -20,13 +20,15 @@
 }
 
 .mermaid-diagram:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline: 0.125rem solid var(--ring);
+  outline-offset: 0.125rem;
 }
 
 .mermaid-scroll-hint {
   margin: -0.5em 0 1em;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 0.6875rem;
   text-align: center;
 }
+
+.mermaid-diagram[data-diagram-theme="dark"] .mermaid-canvas { background: #1f2020; }

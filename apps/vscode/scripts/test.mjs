@@ -22,6 +22,8 @@ await writeFile(resolve(runDirectory, 'profile/User/settings.json'), JSON.string
 const markdown = '# عنوان فارسی\n\nمتن فارسی و English SEARCHABLE_EXTENSION.\n\n## فصل دوم\n\n[Next](./other.md)\n\n- [x] کار انجام‌شده\n\n| نام | عدد |\n| --- | --- |\n| تست | 42 |\n\nفرمول $E=mc^2$\n\n```mermaid\nflowchart LR\nA[شروع] --> B[End]\n```\n\n```typescript\nconst answer = 42;\n```\n';
 await writeFile(resolve(fixture, 'sample.md'), markdown);
 await writeFile(resolve(fixture, 'other.md'), '# Other\n\nLinked document.\n');
+const previewLinks = '# PREVIEW_LINKS\n\n[**پیوند**](https://example.test/original)\n\n| Link |\n| --- |\n| [Table](https://example.test/table) |\n\n[Local](./other.md)\n';
+await writeFile(resolve(fixture, 'preview-links.md'), previewLinks);
 await writeFile(resolve(fixture, 'crlf.md'), '# Windows\r\n\r\nمتن اصلی\r\n');
 // Exercise Windows documents explicitly, even when checkout uses LF. The
 // webview sees logical LF, while native TextDocument/source history stays CRLF.
@@ -44,6 +46,7 @@ git(['config','user.email','parsiword-test@example.invalid']);
 git(['config','commit.gpgsign','false']);
 git(['add','.']);
 git(['commit','--allow-empty','-m','Integration fixture']);
+await writeFile(resolve(fixture, 'preview-links.md'), previewLinks.replace('example.test/original', 'example.test/modified'));
 await writeFile(resolve(fixture, 'nested folder/nested.md'), '# مقایسه فارسی و English\n\nمتن STAGED برای مقایسه.\n\nاین بخش ثابت است و تغییری ندارد.\n' + diagram + scrollContent);
 git(['add','nested folder/nested.md']);
 const insertedLines = '\n' + Array.from({ length: 12 }, (_, index) => `خط افزودهٔ مستقل ${index + 1} فقط در نسخهٔ فعلی.`).join('\n') + '\n';
