@@ -159,7 +159,7 @@ test('color input on a long document preserves native metrics and existing previ
     await expect(textarea).toHaveValue(markdown);
     expect(await metrics()).toEqual(before);
     const report = JSON.stringify({ characters: markdown.length, viewport: '393×851', cpu: 4, colorInputs: durations.length, updateAndPaintMs: durations, previewNodeRetained: true, nativeMetricsUnchanged: true }, null, 2);
-    await writeFile('artifacts/theme-performance.json', report);
+    await writeFile(info.outputPath('theme-performance.json'), report);
     await info.attach('appearance-performance', { body: report, contentType: 'application/json' });
   } finally { await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }); await cdp.detach(); }
 });
