@@ -1,4 +1,6 @@
 {
+  "تعداد خانه‌های ردیف‌ها با هدر یکسان نیست.": "Row cell counts do not match the header.",
+  "کامل‌کردن ستون‌های جدول": "Complete table columns",
   "پارسی‌ورد": "ParsiWord",
   "کد TikZ بیش از حد بزرگ است. شکل را به چند بخش تقسیم کن.": "The TikZ source is too large. Split the drawing into smaller figures.",
   "رسم نمودار TikZ انجام نشد. کد و کتابخانه‌های شکل را بررسی کن.": "The TikZ drawing could not be rendered. Check its source and libraries.",

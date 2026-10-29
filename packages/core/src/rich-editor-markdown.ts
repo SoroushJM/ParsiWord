@@ -144,12 +144,26 @@ export function serializeRichBlock(node: JSONContent): string {
       case 'mathBlock': return { type: 'math', value: item.attrs?.source || '' };
       case 'horizontalRule': return { type: 'thematicBreak' };
       case 'rawBlock': return { type: 'rawMarkdown', value: item.attrs?.source || '' };
-      case 'table': return {
-        type: 'table', align: item.content?.[0]?.content?.map(cell => cell.attrs?.align || null) || [],
-        children: (item.content || []).map(row => ({ type: 'tableRow', children: (row.content || []).map(cell => ({
-          type: 'tableCell', children: (cell.content || []).flatMap((paragraph, index) => [...(index ? [{ type: 'html', value: '<br>' }] : []), ...inlines(paragraph.content).map(child => child.type === 'break' ? { type: 'html', value: '<br>' } : child)]),
-        })) })),
-      };
+      case 'table': {
+        const table = {
+          type: 'table', align: item.content?.[0]?.content?.map(cell => cell.attrs?.align || null) || [],
+          children: (item.content || []).map(row => ({ type: 'tableRow', children: (row.content || []).map(cell => ({
+            type: 'tableCell', children: (cell.content || []).flatMap((paragraph, index) => [...(index ? [{ type: 'html', value: '<br>' }] : []), ...inlines(paragraph.content).map(child => child.type === 'break' ? { type: 'html', value: '<br>' } : child)]),
+          })) })),
+        };
+        if (table.children.some(row => row.children.length !== table.children[0]?.children.length)) {
+          // markdown-table pads every row to the widest one. Row operations
+          // must retain raggedness until the explicit repair command is used.
+          // Encode each row with the existing GFM/math writer (including code
+          // pipes and escapes), keeping the delimiter only for the real header.
+          return { type: 'rawMarkdown', value: table.children.map((row, index) => {
+            const single = { ...table, align: table.align.slice(0, row.children.length), children: [row] };
+            const lines = writer.stringify({ type: 'root', children: [single] } as unknown as Root).trimEnd().split('\n');
+            return lines.slice(0, index === 0 ? 2 : 1).join('\n');
+          }).join('\n') };
+        }
+        return table;
+      }
       default: return { type: 'paragraph', children: inlines(item.content) };
     }
   }

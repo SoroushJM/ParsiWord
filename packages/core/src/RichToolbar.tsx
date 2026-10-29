@@ -5,6 +5,7 @@ import { useEditorState, type Editor } from '@tiptap/react';
 import { closeHistory } from '@tiptap/pm/history';
 import { Bold, Italic, Strikethrough, List, ListOrdered, Quote, Code2, SquareCode, Undo2, Redo2, Link2, Table2, Sigma, Shapes, RemoveFormatting, IndentIncrease, IndentDecrease, Type } from 'lucide-react';
 import { insertTikzSample } from './tikz-edit';
+import { markdownTableShape, selectedMarkdownTable } from './rich-table';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false 
   const linkToolsId = `${toolbarId}-link-tools`;
   const linkUrlId = `${toolbarId}-link-url`;
   const linkErrorId = `${toolbarId}-link-error`;
+  const tableWarningId = `${toolbarId}-table-warning`;
   const [linkOpen, setLinkOpen] = useState(false);
   const [url, setUrl] = useState('');
   const [linkError, setLinkError] = useState('');
@@ -43,6 +45,7 @@ export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false 
     bulletList: editor.isActive('bulletList'), orderedList: editor.isActive('orderedList'),
     blockquote: editor.isActive('blockquote'), code: editor.isActive('code'), codeBlock: editor.isActive('codeBlock'),
     table: editor.isActive('table'), canIndent: editor.can().sinkListItem('listItem'), canOutdent: editor.can().liftListItem('listItem'),
+    irregularTable: (() => { const selected = selectedMarkdownTable(editor.state); return !!selected && markdownTableShape(selected.table).irregular; })(),
     canUndo: editor.can().undo(), canRedo: editor.can().redo(),
   }) });
   const headingLabel = state.heading === 'paragraph' ? t("متن عادی") : `${t('تیتر')} ${number(Number(state.heading))}`;
@@ -98,10 +101,14 @@ export const RichToolbar = memo(function RichToolbar({ editor, readOnly = false 
     </div>
     {state.table && <div className="rich-table-tools" role="group" aria-label={t("ابزار جدول")}>
       <Button type="button" variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().addRowAfter().run()}>{t("افزودن ردیف")}</Button>
-      <Button type="button" variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().addColumnAfter().run()}>{t("افزودن ستون")}</Button>
+      <Button type="button" variant="outline" size="sm" disabled={state.irregularTable} aria-describedby={state.irregularTable ? tableWarningId : undefined} onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().addColumnAfter().run()}>{t("افزودن ستون")}</Button>
       <Button type="button" variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().deleteRow().run()}>{t("حذف ردیف")}</Button>
-      <Button type="button" variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().deleteColumn().run()}>{t("حذف ستون")}</Button>
+      <Button type="button" variant="outline" size="sm" disabled={state.irregularTable} aria-describedby={state.irregularTable ? tableWarningId : undefined} onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().deleteColumn().run()}>{t("حذف ستون")}</Button>
       <Button type="button" variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().deleteTable().run()}>{t("حذف جدول")}</Button>
+      {state.irregularTable && <>
+        <span id={tableWarningId} className="text-muted-foreground text-sm">{t("تعداد خانه‌های ردیف‌ها با هدر یکسان نیست.")}</span>
+        <Button type="button" variant="outline" size="sm" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().repairMarkdownTable().run()}>{t("کامل‌کردن ستون‌های جدول")}</Button>
+      </>}
     </div>}
     {linkOpen && <FieldGroup id={linkToolsId} className="rich-link-tools gap-2">
       <Field data-invalid={!!linkError}><FieldLabel htmlFor={linkUrlId}>{t("نشانی پیوند")}</FieldLabel>

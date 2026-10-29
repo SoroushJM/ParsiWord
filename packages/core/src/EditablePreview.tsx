@@ -11,6 +11,7 @@ import {
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TableKit } from "@tiptap/extension-table";
+import { MarkdownTable } from "./rich-table";
 import type { Direction } from "./document-model";
 import { parseRichMarkdown, type SourcePosition } from "./rich-editor-markdown";
 import { RichSourceDocument, replaceRichSourceState } from "./rich-source";
@@ -156,7 +157,8 @@ export const EditablePreview = memo(function EditablePreview({
       }),
       RichCodeBlock,
       RichListItem,
-      TableKit.configure({ table: { resizable: false, renderWrapper: true } }),
+      TableKit.configure({ table: false }),
+      MarkdownTable.configure({ resizable: false, renderWrapper: true }),
       MathInline,
       MathBlock,
       RawInline.configure({
@@ -267,6 +269,10 @@ export const EditablePreview = memo(function EditablePreview({
           replaceRichSourceState(editor.state, parsed.document),
         );
         preserveSources(editor, markdown, parsed);
+        // External native Undo/Redo replaces state directly. Notify Tiptap's
+        // transaction subscribers so contextual tools reflect the new table
+        // shape without waiting for another click or creating a source edit.
+        editor.view.dispatch(editor.state.tr.setMeta("addToHistory", false));
       } finally {
         externalPositions.current = null;
       }

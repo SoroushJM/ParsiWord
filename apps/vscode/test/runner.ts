@@ -10,6 +10,7 @@ import { testImageExports } from './image-export';
 import { testTikz } from './tikz';
 import { testXeTex } from './xetex';
 import { testRtlLists } from './rtl-lists';
+import { testTables } from './tables';
 import { testLinkedSelection } from './linked-selection';
 
 const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -72,6 +73,11 @@ export async function run() {
     await vscode.commands.executeCommand('workbench.action.closeSidebar');
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${process.env.PARSIWORD_TEST_CDP}`);
     const pages = browser.contexts().flatMap(context=>context.pages());
+    if (process.env.PARSIWORD_TEST_FOCUS === 'tables') {
+      await testTables(browser, artifact, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
+      return;
+    }
     if (process.env.PARSIWORD_TEST_FOCUS === 'xetex') {
       const xetexExports = await testXeTex(browser, artifact, record);
       await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results, xetexExports }, null, 2));
@@ -333,6 +339,7 @@ export async function run() {
     tikzExports = await testTikz(browser, api, artifact, record);
     xetexExports = await testXeTex(browser, artifact, record);
     await testRtlLists(browser, artifact, record);
+    await testTables(browser, artifact, record);
     // Comparison checks close their editors. Reopen the native document and
     // refresh its webview references before continuing the multi-view checks.
     document = await vscode.workspace.openTextDocument(uri);
