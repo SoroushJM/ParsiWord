@@ -91,6 +91,26 @@ export function usePreviewScroll(
   const dirty = useRef(true);
   const scheduleUpdate = useRef<((reflow?: boolean) => void) | null>(null);
 
+  const routePageScroll = useCallback(() => {
+    const panel = preview.current;
+    if (!panel) return false;
+    if (matchMedia(mobileQuery).matches) {
+      delete panel.dataset.scrollRoute;
+      return false;
+    }
+    const pane = panel.closest('.preview-pane');
+    // Until the preview reaches its sticky position, both columns still move
+    // with the page. Scrolling it internally and aligning the source to the
+    // viewport would skip the entire area above the editor in one wheel tick.
+    // At the page bottom, allow inner scrolling even for a short source whose
+    // workspace cannot reach the top of the viewport.
+    const pageFirst = !!pane && pane.getBoundingClientRect().top > 1
+      && document.documentElement.scrollHeight - innerHeight - scrollY > 1;
+    const route = pageFirst ? 'page' : 'preview';
+    if (panel.dataset.scrollRoute !== route) panel.dataset.scrollRoute = route;
+    return pageFirst;
+  }, [preview]);
+
   const layoutSize = useCallback(() => {
     const input = editor.current, panel = preview.current;
     const article = panel?.querySelector<HTMLElement>('.prose');
@@ -142,6 +162,7 @@ export function usePreviewScroll(
   const write = useCallback((view: View, preserveVisual = false) => {
     const element = view === 'edit' ? editor.current : preview.current;
     if (!element?.clientWidth) return;
+    if (view === 'edit' && driver.current === 'preview' && routePageScroll()) return;
     const anchor = preserveVisual && view === 'preview' ? position.current.anchor : undefined;
     const anchoredBlock = anchor && previewMap.current.find(point => point.start && point.source === anchor.source);
     const top = anchoredBlock ? anchoredBlock.top - anchor!.gap : project(view === 'edit' ? editorMap.current : previewMap.current, position.current.source, 'source');
@@ -160,7 +181,7 @@ export function usePreviewScroll(
         expectedWindow.current = window.scrollY;
       }
     }
-  }, [editor, preview, readingTop]);
+  }, [editor, preview, readingTop, routePageScroll]);
 
   const selectView = useCallback((view: View) => {
     if (mode !== 'combined') return;
@@ -207,6 +228,7 @@ export function usePreviewScroll(
     let timer: ReturnType<typeof setTimeout> | undefined;
     let pendingReflow = false;
     const update = (reflow = false) => {
+      routePageScroll();
       measure();
       const { markdown, previewMarkdown } = sources.current;
       if (markdown !== previewMarkdown) return;
@@ -275,6 +297,7 @@ export function usePreviewScroll(
       frame = requestAnimationFrame(() => { update(true); reflowing.current = false; });
     };
     const onWindowScroll = () => {
+      routePageScroll();
       if (viewport.current.width !== innerWidth || viewport.current.height !== innerHeight) { onResize(); return; }
       if (measuredLayout.current !== layoutSize()) { onResize(); return; }
       if (reflowing.current) return;
@@ -289,6 +312,7 @@ export function usePreviewScroll(
     };
     const onPreviewScroll = () => {
       if (mobile) return;
+      if (routePageScroll()) return;
       if (measuredLayout.current !== layoutSize()) { onResize(); return; }
       if (expectedPreview.current !== null && Math.abs(panel.scrollTop - expectedPreview.current) < 2) { expectedPreview.current = null; return; }
       expectedPreview.current = null;
@@ -314,8 +338,9 @@ export function usePreviewScroll(
       window.removeEventListener('resize', onResize);
       document.fonts.removeEventListener('loadingdone', onFontsLoaded);
       panel.removeEventListener('scroll', onPreviewScroll);
+      delete panel.dataset.scrollRoute;
     };
-  }, [mobile, mobileView, editor, preview, measure, read, write, layoutSize, mode]);
+  }, [mobile, mobileView, editor, preview, measure, read, write, layoutSize, routePageScroll, mode]);
 
   return { mobileView: mode === 'rendered' ? 'preview' as const : mode === 'source' ? 'edit' as const : mobileView, selectView, activateView };
 }

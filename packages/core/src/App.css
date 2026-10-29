@@ -1576,6 +1576,12 @@ body {
   scrollbar-color: var(--border) transparent;
   scrollbar-width: thin;
 }
+.preview-pane .preview-panel[data-scroll-route] {
+  scrollbar-gutter: stable;
+}
+.preview-pane .preview-panel[data-scroll-route="page"] {
+  overflow-y: hidden;
+}
 .editor-status {
   flex-wrap: wrap;
   gap: 0.75rem;
