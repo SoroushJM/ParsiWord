@@ -537,15 +537,19 @@ export async function run() {
         return undefined;
       }, value => !!value, `narrow ${mode} frame`) as Frame;
       await page.setViewportSize({ width: 460, height: 900 });
-      for (let attempt = 0; attempt < 3; attempt++) {
+      // Workbench layout and the nested webview viewport resize separately.
+      // Calibrate against the observed width until both have settled, rather
+      // than treating three fixed-delay adjustments as a completed resize.
+      await expect(async () => {
         const width = await captureFrame.evaluate(() => innerWidth);
-        if (Math.abs(width - 400) <= 1) break;
-        const outer = await page.evaluate(() => innerWidth);
-        await page.setViewportSize({ width: Math.max(400, outer + 400 - width), height: 900 });
-        await wait(100);
-      }
+        if (Math.abs(width - 400) > 1) {
+          const outer = await page.evaluate(() => innerWidth);
+          await page.setViewportSize({ width: Math.max(400, outer + 400 - width), height: 900 });
+        }
+        assert.ok(Math.abs(width - 400) <= 1, `Waiting for actual 400-wide webview, got ${width}`);
+      }).toPass({ timeout: 10000, intervals: [100, 200, 400] });
       const dimensions = await captureFrame.evaluate(() => ({ width: innerWidth, height: innerHeight, documentWidth: globalThis.document.documentElement.scrollWidth }));
-      assert.ok(Math.abs(dimensions.width - 400) <= 1, `Expected actual 400px webview, got ${dimensions.width}`);
+      assert.ok(Math.abs(dimensions.width - 400) <= 1, `Expected actual 400-wide webview, got ${dimensions.width}`);
       assert.ok(dimensions.documentWidth <= dimensions.width + 1, `${mode} horizontal page overflow`);
       await expect(captureFrame.locator('.live-workspace')).toHaveAttribute('data-mode', mode);
       const keyboard: unknown[] = [];

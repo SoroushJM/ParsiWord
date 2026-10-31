@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as assert from 'node:assert/strict';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { expect, type Browser, type Frame } from '@playwright/test';
 
@@ -108,18 +108,57 @@ export async function testShortcuts(browser: Browser, artifact: string, record: 
     record('Ctrl+H replaces literal text in one native undo step; Ctrl+G selects the requested Markdown line/column');
 
     const page = frame.page();
-    await source.press('Control+p'); await expect(page.locator('.quick-input-widget')).toBeVisible(); await page.keyboard.press('Escape');
-    await source.press('Control+Shift+p'); await expect(page.locator('.quick-input-widget')).toBeVisible();
-    await expect(page.locator('.quick-input-widget input').first()).toHaveValue('>'); await page.keyboard.press('Escape');
+    const picker = page.locator('.quick-input-widget');
+    await source.press('Control+p'); await expect(picker).toBeVisible(); await page.keyboard.press('Escape');
+    await expect(picker).toBeHidden();
+    await source.press('Control+Shift+p'); await expect(picker).toBeVisible();
+    await expect(picker.locator('input').first()).toHaveValue('>'); await page.keyboard.press('Escape');
+    await expect(picker).toBeHidden();
     const other = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'other.md');
     await vscode.commands.executeCommand('vscode.openWith', other, 'parsiword.markdown.source', { viewColumn: vscode.ViewColumn.One, preview: false });
     await vscode.commands.executeCommand('vscode.openWith', uri, 'parsiword.markdown.source', { viewColumn: vscode.ViewColumn.One, preview: false });
-    await source.click(); await page.keyboard.down('Control'); await page.keyboard.press('Tab');
-    await expect(page.locator('.quick-input-widget')).toBeVisible(); await page.keyboard.up('Control');
-    await until(() => vscode.window.tabGroups.activeTabGroup.activeTab?.input, input => input instanceof vscode.TabInputCustom && input.uri.toString() === other.toString(), 'native Ctrl+Tab');
-    await page.keyboard.down('Control'); await page.keyboard.press('Shift+Tab');
-    await expect(page.locator('.quick-input-widget')).toBeVisible(); await page.keyboard.up('Control');
-    await until(() => vscode.window.tabGroups.activeTabGroup.activeTab?.input, input => input instanceof vscode.TabInputCustom && input.uri.toString() === uri.toString(), 'native Ctrl+Shift+Tab');
+    const switchTab = async (reverse: boolean, target: vscode.Uri) => {
+      const label = `native Ctrl+${reverse ? 'Shift+' : ''}Tab`;
+      try {
+        await expect(picker).toBeHidden();
+        await page.keyboard.down('Control');
+        try {
+          await page.keyboard.press(reverse ? 'Shift+Tab' : 'Tab');
+          await expect(picker).toBeVisible();
+          // Visibility alone does not mean the quick-navigation list is ready
+          // to accept Ctrl-up. Wait for its target and keyboard focus first.
+          await expect(picker.locator('.monaco-list-row.focused .label-name')).toHaveText(basename(target.path));
+          await expect.poll(() => picker.evaluate(element => element.contains(document.activeElement))).toBe(true);
+        } finally { await page.keyboard.up('Control'); }
+        await expect(picker).toBeHidden();
+        await until(() => vscode.window.tabGroups.activeTabGroup.activeTab?.input, input => input instanceof vscode.TabInputCustom && input.uri.toString() === target.toString(), label);
+        // The native tab event can precede webview visibility/focus restoration.
+        // Start the next chord only after the destination editor receives focus.
+        const text = (await vscode.workspace.openTextDocument(target)).getText().replace(/\r\n/g, '\n');
+        await until(async () => {
+          for (const candidate of page.frames()) {
+            try {
+              const input = candidate.locator('.live-workspace[data-mode=source] #markdown-source');
+              if (await input.isVisible() && await input.inputValue() === text && await candidate.evaluate(() => document.hasFocus())) return true;
+            } catch { /* A switching webview can detach while it is being restored. */ }
+          }
+          return false;
+        }, Boolean, `${label} destination webview focus`);
+      } catch (error) {
+        await writeFile(join(artifact, 'shortcuts-navigation-failure.json'), JSON.stringify({
+          label, target: target.toString(), error: String(error),
+          tabs: vscode.window.tabGroups.all.map(group => group.tabs.map(tab => ({ label: tab.label, active: tab.isActive, uri: tab.input instanceof vscode.TabInputCustom ? tab.input.uri.toString() : undefined }))),
+          picker: await picker.evaluate(element => ({ visible: !!element.getClientRects().length, focused: element.contains(document.activeElement), selected: element.querySelector('.monaco-list-row.focused')?.getAttribute('aria-label') })),
+        }, null, 2));
+        await page.screenshot({ path: join(artifact, 'shortcuts-navigation-failure.png') });
+        throw error;
+      }
+    };
+    await source.click();
+    for (let cycle = 0; cycle < 3; cycle++) {
+      await switchTab(false, other);
+      await switchTab(true, uri);
+    }
     record('Ctrl+P, Ctrl+Shift+P and Ctrl+Tab/Shift+Tab reach real VS Code pickers and editor tabs');
 
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');

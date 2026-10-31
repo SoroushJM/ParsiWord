@@ -74,7 +74,7 @@ export const IntroControls = memo(function IntroControls({ direction, onDirectio
 export const DocumentHeading = memo(function DocumentHeading({ instanceId, hostControlled = false, compact = false, direction, title, busy, canExport, onDirectionChange, onTitleChange, onOpen, onNew, onSettings, onExport, onExportPdf, onExportMarkdown }: { instanceId?: string; hostControlled?: boolean; compact?: boolean; direction: ExportSettings['direction']; title: string; busy: boolean; canExport: boolean; onDirectionChange: (direction: ExportSettings['direction']) => void; onTitleChange: (title: string) => void; onOpen: () => void; onNew: () => void; onSettings: () => void; onExport: () => void; onExportPdf: () => void; onExportMarkdown: () => void }) {
   const titleId = instanceId ? `document-title-${instanceId}` : 'document-title';
   const { t, dir } = useLocale();
-  return (<div className={hostControlled ? 'document-host-controls flex items-center gap-1' : 'document-heading'}>
+  return (<div className={hostControlled ? 'document-host-controls flex min-w-0 max-w-full flex-wrap items-center gap-1' : 'document-heading'}>
               {compact && <ToggleGroup type="single" variant="outline" size="sm" spacing={0} dir="ltr" value={direction}
                 onValueChange={value => { if (value === 'rtl' || value === 'ltr' || value === 'auto') onDirectionChange(value); }}
                 aria-label={t('جهت متن')} className="comparison-direction-controls">

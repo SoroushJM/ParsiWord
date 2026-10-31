@@ -146,7 +146,7 @@ export function ComparisonWorkspace({ host, resolveOriginalImage, openOriginalLi
       {host.kind === 'vscode' && <Button variant="outline" aria-label={fa ? 'باز کردن مقایسه در VS Code' : 'Open comparison in VS Code'} onClick={() => host.command?.('nativeDiff')}>{fa ? 'مقایسه در VS Code' : 'VS Code Diff'}</Button>}
       {layout === 'inline' && <Button variant="outline" disabled={!editing && host.readOnly} aria-label={editing ? 'Review changes' : 'Edit current version'} onClick={() => { setEditing(value => !value); focus('modified'); }}><Pencil data-icon="inline-start" />{editing ? fa ? 'مرور تغییرات' : 'Review changes' : fa ? 'ویرایش نسخهٔ فعلی' : 'Edit current version'}</Button>}
       <Button variant="ghost" aria-label={fa ? 'English' : 'فارسی'} onClick={() => setLocale(fa ? 'en' : 'fa')}><Languages data-icon="inline-start" />{fa ? 'English' : 'فارسی'}</Button>
-      <div ref={setControlsTarget} className="comparison-document-controls flex flex-none items-center" />
+      <div ref={setControlsTarget} className="comparison-document-controls flex min-w-0 max-w-full flex-none items-center" />
     </header>
     <ResizablePanelGroup className="comparison-editors" orientation="horizontal" dir="ltr" disabled={layout !== 'side-by-side'}>
       {(['original', 'modified'] as const).map(side => <Fragment key={side}><ResizablePanel id={`comparison-${side}`} data-comparison-panel={side} defaultSize="50%" minSize="12rem">

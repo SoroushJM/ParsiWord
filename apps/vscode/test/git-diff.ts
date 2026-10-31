@@ -400,17 +400,34 @@ export async function testGitDiff(browser: Browser, api: Diagnostics, artifact: 
         await page.setViewportSize({ width: Math.max(320, outer + 320 - width), height: 900 });
         await wait(100);
       }
-      for (const view of ['source', 'rendered'] as const) {
-        await setMode(frame, view, 'side-by-side');
-        const size = await frame.evaluate(() => ({ width: innerWidth, page: document.documentElement.scrollWidth, workspace: document.querySelector('.comparison-workspace')!.scrollWidth }));
-        assert.ok(Math.abs(size.width - 320) <= 1, `Expected an actual narrow 320 webview, got ${JSON.stringify(size)}`);
-        assert.ok(size.page <= size.width + 1 && size.workspace <= size.width + 1, `${view} comparison overflows the narrow webview: ${JSON.stringify(size)}`);
-        await expect(original.locator('.markdown-editor')).toHaveValue(revision);
-        await expect(modified.locator('.markdown-editor')).toHaveValue(next);
+      for (const locale of ['en', 'fa'] as const) {
+        if (locale === 'fa') await frame.getByRole('button', { name: 'فارسی', exact: true }).click();
+        for (const view of ['source', 'rendered'] as const) {
+          await setMode(frame, view, 'side-by-side');
+          const size = await frame.evaluate(() => ({ width: innerWidth, page: document.documentElement.scrollWidth, workspace: document.querySelector('.comparison-workspace')!.scrollWidth }));
+          assert.ok(Math.abs(size.width - 320) <= 1, `Expected an actual narrow 320 webview, got ${JSON.stringify(size)}`);
+          if (size.page > size.width + 1 || size.workspace > size.width + 1) {
+            const overflow = await frame.evaluate(() => [...document.querySelectorAll<HTMLElement>('.comparison-workspace *')].map(element => {
+              const rect = element.getBoundingClientRect();
+              return { tag: element.tagName, class: element.className, slot: element.dataset.slot, text: element.textContent?.slice(0, 100), left: rect.left, right: rect.right, width: rect.width, scroll: element.scrollWidth, minWidth: getComputedStyle(element).minWidth };
+            }).filter(element => element.left < -1 || element.right > innerWidth + 1).slice(0, 80));
+            await writeFile(join(artifact, 'git-diff-narrow-failure.json'), JSON.stringify({ locale, view, size, overflow }, null, 2));
+            await page.screenshot({ path: join(artifact, 'git-diff-narrow-failure.png') });
+          }
+          assert.ok(size.page <= size.width + 1 && size.workspace <= size.width + 1, `${view} comparison overflows the narrow webview: ${JSON.stringify(size)}`);
+          const clippedControls = await frame.locator('.comparison-document-controls button').evaluateAll(buttons => buttons.map(button => {
+            const rect = button.getBoundingClientRect();
+            return { name: button.getAttribute('aria-label') ?? button.textContent, left: rect.left, right: rect.right };
+          }).filter(button => button.left < -1 || button.right > innerWidth + 1));
+          assert.deepEqual(clippedControls, [], `${locale} ${view} shared controls must remain inside the webview`);
+          await expect(original.locator('.markdown-editor')).toHaveValue(revision);
+          await expect(modified.locator('.markdown-editor')).toHaveValue(next);
+        }
       }
       await page.screenshot({ path: join(artifact, 'git-diff-narrow.png') });
+      await setEnglish(frame);
       assert.equal(doc.getText(), next);
-      record('Source and rendered comparisons fit an actual 320-wide VS Code webview without horizontal page overflow or document changes');
+      record('English and Persian source/rendered comparisons fit an actual 320-wide VS Code webview with all shared controls visible and no document changes');
     } finally { await page.setViewportSize(previousViewport); }
     await setMode(frame, 'rendered', 'side-by-side');
     const rich = modified.locator('.rich-document');
