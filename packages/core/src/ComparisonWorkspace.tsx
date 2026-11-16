@@ -152,7 +152,9 @@ export function ComparisonWorkspace({ host, resolveOriginalImage, openOriginalLi
       {(['original', 'modified'] as const).map(side => <Fragment key={side}><ResizablePanel id={`comparison-${side}`} data-comparison-panel={side} defaultSize="50%" minSize="12rem">
         <section className="comparison-side" dir={dir} data-comparison-side={side} hidden={layout === 'inline' && (!editing || side === 'original')}
         onFocusCapture={() => focus(side)} onPointerDownCapture={() => focus(side)}>
-        <div className="comparison-revision">{side === 'original' ? comparison.staged ? 'HEAD' : fa ? 'نسخهٔ staged · فقط خواندنی' : 'Index · Read only' : comparison.staged ? fa ? 'نسخهٔ staged · فقط خواندنی' : 'Index · Read only' : fa ? 'فایل فعلی' : 'Working tree'}</div>
+        <div className="comparison-revision">{comparison.revisionLabels
+          ? <><bdi>{comparison.revisionLabels[side]}</bdi>{fa ? ' · فقط خواندنی' : ' · Read only'}</>
+          : side === 'original' ? comparison.staged ? 'HEAD' : fa ? 'نسخهٔ staged · فقط خواندنی' : 'Index · Read only' : comparison.staged ? fa ? 'نسخهٔ staged · فقط خواندنی' : 'Index · Read only' : fa ? 'فایل فعلی' : 'Working tree'}</div>
         <App host={hosts[side]} mode={view} embedded instanceId={side} controlsTarget={side === 'modified' ? controlsTarget : undefined} displaySettings={side === 'original' ? displaySettings : undefined} />
       </section>
       </ResizablePanel>

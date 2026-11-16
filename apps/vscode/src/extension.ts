@@ -22,11 +22,15 @@ export function activate(context: vscode.ExtensionContext) {
   const promotingTabs = new Set<vscode.Tab>();
   const promotingComparisons = new Set<string>();
   const isComparisonTab = (tab: vscode.Tab) => tab.input instanceof vscode.TabInputCustom && tab.input.viewType === comparisonViewType;
+  const ownsComparisonTab = (document: vscode.TextDocument, panel: vscode.WebviewPanel) => {
+    const tab = vscode.window.tabGroups.all.find(group => group.viewColumn === panel.viewColumn)?.activeTab;
+    return tab?.input instanceof vscode.TabInputCustom && tab.input.viewType === comparisonViewType && tab.input.uri.toString() === document.uri.toString();
+  };
   let active: Session | undefined;
   let focused: Session | undefined;
   const current = (uri?: vscode.Uri) => uri ?? (active?.panel.active ? active.document.uri : vscode.window.activeTextEditor?.document.uri) ?? active?.document.uri;
   const lineEnding = (document: vscode.TextDocument) => document.eol === vscode.EndOfLine.CRLF ? '\r\n' as const : '\n' as const;
-  const readOnly = (document: vscode.TextDocument) => !['file', 'untitled'].includes(document.uri.scheme);
+  const readOnly = (document: Pick<vscode.TextDocument, 'uri'>) => !['file', 'untitled'].includes(document.uri.scheme);
   const localUri = (uri: vscode.Uri): vscode.Uri | undefined => {
     if (uri.scheme === 'file') return uri;
     if (uri.scheme === 'git') {
@@ -112,7 +116,39 @@ export function activate(context: vscode.ExtensionContext) {
   };
   const gitRef = (uri: vscode.Uri): string | undefined => {
     if (uri.scheme !== 'git') return;
-    try { return JSON.parse(uri.query).ref; } catch { return; }
+    try { const ref = JSON.parse(uri.query).ref; return typeof ref === 'string' ? ref : undefined; } catch { return; }
+  };
+  const shortRef = (uri: vscode.Uri) => {
+    const ref = gitRef(uri);
+    return ref ? ref.replace(/^([a-f\d]{8})[a-f\d]+/i, '$1') : basename(uri.path);
+  };
+  const isStagedPair = (original: vscode.Uri, modified: vscode.Uri) => gitRef(original) === 'HEAD' && gitRef(modified) === '~';
+  const revisionLabels = (original: vscode.Uri, modified: vscode.Uri) => readOnly({ uri: modified }) && !isStagedPair(original, modified)
+    ? { original: shortRef(original), modified: shortRef(modified) } : undefined;
+  const comparisonTitle = (original: vscode.Uri, modified: vscode.Uri) => `${basename(modified.path)} (${revisionLabels(original, modified)
+    ? `${shortRef(original)} ↔ ${shortRef(modified)}` : isStagedPair(original, modified) ? 'Staged Diff' : 'Working Tree Diff'})`;
+  const legacyPair = (panes: Session[], tab: vscode.Tab): [Session, Session] | undefined => {
+    // Stable VS Code reports a legacy custom-editor diff as an unknown tab
+    // input. Require exactly two panes in that tab's group; ordinary editors
+    // and the explicitly requested native TextDiff must never be promoted.
+    if (tab.input !== undefined || panes.length !== 2) return;
+    const [first, second] = panes;
+    for (const [original, modified] of [[first, second], [second, first]] as const) {
+      if (original.document.uri.scheme === 'git' && (modified.document.uri.scheme === 'file' || isStagedPair(original.document.uri, modified.document.uri))) return [original, modified];
+    }
+    // Git Timeline supplies "file (old hash) ↔ file (new hash)". Both URIs
+    // are read-only Git revisions, so neither scheme nor resolve order tells
+    // us which is original. Match the two refs in the tab title instead of
+    // guessing from asynchronous webview creation or sorting commit hashes.
+    const refs = [...tab.label.matchAll(/\(([a-f\d]{7,40}(?:\^)?)\)/gi)].map(match => match[1].toLowerCase());
+    if (refs.length !== 2 || refs[0] === refs[1]) return;
+    const matches = (session: Session, label: string) => {
+      const ref = gitRef(session.document.uri)?.toLowerCase();
+      return !!ref && ref.endsWith('^') === label.endsWith('^') && ref.replace(/\^$/, '').startsWith(label.replace(/\^$/, ''));
+    };
+    const original = panes.find(pane => matches(pane, refs[0]));
+    const modified = panes.find(pane => matches(pane, refs[1]));
+    return original && modified && original !== modified ? [original, modified] : undefined;
   };
   // Native browser inputs use LF. Keep that UI representation stable while
   // applying minimal edits and exporting with the TextDocument's actual EOL.
@@ -135,6 +171,7 @@ export function activate(context: vscode.ExtensionContext) {
       await vscode.commands.executeCommand('vscode.openWith', modified, comparisonViewType, { viewColumn: column, preview: false });
       for (const session of sessions) if (session.document.uri.toString() === modified.toString() && session.original && session.panel.viewColumn === column) {
         session.original = originalDocument;
+        session.panel.title = comparisonTitle(original, modified);
         configureResources(session);
       }
       // VS Code can retain a Tab object while replacing its input. Never
@@ -149,21 +186,19 @@ export function activate(context: vscode.ExtensionContext) {
   let comparisonTimer: ReturnType<typeof setTimeout> | undefined;
   const refreshComparisons = () => {
     const visible = [...sessions].filter(session => session.panel.visible);
-    for (const modified of visible) {
-      if (modified.original) continue;
-      const original = visible.find(other => !other.original && other !== modified && other.panel.viewColumn === modified.panel.viewColumn
-          && other.document.uri.scheme === 'git' && (modified.document.uri.scheme === 'file' || (gitRef(other.document.uri) === 'HEAD' && gitRef(modified.document.uri) === '~')));
-      if (original) {
-        const tab = vscode.window.tabGroups.all.find(group => group.viewColumn === modified.panel.viewColumn)?.activeTab;
-        if (tab && !isComparisonTab(tab) && !promotingTabs.has(tab)) {
-          void openComparison(original.document.uri, modified.document.uri, modified.panel.viewColumn, tab).catch(error => { void vscode.window.showErrorMessage(`ParsiWord: ${String(error)}`); });
-          return;
-        }
+    for (const group of vscode.window.tabGroups.all) {
+      const tab = group.activeTab;
+      if (!tab || isComparisonTab(tab) || promotingTabs.has(tab)) continue;
+      const pair = legacyPair(visible.filter(session => !session.original && session.panel.viewColumn === group.viewColumn), tab);
+      if (pair) {
+        void openComparison(pair[0].document.uri, pair[1].document.uri, group.viewColumn, tab).catch(error => { void vscode.window.showErrorMessage(`ParsiWord: ${String(error)}`); });
+        return;
       }
     }
     for (const session of sessions) {
       const next = session.original ? { side: 'modified', other: snapshot(session.original).text,
-        staged: session.document.uri.scheme === 'git', singleTab: true, originalUri: session.original.uri.toString() } satisfies DocumentComparison : undefined;
+        staged: readOnly(session.document), singleTab: true, originalUri: session.original.uri.toString(),
+        revisionLabels: revisionLabels(session.original.uri, session.document.uri) } satisfies DocumentComparison : undefined;
       if (JSON.stringify(next) !== JSON.stringify(session.comparison)) {
         session.comparison = next;
         if (session.ready) void session.panel.webview.postMessage({ type: 'comparison', comparison: next ?? null });
@@ -301,10 +336,16 @@ export function activate(context: vscode.ExtensionContext) {
       const session: Session = { document, panel, ready: false, client: randomBytes(12).toString('hex'), journal: new PendingDocument() };
       const requestedComparison = isComparison ? comparisonRequests.get(document.uri.toString()) : undefined;
       if (isComparison) {
-        panel.title = `${basename(document.uri.path)} (${document.uri.scheme === 'git' ? 'Staged' : 'Working Tree'} Diff)`;
-        const source = requestedComparison?.toString() ?? context.workspaceState.get<string>(`comparison:${document.uri.toString()}`);
+        // The editor picker can place this same provider inside VS Code's
+        // two-webview diff wrapper. Only a standalone comparison tab owns a
+        // saved original revision; restoring it into a wrapper child would
+        // create a nested comparison and prevent promotion of the exact pair.
+        const source = requestedComparison?.toString() ?? (ownsComparisonTab(document, panel) ? context.workspaceState.get<string>(`comparison:${document.uri.toString()}`) : undefined);
         if (source) {
-          try { session.original = await vscode.workspace.openTextDocument(vscode.Uri.parse(source, true)); }
+          try {
+            session.original = await vscode.workspace.openTextDocument(vscode.Uri.parse(source, true));
+            panel.title = comparisonTitle(session.original.uri, document.uri);
+          }
           catch { /* A restored panel can retry its retained revision on ready. */ }
         }
       }
@@ -317,7 +358,7 @@ export function activate(context: vscode.ExtensionContext) {
       const nonce = randomBytes(24).toString('base64');
       const escape = (value: string) => value.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
       const csp = `default-src 'none'; img-src ${panel.webview.cspSource} https: data: blob:; font-src ${panel.webview.cspSource} blob:; style-src ${panel.webview.cspSource} 'unsafe-inline'; script-src ${panel.webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}'; connect-src ${panel.webview.cspSource}; worker-src ${panel.webview.cspSource} blob:;`;
-      panel.webview.html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(csp)}"><meta name="viewport" content="width=device-width, initial-scale=1.0">${(entry.css ?? []).map((file: string) => `<link rel="stylesheet" href="${escape(assetRoot + '/' + file)}">`).join('')}<title>ParsiWord</title></head><body><div id="root" role="status">Loading ParsiWord…</div><script nonce="${nonce}" type="module" src="${escape(assetRoot + '/' + entry.file)}"></script></body></html>`;
+      const html = `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(csp)}"><meta name="viewport" content="width=device-width, initial-scale=1.0">${(entry.css ?? []).map((file: string) => `<link rel="stylesheet" href="${escape(assetRoot + '/' + file)}">`).join('')}<title>ParsiWord</title></head><body><div id="root" role="status">Loading ParsiWord…</div><script nonce="${nonce}" type="module" src="${escape(assetRoot + '/' + entry.file)}"></script></body></html>`;
       const disposables = [
         panel.onDidChangeViewState(() => { if (panel.active) active = session; scheduleComparisons(); }),
         panel.webview.onDidReceiveMessage(async message => {
@@ -344,21 +385,26 @@ export function activate(context: vscode.ExtensionContext) {
             await preserve(session);
             session.journal = new PendingDocument();
             session.client = randomBytes(12).toString('hex');
-            if (isComparison && !requestedComparison && message.restoreComparison && message.restoreComparison !== session.original?.uri.toString()) {
+            const standaloneComparison = isComparison && ownsComparisonTab(document, panel);
+            const restoredOriginal = standaloneComparison && !requestedComparison
+              ? message.restoreComparison ?? context.workspaceState.get<string>(`comparison:${document.uri.toString()}`) : undefined;
+            if (restoredOriginal && restoredOriginal !== session.original?.uri.toString()) {
               try {
-                const original = vscode.Uri.parse(message.restoreComparison, true);
+                const original = vscode.Uri.parse(restoredOriginal, true);
                 const base = localUri(original), modified = localUri(document.uri);
                 if (['file', 'git', 'untitled'].includes(original.scheme) && base && modified && base.fsPath === modified.fsPath) {
                   session.original = await vscode.workspace.openTextDocument(original);
+                  panel.title = comparisonTitle(original, document.uri);
                   configureResources(session);
                 }
               } catch { /* A missing revision is reported below without editing it. */ }
             }
-            if (isComparison && !session.original) {
+            if (standaloneComparison && !session.original) {
               void vscode.window.showWarningMessage('The comparison revision is unavailable. Reopen Git Diff to compare the current file.');
-              await vscode.commands.executeCommand('vscode.openWith', document.uri, viewType, { viewColumn: panel.viewColumn });
-              return;
             }
+            // Always initialize the document. Wrapper children are promoted
+            // together once both panes are known; opening another editor from
+            // inside their ready handler leaves the wrapper on Loading forever.
             refreshComparisons();
             session.ready = true;
             const config = vscode.workspace.getConfiguration('parsiword', document.uri);
@@ -473,10 +519,14 @@ export function activate(context: vscode.ExtensionContext) {
         }),
       ];
       panel.onDidDispose(() => { disposables.forEach(item => item.dispose()); void preserve(session, true); sessions.delete(session); if (active === session) active = undefined; scheduleComparisons(); });
+      // Subscribe before a cached module can send its initial ready message.
+      panel.webview.html = html;
     },
   });
   context.subscriptions.push(
     { dispose: () => clearTimeout(comparisonTimer) },
+    vscode.window.tabGroups.onDidChangeTabs(scheduleComparisons),
+    vscode.window.tabGroups.onDidChangeTabGroups(scheduleComparisons),
     ...(['combined', 'source', 'rendered'] as const).map(mode => vscode.window.registerCustomEditorProvider(mode === 'combined' ? viewType : `${viewType}.${mode}`, provider(mode), { supportsMultipleEditorsPerDocument: true, webviewOptions: { retainContextWhenHidden: true } })),
     vscode.window.registerCustomEditorProvider(comparisonViewType, provider('source', true), { supportsMultipleEditorsPerDocument: true, webviewOptions: { retainContextWhenHidden: true } }),
     vscode.workspace.onWillSaveTextDocument(event => { event.waitUntil(preserveAll(event.document).then(() => [])); }),

@@ -1,5 +1,87 @@
 # ParsiWord Git comparison validation
 
+## Editor-picker Loading recovery — 0.1.12, 2026-10-31
+
+Selecting **ParsiWord Git Comparison** from VS Code's editor picker creates a
+legacy two-webview wrapper using the comparison provider for both children.
+The old provider treated each child as a standalone comparison: without an
+original revision, its `ready` handler reopened another editor and returned
+without sending `init`, leaving the old panes on **Loading ParsiWord…**. A
+previously saved original could instead create a comparison inside one child,
+preventing promotion of the complete pair.
+
+The provider now restores a saved original only for its own standalone custom
+tab, initializes wrapper children without reopening editors, and promotes the
+ordered Timeline pair to the shared comparison workspace. A genuinely missing
+original produces a warning with a readable document in the same tab. Message
+handlers are registered before assigning HTML so a cached module's first
+`ready` cannot precede the subscription.
+
+The installed 0.1.11 host reproduced the editor-picker failure in an isolated
+profile. The pre-fix local host also failed reopening a previously compared
+pair. With the fix, the actual Windows VS Code **1.144.0** comparison run passed
+**38 checks** (working tree, staged, Undo/Redo, Timeline and first/repeated picker
+selection). The final historical run passed **6 checks**, including the added
+missing-original case. All four content/layout combinations, read-only commit
+identity, native Diff URI identity and retained tabs are covered. The shared
+protocol/diff suites passed **18 tests**; TypeScript, build, architecture and
+whitespace checks passed.
+
+Local evidence: `artifacts/picker-loading-installed-exact.log`,
+`artifacts/picker-loading-installed-failure.json`,
+`artifacts/picker-loading-warm-before.log`,
+`artifacts/picker-loading-regression.log`,
+`artifacts/picker-loading-history-final.log`,
+`artifacts/picker-loading-unit.log` and `artifacts/vscode-test/results.json`.
+The packaged `artifacts/parsiword-vscode-0.1.12.vsix` was installed locally.
+SHA-256 checks match the tested host, manifest, entry script and stylesheet:
+`artifacts/picker-loading-installed-hashes.json`. No push or CI run was used.
+After reloading the user's existing VS Code window, the previously stuck
+`README.md (e20e4dab) ↔ README.md (d4a28bc9)` tab opened as one comparison
+workspace with visible red/green source highlights, exact revision labels and
+both commits read-only. This was checked in the user's actual installed app,
+in addition to the isolated integration profile.
+
+## Timeline commit comparisons — 2026-10-31
+
+Comparing two historical commits used to open two ordinary ParsiWord panes
+without change decoration. Automatic promotion recognized Git/file and
+HEAD/index pairs only, so the arbitrary commit refs used by Timeline never
+entered the comparison workspace.
+
+The host now recognizes Timeline's ordered commit refs and promotes that
+wrapper to the existing single-tab comparison. Both historical documents stay
+read-only. The tab and revision headers show the commit identifiers instead of
+calling historical revisions HEAD/index. Source/rendered content, side-by-side
+and inline layouts, and the optional native Text Diff preserve the exact pair.
+
+VS Code's stable tab API exposes a legacy custom-editor diff as an unknown
+input. Promotion therefore requires exactly two visible ParsiWord panes in the
+same editor group, and matches both URI refs against Timeline's ordered title.
+It never infers revision order from asynchronous pane creation or commit hash
+sorting. Explicit native text diffs and ordinary custom-editor tabs are excluded.
+Custom comparison titles without identifiable commit refs are not guessed.
+The title format is defined in VS Code's
+[Git Timeline command](https://github.com/microsoft/vscode/blob/2c33b50b16c472efe58357d1d2a8a5414bc23fbf/extensions/git/src/commands.ts#L4412).
+
+The new actual-host fixture creates three local commits and opens the same
+`vscode.diff` URI/title combination as Timeline. The unmodified host reproduced
+the missing workspace. The final focused comparison run passed **36 checks**
+in Windows VS Code **1.144.0**, including existing working-tree/staged editing
+and Undo/Redo checks plus historical comparisons in both orders, all four
+content/layout combinations, native diff content and URI identity, multiple
+retained comparison tabs, and reopening with the original commit restored.
+The protocol/diff unit suites passed **18 tests**. Extension build, TypeScript,
+architecture boundaries and `git diff --check` also passed.
+
+Local evidence: `artifacts/history-diff-before.log`,
+`artifacts/history-diff-regression.log`, `artifacts/history-diff-unit.log`,
+`artifacts/vscode-test/results.json` and
+`artifacts/vscode-test/history-diff-source-side-by-side.png`.
+Run `PARSIWORD_TEST_FOCUS=diff` with the VS Code test runner to cover both the
+existing Git comparison suite and the new historical cases; `history-diff`
+selects just the new cases. These checks do not require a push or a CI run.
+
 Extension **0.1.7** exposes **RTL / LTR / Auto** in the shared comparison toolbar
 and replaces the large Word action with compact, direct **Word** and **PDF**
 buttons. Forced RTL/LTR now also applies to source text and inline source review;

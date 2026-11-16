@@ -55,6 +55,10 @@ describe('runtime host protocol', () => {
     const comparison = { side: 'original', other: 'متن English', staged: true };
     expect(isHostMessage({ type: 'comparison', comparison })).toBe(true);
     expect(isHostMessage({ type: 'comparison', comparison: null })).toBe(true);
+    expect(isHostMessage({ type: 'comparison', comparison: { ...comparison, revisionLabels: { original: 'a1b2c3d4', modified: 'e5f6a7b8' } } })).toBe(true);
+    for (const revisionLabels of [null, [], 'HEAD', { original: 'a' }, { original: 1, modified: 'b' }, { original: 'a', modified: 'b'.repeat(257) }]) {
+      expect(isHostMessage({ type: 'comparison', comparison: { ...comparison, revisionLabels } })).toBe(false);
+    }
     for (const invalid of [{ ...comparison, side: 'both' }, { ...comparison, other: 1 }, { ...comparison, staged: 'true' }]) {
       expect(isHostMessage({ type: 'comparison', comparison: invalid })).toBe(false);
     }

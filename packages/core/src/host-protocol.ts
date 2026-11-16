@@ -9,8 +9,10 @@ import { isMarkdownLink } from './markdown-link';
 
 const integer = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
 export function isDocumentComparison(value: unknown): value is DocumentComparison {
+  const labels = isRecord(value) ? value.revisionLabels : undefined;
   return isRecord(value) && (value.side === 'original' || value.side === 'modified') && typeof value.other === 'string' && typeof value.staged === 'boolean'
     && (value.singleTab === undefined || typeof value.singleTab === 'boolean')
+    && (labels === undefined || isRecord(labels) && typeof labels.original === 'string' && labels.original.length <= 256 && typeof labels.modified === 'string' && labels.modified.length <= 256)
     && (value.originalUri === undefined || typeof value.originalUri === 'string' && value.originalUri.length <= 8192);
 }
 export const isViewMode = (value: unknown): value is DocumentViewMode => typeof value === 'string' && ['combined', 'source', 'rendered'].includes(value);

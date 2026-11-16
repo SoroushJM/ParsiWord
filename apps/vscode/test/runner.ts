@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { chromium, expect, type Browser, type Frame } from '@playwright/test';
 import JSZip from 'jszip';
 import { testGitDiff } from './git-diff';
+import { testHistoryDiff } from './history-diff';
 import { testShortcuts } from './shortcuts';
 import { testImageExports } from './image-export';
 import { testTikz } from './tikz';
@@ -118,6 +119,12 @@ export async function run() {
     }
     if (process.env.PARSIWORD_TEST_FOCUS === 'diff') {
       await testGitDiff(browser, api, artifact, record);
+      await testHistoryDiff(browser, api, artifact, record);
+      await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
+      return;
+    }
+    if (process.env.PARSIWORD_TEST_FOCUS === 'history-diff') {
+      await testHistoryDiff(browser, api, artifact, record);
       await writeFile(join(artifact, 'results.json'), JSON.stringify({ version: vscode.version, results }, null, 2));
       return;
     }
@@ -354,6 +361,7 @@ export async function run() {
     await testLinkedSelection(browser, artifact, record);
     await testPreviewLinks(browser, record);
     await testGitDiff(browser, api, artifact, record);
+    await testHistoryDiff(browser, api, artifact, record);
     imageExports = await testImageExports(browser, api, artifact, record);
     tikzExports = await testTikz(browser, api, artifact, record);
     xetexExports = await testXeTex(browser, artifact, record);
