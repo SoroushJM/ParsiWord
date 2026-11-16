@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "tauri": "pnpm --filter @parsiword/app run tauri",
     "test": "vitest run",
+    "test:pwa": "node scripts/test-pwa.mjs",
     "test:ui": "playwright test",
     "check:architecture": "node scripts/check-architecture.mjs",
     "android:apk": "pnpm run tauri android build --apk --target aarch64 --ci",

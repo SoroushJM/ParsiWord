@@ -53,8 +53,9 @@ The first Unicode document loads about 33 MB of pinned application assets.
 Those files ship with native apps and the extension; the website downloads
 them from its own deployment and can reuse the browser HTTP cache. This is a
 lazy engine load, not a document upload or an automatic CTAN installation.
-A website visit still needs the application files; it is not an offline site
-installation. `SharedArrayBuffer` and cross-origin isolation are not needed.
+The website installs an offline app shell after the first online visit. The
+XeLaTeX runtime is downloaded when first used and can then be reused offline.
+`SharedArrayBuffer` and cross-origin isolation are not needed.
 
 Preview displays all compiled PDF pages. Word embeds each page as a separate
 PNG with the unchanged source in alternative-text metadata, fitting the Word

@@ -48,9 +48,9 @@ The bundled, pinned [TikZJax engine](https://github.com/rod2ik/tikzjax) executes
 real e-TeX/PGF in one local worker. Runtime files, PGF/TikZ libraries, PGFPlots
 and glyph data ship with every build. The first drawing loads these local
 application assets; later drawings reuse the engine. There is no rendering
-server, shell execution or automatic CTAN download. A fresh website visit still
-requires the site's application files; this feature does not install an offline
-copy of the entire website.
+server, shell execution or automatic CTAN download. The website installs an
+offline app shell after the first online visit. TikZ runtime files download on
+first use and can then be reused offline.
 
 Cold downloads have a separate bounded loading budget: up to 60 seconds per
 application asset and a 90-second deadline for the entire engine bootstrap.

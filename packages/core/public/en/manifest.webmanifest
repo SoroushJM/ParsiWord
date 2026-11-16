@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "ParsiWord — RTL Markdown Editor",
+  "short_name": "ParsiWord",
+  "description": "Offline RTL Markdown editor with editable preview and Word and PDF export",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "../",
+  "display": "standalone",
+  "background_color": "#f5f7f6",
+  "theme_color": "#f5f7f6",
+  "icons": [
+    { "src": "../pwa-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "../pwa-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
